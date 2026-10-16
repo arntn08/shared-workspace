@@ -14,7 +14,7 @@ export default function Login() {
     setErr('')
     const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
     if (error || !data.user) {
-      setErr('Incorrect email or password.')
+      setErr(error ? error.message : 'Sign in failed.')
       setBusy(false)
       return
     }
