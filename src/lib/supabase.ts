@@ -1,21 +1,15 @@
-/// <reference types="vite/client" />
 import { createClient } from '@supabase/supabase-js'
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+const url = 'https://vduphuzjmhcgrsxyrvzt.supabase.co'
+const anonKey =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkdXBodXpqbWhjZ3JzeHlydnp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxMzY1NTMsImV4cCI6MjEwNzcxMjU1M30.04kMRT3y3SyyIVqa4DLS7QC05iKLTT9HDy5ApYKhrOs'
 
-export const isConfigured = Boolean(url && anonKey)
+export const isConfigured = true
 
-// Placeholder values keep the app from crashing before Supabase is connected.
-// The app shows a setup message instead when isConfigured is false.
-export const supabase = createClient(
-  url ?? 'https://placeholder.supabase.co',
-  anonKey ?? 'placeholder-anon-key',
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true
-    }
+export const supabase = createClient(url, anonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
   }
-)
+})
