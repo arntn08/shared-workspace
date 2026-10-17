@@ -43,7 +43,7 @@ function Gate() {
       </div>
     )
   }
-  return profile.role === 'owner' ? <OwnerLayout /> : <EmployeeLayout />
+   return profile.role === 'owner' || profile.role === 'editor' ? <OwnerLayout /> : <EmployeeLayout />
 }
 
 export default function App() {
