@@ -10,8 +10,24 @@ interface Section {
   rows: string[][]
 }
 
+const ERR = /^#(REF|N\/A|VALUE|DIV\/0|NAME|NULL|NUM|ERROR)[!?]?$/i
+const NUM = /^[\d.,\s]+$/
+const LABEL = /^(new install|migration|slr|total)$/i
+
+const clean = (c: unknown) => {
+  const s = String(c ?? '')
+  return ERR.test(s.trim()) ? '' : s
+}
 const filled = (c: string | undefined) => (c ?? '').trim() !== ''
 const hl = (t: string | undefined) => (/new install|migration/i.test(t ?? '') ? 'hl' : undefined)
+
+function isHeading(cells: string[]) {
+  const text = cells.filter((c) => filled(c))
+  if (text.length === 0) return false
+  const first = text[0].trim()
+  if (NUM.test(first) || /^total\b/i.test(first)) return false
+  return text.slice(1).every((c) => NUM.test(c.trim()) || LABEL.test(c.trim()))
+}
 
 function parse(rows: string[][]) {
   let title = ''
@@ -19,16 +35,15 @@ function parse(rows: string[][]) {
   let cur: Section | null = null
   let expectHead = false
   for (const raw of rows) {
-    const cells = (Array.isArray(raw) ? raw : []).map((c) => String(c ?? ''))
-    const text = cells.filter((c) => filled(c))
-    if (text.length === 0) continue
-    const lone = text.length === 1 && !/^[\d.,\s]+$/.test(text[0])
-    if (lone && !title && sections.length === 0) {
-      title = text[0].trim()
-      continue
-    }
-    if (lone) {
-      cur = { title: text[0].trim(), head: null, rows: [] }
+    const cells = (Array.isArray(raw) ? raw : []).map(clean)
+    if (!cells.some((c) => filled(c))) continue
+    if (isHeading(cells)) {
+      const text = (cells.find((c) => filled(c)) ?? '').trim()
+      if (!title && sections.length === 0) {
+        title = text
+        continue
+      }
+      cur = { title: text, head: null, rows: [] }
       sections.push(cur)
       expectHead = true
       continue
@@ -142,7 +157,7 @@ export default function FileViewer() {
           <div className="notice">
             <span style={{ flex: 1 }}>View only. Updates from the original sheet appear here automatically.</span>
             {canEdit && file.url && (
-              <a className="btn primary" style={{ textDecoration: 'none' }} href={file.url} target="_blank" rel="noopener noreferrer">
+              <a className="btn primary" href={file.url} target="_blank" rel="noopener noreferrer">
                 Edit in Google Sheets
               </a>
             )}
