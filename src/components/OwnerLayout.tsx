@@ -1,6 +1,7 @@
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { useSettings } from '../lib/settings'
+import { Avatar, Icon, ThemeButton } from './Nav'
 import Overview from '../pages/Overview'
 import Files from '../pages/Files'
 import People from '../pages/People'
@@ -9,19 +10,19 @@ import Activity from '../pages/Activity'
 import Settings from '../pages/Settings'
 import FileViewer from '../pages/FileViewer'
 
-const ownerLinks: [string, string][] = [
-  ['/', 'Overview'],
-  ['/files', 'Files'],
-  ['/people', 'People & Access'],
-  ['/design', 'Dashboard Design'],
-  ['/activity', 'Activity'],
-  ['/settings', 'Settings']
+const ownerLinks: [string, string, string][] = [
+  ['/', 'Overview', 'home'],
+  ['/files', 'Files', 'files'],
+  ['/people', 'People', 'people'],
+  ['/design', 'Design', 'design'],
+  ['/activity', 'Activity', 'activity'],
+  ['/settings', 'Settings', 'settings']
 ]
 
-const editorLinks: [string, string][] = [
-  ['/', 'Overview'],
-  ['/files', 'Files'],
-  ['/settings', 'Settings']
+const editorLinks: [string, string, string][] = [
+  ['/', 'Overview', 'home'],
+  ['/files', 'Files', 'files'],
+  ['/settings', 'Settings', 'settings']
 ]
 
 export default function OwnerLayout() {
@@ -34,21 +35,20 @@ export default function OwnerLayout() {
     <div className="owner-shell">
       <nav className="sidebar">
         <div className="brand">{s.title}</div>
-        {links.map(([to, label]) => (
+        {links.map(([to, label, icon]) => (
           <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}>
-            {label}
+            <Icon name={icon} />
+            <span>{label}</span>
           </NavLink>
         ))}
         <div className="spacer" />
-        <a
-          href="#/"
-          onClick={(e) => {
-            e.preventDefault()
-            signOut()
-          }}
-        >
-          Sign out
-        </a>
+        <ThemeButton />
+        <div className="me">
+          <Avatar name={profile?.full_name} email={profile?.email} />
+        </div>
+        <button className="icon-btn" onClick={signOut} title="Sign out" aria-label="Sign out">
+          <Icon name="out" />
+        </button>
       </nav>
       <main className="content">
         <Routes>
