@@ -5,8 +5,6 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import type { FileRow } from '../types'
 
-const btn = { textDecoration: 'none', display: 'inline-flex', alignItems: 'center' } as const
-
 function displayName(full: string | null | undefined, email: string | undefined) {
   if (full && full.trim()) return full.trim().split(' ')[0]
   const first = (email ?? '').split('@')[0].split(/[._-]/)[0]
@@ -19,8 +17,8 @@ function Tilt({ children, className = '' }: { children: ReactNode; className?: s
     const r = el.getBoundingClientRect()
     const x = (e.clientX - r.left) / r.width - 0.5
     const y = (e.clientY - r.top) / r.height - 0.5
-    el.style.setProperty('--ry', `${x * 14}deg`)
-    el.style.setProperty('--rx', `${-y * 14}deg`)
+    el.style.setProperty('--ry', `${x * 12}deg`)
+    el.style.setProperty('--rx', `${-y * 12}deg`)
   }
   function leave(e: PointerEvent<HTMLDivElement>) {
     e.currentTarget.style.setProperty('--rx', '0deg')
@@ -59,9 +57,11 @@ export default function Overview() {
   return (
     <>
       <Tilt className="hero rise">
-        <div className="orb a" />
-        <div className="orb b" />
-        <div className="orb c" />
+        <div className="topo">
+          <div className="topo-plane">
+            <i /><i /><i /><i /><i /><i /><i />
+          </div>
+        </div>
         <h1 className="pop">Hi, {name} 👋</h1>
         <p className="pop">Here is what is happening in your workspace.</p>
       </Tilt>
@@ -84,9 +84,9 @@ export default function Overview() {
       <div className="card rise">
         <h2>Quick actions</h2>
         <div className="row">
-          <Link className="btn primary" style={btn} to="/files">Add a file</Link>
-          {isOwner && <Link className="btn" style={btn} to="/people">Invite employees</Link>}
-          {isOwner && <Link className="btn" style={btn} to="/design">Customize dashboard</Link>}
+          <Link className="btn primary" to="/files">Add a file</Link>
+          {isOwner && <Link className="btn" to="/people">Invite employees</Link>}
+          {isOwner && <Link className="btn" to="/design">Customize dashboard</Link>}
         </div>
       </div>
 
