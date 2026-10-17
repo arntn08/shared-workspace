@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
 import { useAuth } from '../lib/auth'
+import { supabase } from '../lib/supabase'
 import { applyPrefs, defaultPrefs, loadPrefs, savePrefs } from '../lib/prefs'
+import { logAction } from '../lib/audit'
+import { Avatar } from '../components/Nav'
 import type { Prefs } from '../types'
 
 const sizes = [
@@ -13,6 +17,9 @@ const sizes = [
 export default function Settings() {
   const { profile, signOut } = useAuth()
   const [p, setP] = useState<Prefs>(defaultPrefs)
+  const [pw, setPw] = useState('')
+  const [pw2, setPw2] = useState('')
+  const [msg, setMsg] = useState<{ text: string; err: boolean } | null>(null)
 
   useEffect(() => {
     if (profile) loadPrefs(profile.id).then(setP)
@@ -24,22 +31,47 @@ export default function Settings() {
     await savePrefs(profile!.id, next)
   }
 
+  async function changePw(e: FormEvent) {
+    e.preventDefault()
+    if (pw.length < 8) return setMsg({ text: 'Use at least 8 characters.', err: true })
+    if (pw !== pw2) return setMsg({ text: 'The two passwords do not match.', err: true })
+    const { error } = await supabase.auth.updateUser({ password: pw })
+    if (error) return setMsg({ text: error.message, err: true })
+    await logAction(profile!.id, 'change_password')
+    setPw('')
+    setPw2('')
+    setMsg({ text: 'Password updated.', err: false })
+  }
+
   return (
     <>
       <h1>Settings</h1>
+
       <div className="card">
-        <h2>Text size</h2>
+        <div className="person">
+          <Avatar name={profile?.full_name} email={profile?.email} large />
+          <div className="info">
+            <strong>{profile?.full_name || profile?.email}</strong>
+            <div className="muted">{profile?.email}</div>
+          </div>
+          <span className={`role ${profile?.role}`}>{profile?.role}</span>
+        </div>
+      </div>
+
+      <div className="card">
+        <h2>Appearance</h2>
+        <label>Text size</label>
         <div className="row">
           {sizes.map((s) => (
-            <button key={s.v} className={p.text_scale === s.v ? 'primary' : ''} onClick={() => update({ ...p, text_scale: s.v })}>
+            <button key={s.v} className={`small${p.text_scale === s.v ? ' primary' : ''}`} onClick={() => update({ ...p, text_scale: s.v })}>
               {s.l}
             </button>
           ))}
         </div>
         <label htmlFor="th">Theme</label>
         <select id="th" value={p.theme} onChange={(e) => update({ ...p, theme: e.target.value as Prefs['theme'] })}>
-          <option value="light">Light</option>
           <option value="dark">Dark</option>
+          <option value="light">Light</option>
         </select>
         <label htmlFor="ct">Contrast</label>
         <select id="ct" value={p.contrast} onChange={(e) => update({ ...p, contrast: e.target.value as Prefs['contrast'] })}>
@@ -47,10 +79,27 @@ export default function Settings() {
           <option value="high">High</option>
         </select>
       </div>
+
+      <form className="card" onSubmit={changePw}>
+        <h2>Change password</h2>
+        <div className="form-grid">
+          <div>
+            <label htmlFor="pw">New password</label>
+            <input id="pw" type="password" autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="pw2">Repeat it</label>
+            <input id="pw2" type="password" autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} />
+          </div>
+        </div>
+        {msg && <p className={msg.err ? 'error' : 'muted'} style={{ marginTop: '0.75rem' }}>{msg.text}</p>}
+        <button className="primary" style={{ marginTop: '1rem' }}>Update password</button>
+      </form>
+
       <div className="card">
         <h2>About access</h2>
         <p className="muted">
-          Files here are view-only and shown only to the people they are assigned to. No website can fully prevent screenshots or copying, so treat anything on screen as visible to the person viewing it. Access is logged.
+          Files are shown only to the people they are assigned to. No website can fully prevent screenshots or copying, so treat anything on screen as visible to the person viewing it. Access is logged.
         </p>
       </div>
       <button onClick={signOut}>Sign out</button>
