@@ -9,7 +9,7 @@ import Activity from '../pages/Activity'
 import Settings from '../pages/Settings'
 import FileViewer from '../pages/FileViewer'
 
-const links: [string, string][] = [
+const ownerLinks: [string, string][] = [
   ['/', 'Overview'],
   ['/files', 'Files'],
   ['/people', 'People & Access'],
@@ -18,9 +18,18 @@ const links: [string, string][] = [
   ['/settings', 'Settings']
 ]
 
+const editorLinks: [string, string][] = [
+  ['/', 'Overview'],
+  ['/files', 'Files'],
+  ['/settings', 'Settings']
+]
+
 export default function OwnerLayout() {
-  const { signOut } = useAuth()
+  const { profile, signOut } = useAuth()
   const [s] = useSettings()
+  const isOwner = profile?.role === 'owner'
+  const links = isOwner ? ownerLinks : editorLinks
+
   return (
     <div className="owner-shell">
       <nav className="sidebar">
@@ -46,10 +55,10 @@ export default function OwnerLayout() {
           <Route path="/" element={<Overview />} />
           <Route path="/files" element={<Files />} />
           <Route path="/file/:id" element={<FileViewer />} />
-          <Route path="/people" element={<People />} />
-          <Route path="/design" element={<DashboardDesign />} />
-          <Route path="/activity" element={<Activity />} />
           <Route path="/settings" element={<Settings />} />
+          {isOwner && <Route path="/people" element={<People />} />}
+          {isOwner && <Route path="/design" element={<DashboardDesign />} />}
+          {isOwner && <Route path="/activity" element={<Activity />} />}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
