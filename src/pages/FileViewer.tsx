@@ -1,8 +1,46 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import type { FileRow } from '../types'
+
+type Kind = 'blank' | 'title' | 'section' | 'head' | 'data'
+interface Line {
+  kind: Kind
+  cells: string[]
+}
+
+const isFilled = (c: string) => c.trim() !== ''
+const lastFilled = (cells: string[]) => {
+  for (let i = cells.length - 1; i >= 0; i--) if (isFilled(cells[i])) return i
+  return 0
+}
+
+function classify(rows: string[][]): Line[] {
+  const out: Line[] = []
+  let seenFirst = false
+  let prev: Kind = 'blank'
+  for (const raw of rows) {
+    const cells = (Array.isArray(raw) ? raw : []).map((c) => String(c ?? ''))
+    const filled = cells.filter(isFilled)
+    let kind: Kind
+    if (filled.length === 0) {
+      kind = 'blank'
+    } else if (filled.length === 1 && !/^[\d.,\s]+$/.test(filled[0])) {
+      kind = !seenFirst ? 'title' : 'section'
+    } else if (prev === 'section') {
+      kind = 'head'
+    } else {
+      kind = 'data'
+    }
+    if (kind !== 'blank') {
+      seenFirst = true
+      prev = kind
+    }
+    out.push({ kind, cells })
+  }
+  return out
+}
 
 export default function FileViewer() {
   const { id } = useParams()
@@ -41,61 +79,16 @@ export default function FileViewer() {
     })()
   }, [id])
 
-  const back = profile?.role === 'owner' ? '/files' : '/'
-  const header = rows[0] ?? []
-  const width = Math.max(0, ...rows.map((r) => r.length))
-  const body = rows.slice(1).filter((r) => !q || r.join(' ').toLowerCase().includes(q.toLowerCase()))
-  const shown = body.slice(0, 1000)
-  const locked = profile?.role !== 'owner'
+  const lines = useMemo(() => classify(rows), [rows])
+  const titleLine = lines.find((l) => l.kind === 'title')
+  const titleText = titleLine ? titleLine.cells.find(isFilled)?.trim() : ''
 
-  return (
-    <>
-      <p><Link to={back}>← Back</Link></p>
-      {!busy && !file && <p className="error">File not found or not available to you.</p>}
-      {file && <h1>{file.title}</h1>}
-      {file && file.kind !== 'gsheet' && file.url && (
-        <p><a href={file.url} target="_blank" rel="noopener noreferrer">Open this file</a></p>
-      )}
-      {busy && <p className="muted">Loading…</p>}
-      {err && <p className="error">{err}</p>}
-      {file?.kind === 'gsheet' && !busy && !err && (
-        <>
-          <div className="notice">View only. Changes to the original sheet appear here automatically.</div>
-          {tabs.length > 1 && (
-            <select value={tab} onChange={(e) => fetchSheet(e.target.value)} style={{ marginBottom: '0.75rem' }}>
-              {tabs.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-          )}
-          <input placeholder="Search this sheet" value={q} onChange={(e) => setQ(e.target.value)} style={{ marginBottom: '0.75rem' }} />
-          <div
-            className="table-wrap"
-            style={locked ? { userSelect: 'none', WebkitUserSelect: 'none' } : undefined}
-            onContextMenu={locked ? (e) => e.preventDefault() : undefined}
-          >
-            <table>
-              <thead>
-                <tr>
-                  {Array.from({ length: width }).map((_, i) => (
-                    <th key={i}>{header[i] ?? ''}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {shown.map((r, ri) => (
-                  <tr key={ri}>
-                    {Array.from({ length: width }).map((_, ci) => (
-                      <td key={ci}>{r[ci] ?? ''}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {body.length > shown.length && <p className="muted">Showing the first 1000 matching rows. Use search to narrow down.</p>}
-        </>
-      )}
-    </>
-  )
-}
+  const query = q.trim().toLowerCase()
+  const shown = useMemo(() => {
+    const body = lines.filter((l) => l.kind !== 'blank' && l.kind !== 'title')
+    const filtered = query ? body.filter((l) => l.cells.join(' ').toLowerCase().includes(query)) : body
+    return filtered.slice(0, 3000)
+  }, [lines, query])
+  const width = Math.max(1, ...shown.map((l) => lastFilled(l.cells) + 1))
+
+  const back = profile?.role === 'employee' ? '/' :
