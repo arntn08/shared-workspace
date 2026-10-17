@@ -4,47 +4,74 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import type { FileRow } from '../types'
 
-type Kind = 'blank' | 'title' | 'section' | 'head' | 'data'
-interface Line {
-  kind: Kind
-  cells: string[]
+interface Section {
+  title: string
+  head: string[] | null
+  rows: string[][]
 }
 
-const isFilled = (c: string) => c.trim() !== ''
-const lastFilled = (cells: string[]) => {
-  for (let i = cells.length - 1; i >= 0; i--) if (isFilled(cells[i])) return i
-  return 0
-}
+const filled = (c: string | undefined) => (c ?? '').trim() !== ''
+const hl = (t: string | undefined) => (/new install|migration/i.test(t ?? '') ? 'hl' : undefined)
 
-function classify(rows: string[][]): Line[] {
-  const out: Line[] = []
-  let seenFirst = false
-  let prev: Kind = 'blank'
+function parse(rows: string[][]) {
+  let title = ''
+  const sections: Section[] = []
+  let cur: Section | null = null
+  let expectHead = false
   for (const raw of rows) {
     const cells = (Array.isArray(raw) ? raw : []).map((c) => String(c ?? ''))
-    const filled = cells.filter(isFilled)
-    let kind: Kind
-    if (filled.length === 0) {
-      kind = 'blank'
-    } else if (filled.length === 1 && !/^[\d.,\s]+$/.test(filled[0])) {
-      kind = !seenFirst ? 'title' : 'section'
-    } else if (prev === 'section') {
-      kind = 'head'
-    } else {
-      kind = 'data'
+    const text = cells.filter((c) => filled(c))
+    if (text.length === 0) continue
+    const lone = text.length === 1 && !/^[\d.,\s]+$/.test(text[0])
+    if (lone && !title && sections.length === 0) {
+      title = text[0].trim()
+      continue
     }
-    if (kind !== 'blank') {
-      seenFirst = true
-      prev = kind
+    if (lone) {
+      cur = { title: text[0].trim(), head: null, rows: [] }
+      sections.push(cur)
+      expectHead = true
+      continue
     }
-    out.push({ kind, cells })
+    if (!cur) {
+      cur = { title: '', head: null, rows: [] }
+      sections.push(cur)
+    }
+    if (expectHead) {
+      cur.head = cells
+      expectHead = false
+      continue
+    }
+    cur.rows.push(cells)
   }
-  return out
+  return { title, sections }
+}
+
+function usedCols(s: Section) {
+  const max = Math.max(0, s.head?.length ?? 0, ...s.rows.map((r) => r.length))
+  const cols: number[] = []
+  for (let i = 0; i < max; i++) {
+    if (filled(s.head?.[i]) || s.rows.some((r) => filled(r[i]))) cols.push(i)
+  }
+  return cols
+}
+
+function useNarrow() {
+  const query = '(max-width: 720px)'
+  const [narrow, setNarrow] = useState(() => window.matchMedia(query).matches)
+  useEffect(() => {
+    const m = window.matchMedia(query)
+    const f = () => setNarrow(m.matches)
+    m.addEventListener('change', f)
+    return () => m.removeEventListener('change', f)
+  }, [])
+  return narrow
 }
 
 export default function FileViewer() {
   const { id } = useParams()
   const { profile } = useAuth()
+  const narrow = useNarrow()
   const [file, setFile] = useState<FileRow | null>(null)
   const [tabs, setTabs] = useState<string[]>([])
   const [tab, setTab] = useState('')
@@ -79,16 +106,120 @@ export default function FileViewer() {
     })()
   }, [id])
 
-  const lines = useMemo(() => classify(rows), [rows])
-  const titleLine = lines.find((l) => l.kind === 'title')
-  const titleText = titleLine ? titleLine.cells.find(isFilled)?.trim() : ''
-
+  const parsed = useMemo(() => parse(rows), [rows])
   const query = q.trim().toLowerCase()
-  const shown = useMemo(() => {
-    const body = lines.filter((l) => l.kind !== 'blank' && l.kind !== 'title')
-    const filtered = query ? body.filter((l) => l.cells.join(' ').toLowerCase().includes(query)) : body
-    return filtered.slice(0, 3000)
-  }, [lines, query])
-  const width = Math.max(1, ...shown.map((l) => lastFilled(l.cells) + 1))
+  const visible = useMemo(
+    () =>
+      parsed.sections
+        .map((s) => ({
+          ...s,
+          rows:
+            query && !s.title.toLowerCase().includes(query)
+              ? s.rows.filter((r) => r.join(' ').toLowerCase().includes(query))
+              : s.rows
+        }))
+        .filter((s) => !query || s.rows.length > 0),
+    [parsed, query]
+  )
 
-  const back = profile?.role === 'employee' ? '/' :
+  const back = profile?.role === 'employee' ? '/' : '/files'
+  const canEdit = profile?.role === 'owner' || profile?.role === 'editor'
+  const locked = !canEdit
+
+  return (
+    <>
+      <p><Link to={back}>← Back</Link></p>
+      {!busy && !file && <p className="error">File not found or not available to you.</p>}
+      {file && <h1>{file.title}</h1>}
+      {file && file.kind !== 'gsheet' && file.url && (
+        <p><a href={file.url} target="_blank" rel="noopener noreferrer">Open this file</a></p>
+      )}
+      {busy && <p className="muted">Loading…</p>}
+      {err && <p className="error">{err}</p>}
+
+      {file?.kind === 'gsheet' && !busy && !err && (
+        <>
+          <div className="notice">
+            <span style={{ flex: 1 }}>View only. Updates from the original sheet appear here automatically.</span>
+            {canEdit && file.url && (
+              <a className="btn primary" style={{ textDecoration: 'none' }} href={file.url} target="_blank" rel="noopener noreferrer">
+                Edit in Google Sheets
+              </a>
+            )}
+          </div>
+
+          <div className="row" style={{ marginBottom: '0.75rem' }}>
+            {tabs.length > 1 && (
+              <select value={tab} onChange={(e) => fetchSheet(e.target.value)} style={{ flex: 1, minWidth: 160 }}>
+                {tabs.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            )}
+            <input placeholder="Search this sheet" value={q} onChange={(e) => setQ(e.target.value)} style={{ flex: 2, minWidth: 180 }} />
+          </div>
+
+          <div
+            className="sheet-wrap"
+            style={locked ? { userSelect: 'none', WebkitUserSelect: 'none' } : undefined}
+            onContextMenu={locked ? (e) => e.preventDefault() : undefined}
+          >
+            {parsed.title && <div className="sheet-title">{parsed.title}</div>}
+            {visible.map((s, si) => {
+              const cols = usedCols(s)
+              return (
+                <section key={si} className="sheet-block">
+                  {s.title && <div className="sheet-band">{s.title}</div>}
+                  {narrow ? (
+                    <div className="sheet-cards">
+                      {s.rows.map((r, ri) => {
+                        const first = cols.find((ci) => filled(r[ci]))
+                        return (
+                          <div key={ri} className="sheet-card">
+                            <div className="sheet-card-title">{first !== undefined ? r[first] : ''}</div>
+                            <div className="sheet-card-grid">
+                              {cols
+                                .filter((ci) => ci !== first && filled(r[ci]))
+                                .map((ci) => (
+                                  <div key={ci}>
+                                    <span>{s.head?.[ci] ?? ''}</span>
+                                    <b>{r[ci]}</b>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <table className="sheet-table">
+                      {s.head && (
+                        <thead>
+                          <tr>
+                            {cols.map((ci) => (
+                              <th key={ci} className={hl(s.head?.[ci])}>{s.head?.[ci] ?? ''}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                      )}
+                      <tbody>
+                        {s.rows.map((r, ri) => (
+                          <tr key={ri}>
+                            {cols.map((ci) => (
+                              <td key={ci}>{r[ci] ?? ''}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </section>
+              )
+            })}
+          </div>
+          {visible.length === 0 && <p className="muted">Nothing matches your search.</p>}
+        </>
+      )}
+    </>
+  )
+}
