@@ -7,6 +7,7 @@ export interface Profile {
   full_name: string | null
   role: Role
   active: boolean
+  teams?: string[] 
   created_at: string
 }
 
