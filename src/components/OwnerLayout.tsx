@@ -8,6 +8,7 @@ import People from '../pages/People'
 import DashboardDesign from '../pages/DashboardDesign'
 import Activity from '../pages/Activity'
 import Settings from '../pages/Settings'
+import MySchedule from '../pages/MySchedule'
 import FileViewer from '../pages/FileViewer'
 
 const ownerLinks: [string, string, string][] = [
@@ -17,12 +18,15 @@ const ownerLinks: [string, string, string][] = [
   ['/design', 'Design', 'design'],
   ['/activity', 'Activity', 'activity'],
   ['/settings', 'Settings', 'settings']
+  ['/schedule', 'Schedule', 'schedule'],
 ]
 
 const editorLinks: [string, string, string][] = [
   ['/', 'Overview', 'home'],
-  ['/files', 'Files', 'files'],
+  ['/files', 'Files', 'files'], 
+  ['/schedule', 'Schedule', 'schedule'],
   ['/settings', 'Settings', 'settings']
+  
 ]
 
 export default function OwnerLayout() {
@@ -55,6 +59,7 @@ export default function OwnerLayout() {
           <Route path="/" element={<Overview />} />
           <Route path="/files" element={<Files />} />
           <Route path="/file/:id" element={<FileViewer />} />
+          <Route path="/schedule" element={<MySchedule />} />
           <Route path="/settings" element={<Settings />} />
           {isOwner && <Route path="/people" element={<People />} />}
           {isOwner && <Route path="/design" element={<DashboardDesign />} />}
