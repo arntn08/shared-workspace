@@ -1,0 +1,41 @@
+.section-title { margin: 1.4rem 0 0.6rem; font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.stagger > * { animation: rise 0.45s ease both; }
+.stagger > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger > *:nth-child(3) { animation-delay: 0.12s; }
+
+.badge.pulse { background: var(--accent); color: var(--accent-ink); animation: pulse 1.8s ease-in-out infinite; }
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+  50% { box-shadow: 0 0 0 7px transparent; }
+}
+
+.ann-item { padding: 0.8rem 0; border-bottom: 1px solid var(--border); }
+.ann-item:last-child { border-bottom: none; }
+.ann-item.pinned { margin: 0 -0.6rem; padding: 0.8rem 0.6rem; border-radius: 14px; background: var(--accent-soft); border-bottom: none; }
+.ann-item p { margin: 0.35rem 0 0.5rem; white-space: pre-wrap; }
+.ann-form { margin: 1rem 0; padding: 1rem; border: 1px dashed var(--border); border-radius: 16px; }
+
+.file-row { position: relative; }
+.file-item .meta { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding-right: 2.4rem; }
+.star {
+  position: absolute; top: 0.55rem; right: 0.7rem; min-height: 36px; width: 36px; padding: 0;
+  border-radius: 50%; border-color: transparent; background: transparent; font-size: 1.25rem; color: var(--muted);
+}
+.star.on { color: var(--yellow); }
+.star:hover { transform: scale(1.12); }
+
+.skeleton {
+  height: 64px; margin-bottom: 0.75rem; border-radius: 18px;
+  background: linear-gradient(90deg, var(--surface-2), var(--surface), var(--surface-2));
+  background-size: 200% 100%; animation: shimmer 1.2s linear infinite;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+.sheet-wrap { overflow-x: auto; }
+.sheet-table { min-width: 720px; }
+.sheet-table td { word-break: normal; overflow-wrap: break-word; }
+.sheet-table td:first-child { white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .badge.pulse, .skeleton, .stagger > * { animation: none; }
+}
