@@ -1,0 +1,60 @@
+.hero3d {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  align-items: center;
+  gap: 1rem;
+  min-height: 270px;
+  margin-bottom: 1.25rem;
+  padding: 2rem 1.75rem;
+  border-radius: 28px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  background:
+    radial-gradient(520px 260px at 85% 0%, rgba(214, 242, 107, 0.16), transparent 70%),
+    linear-gradient(180deg, var(--surface-2), var(--surface));
+}
+.hero3d h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); }
+.hero3d .topo { left: auto; right: 2%; top: 50%; width: 340px; height: 340px; margin-top: -170px; opacity: 0.5; }
+.hero3d-copy { position: relative; z-index: 2; }
+.hero3d-stage { position: relative; z-index: 2; height: 230px; display: grid; place-items: center; perspective: 900px; }
+.logo3d {
+  position: relative;
+  width: 170px;
+  height: 170px;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 0.12s ease-out;
+}
+.logo3d-sway { position: absolute; inset: 0; transform-style: preserve-3d; animation: logoSway 8s ease-in-out infinite; }
+.logo3d-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; border-radius: 18px; }
+.logo-fallback {
+  display: grid; place-items: center; font-size: 4.5rem; font-weight: 800;
+  border-radius: 38px; background: var(--accent); color: var(--accent-ink);
+}
+.logo-shadow {
+  position: absolute; left: 50%; bottom: -34px; width: 150px; height: 26px; margin-left: -75px;
+  border-radius: 50%; filter: blur(4px);
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.45), transparent);
+  animation: shadowPulse 8s ease-in-out infinite;
+}
+@keyframes logoSway {
+  0%, 100% { transform: rotateY(-16deg) translateY(0); }
+  50% { transform: rotateY(16deg) translateY(-10px); }
+}
+@keyframes shadowPulse {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(0.8); opacity: 0.55; }
+}
+.btn.small { min-height: 34px; padding: 0.3rem 0.85rem; font-size: 0.82rem; }
+.logo-upload { margin: 0; cursor: pointer; }
+
+@media (max-width: 760px) {
+  .hero3d { grid-template-columns: 1fr; }
+  .hero3d-stage { height: 190px; }
+  .hero3d .topo { opacity: 0.3; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo3d-sway, .logo-shadow { animation: none; }
+}
