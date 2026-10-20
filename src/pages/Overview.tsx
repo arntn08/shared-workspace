@@ -3,6 +3,7 @@ import type { PointerEvent, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import Hero from '../components/Hero'
 import { actionKind, actionLabel, detailText } from '../lib/labels'
 import type { FileRow } from '../types'
 
@@ -112,15 +113,7 @@ export default function Overview() {
 
   return (
     <>
-      <Tilt className="hero rise">
-        <div className="topo">
-          <div className="topo-plane">
-            <i /><i /><i /><i /><i /><i /><i />
-          </div>
-        </div>
-        <h1 className="pop">Hi, {name} 👋</h1>
-        <p className="pop">{today} · here is what is happening in your workspace.</p>
-      </Tilt>
+           <Hero name={name} subtitle={`${today} · here is what is happening in your workspace.`} canUpload={isOwner} />
 
       <div className="grid metrics" style={{ marginBottom: '1rem' }}>
         <Metric label="Files" value={stats.files} />
