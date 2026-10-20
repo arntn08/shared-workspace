@@ -5,6 +5,7 @@ import { Avatar, Icon, ThemeButton } from './Nav'
 import EmployeeHome from '../pages/EmployeeHome'
 import FileViewer from '../pages/FileViewer'
 import Settings from '../pages/Settings'
+import MySchedule from '../pages/MySchedule'
 
 export default function EmployeeLayout() {
   const { profile } = useAuth()
@@ -16,6 +17,10 @@ export default function EmployeeLayout() {
         <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>
           <Icon name="files" />
           <span>Files</span>
+        </NavLink>
+          <NavLink to="/schedule" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <Icon name="schedule" />
+          <span>My schedule</span>
         </NavLink>
         <NavLink to="/settings" className={({ isActive }) => (isActive ? 'active' : '')}>
           <Icon name="settings" />
@@ -31,6 +36,7 @@ export default function EmployeeLayout() {
       <Routes>
         <Route path="/" element={<EmployeeHome settings={s} />} />
         <Route path="/file/:id" element={<FileViewer />} />
+        <Route path="/schedule" element={<MySchedule />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
