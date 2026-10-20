@@ -4,13 +4,15 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import Hero from '../components/Hero'
+import Announcements from '../components/Announcements'
 import { actionKind, actionLabel, detailText } from '../lib/labels'
 import type { FileRow } from '../types'
 
 function displayName(full: string | null | undefined, email: string | undefined) {
-  if (full && full.trim()) return full.trim().split(' ')[0]
-  const first = (email ?? '').split('@')[0].split(/[._-]/)[0]
-  return first ? first.charAt(0).toUpperCase() + first.slice(1) : 'there'
+  const nice = (w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+  if (full && full.trim()) return nice(full.trim().split(' ')[0])
+  const last = (email ?? '').split('@')[0].split(/[._-]/).pop() ?? ''
+  return last ? nice(last) : 'there'
 }
 
 function useCountUp(target: number) {
@@ -120,7 +122,7 @@ export default function Overview() {
         <Metric label="Active employees" value={stats.people} />
         <Metric label="File assignments" value={stats.assignments} />
       </div>
-
+      <Announcements canPost />
       {isOwner && (
         <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
           <div className="card rise">
