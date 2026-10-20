@@ -14,19 +14,18 @@ import FileViewer from '../pages/FileViewer'
 const ownerLinks: [string, string, string][] = [
   ['/', 'Overview', 'home'],
   ['/files', 'Files', 'files'],
+  ['/schedule', 'Schedule', 'schedule'],
   ['/people', 'People', 'people'],
   ['/design', 'Design', 'design'],
   ['/activity', 'Activity', 'activity'],
   ['/settings', 'Settings', 'settings']
-  ['/schedule', 'Schedule', 'schedule'],
 ]
 
 const editorLinks: [string, string, string][] = [
   ['/', 'Overview', 'home'],
-  ['/files', 'Files', 'files'], 
+  ['/files', 'Files', 'files'],
   ['/schedule', 'Schedule', 'schedule'],
   ['/settings', 'Settings', 'settings']
-  
 ]
 
 export default function OwnerLayout() {
