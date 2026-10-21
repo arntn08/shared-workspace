@@ -54,7 +54,17 @@ html[data-theme="light"] .angel-stage::before { --scrim: rgba(249, 244, 233, 0.8
 
 /* Two art plates, crossfaded */
 .plate { position: absolute; inset: 0; opacity: 0; transition: opacity 1.4s ease; }
-.plate-img { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; pointer-events: none; }
+.plate-img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  user-select: none;
+  pointer-events: none;
+}
 html:not([data-theme="light"]) .plate.dark,
 html[data-theme="light"] .plate.light { opacity: 1; }
 html:not([data-theme="light"]) .plate.light .fx,
