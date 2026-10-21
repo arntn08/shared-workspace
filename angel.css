@@ -1,0 +1,208 @@
+/* Active-theme helpers: dark is the default until data-theme="light" is set */
+.angel-stage { position: absolute; inset: 0; overflow: hidden; isolation: isolate; --mx: 0; --my: 0; }
+
+/* Sky: crossfades between themes */
+.sky { position: absolute; inset: 0; opacity: 0; transition: opacity 1.4s ease; }
+.sky-light {
+  background:
+    radial-gradient(900px 620px at 58% 6%, #fffaf0, transparent 70%),
+    linear-gradient(180deg, #f9f4e9, #ede3cf);
+}
+.sky-dark {
+  background:
+    radial-gradient(820px 580px at 58% 8%, rgba(214, 178, 106, 0.24), transparent 70%),
+    linear-gradient(180deg, #09090b, #17171b 62%, #0b0b0d);
+}
+html:not([data-theme="light"]) .sky-dark,
+html[data-theme="light"] .sky-light { opacity: 1; }
+
+/* Legibility scrim for the copy on the left */
+.angel-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(90deg, var(--scrim, rgba(9, 9, 11, 0.72)) 0, transparent 46%);
+}
+html[data-theme="light"] .angel-stage::before { --scrim: rgba(249, 244, 233, 0.82); }
+
+/* Parallax layer */
+.layer { position: absolute; inset: 0; will-change: transform; }
+.l-angel { transform: translate3d(calc(var(--mx) * -18px), calc(var(--my) * -12px), 0); }
+
+.angel-box {
+  --h: min(94vh, 1020px);
+  --w: calc(var(--h) * 0.7567);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--w);
+  height: var(--h);
+  margin-left: calc(var(--w) * -0.66);
+  margin-top: calc(var(--h) * -0.5);
+}
+.angel-float { position: absolute; inset: 0; animation: bob 8s ease-in-out infinite; }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.1%); } }
+
+.feather {
+  position: absolute;
+  inset: 0;
+  -webkit-mask-image: radial-gradient(ellipse 58% 60% at 58% 48%, #000 52%, transparent 98%);
+  mask-image: radial-gradient(ellipse 58% 60% at 58% 48%, #000 52%, transparent 98%);
+}
+
+/* Two art plates, crossfaded */
+.plate { position: absolute; inset: 0; opacity: 0; transition: opacity 1.4s ease; }
+.plate-img { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; pointer-events: none; }
+html:not([data-theme="light"]) .plate.dark,
+html[data-theme="light"] .plate.light { opacity: 1; }
+html:not([data-theme="light"]) .plate.light .fx,
+html[data-theme="light"] .plate.dark .fx { animation-play-state: paused; }
+/* The dark artwork sits slightly right of the light one; line the two up */
+.plate.dark { transform: translateX(-2.9%); }
+
+/* Motion layers: the art is repeated and masked to one region, then nudged */
+.fx { position: absolute; inset: 0; background-size: 100% 100%; background-repeat: no-repeat; pointer-events: none; will-change: transform; }
+.wing-l {
+  -webkit-mask-image: radial-gradient(ellipse 21% 20% at 38% 25%, #000 45%, transparent 100%);
+  mask-image: radial-gradient(ellipse 21% 20% at 38% 25%, #000 45%, transparent 100%);
+  transform-origin: 58% 31%;
+  animation: flapL 6.5s ease-in-out infinite;
+}
+.wing-r {
+  -webkit-mask-image: radial-gradient(ellipse 17% 20% at 86% 26%, #000 45%, transparent 100%);
+  mask-image: radial-gradient(ellipse 17% 20% at 86% 26%, #000 45%, transparent 100%);
+  transform-origin: 73% 31%;
+  animation: flapR 6.5s ease-in-out infinite;
+}
+.silk-body {
+  -webkit-mask-image: radial-gradient(ellipse 34% 17% at 62% 66%, #000 40%, transparent 100%);
+  mask-image: radial-gradient(ellipse 34% 17% at 62% 66%, #000 40%, transparent 100%);
+  transform-origin: 62% 52%;
+  animation: silkA 7s ease-in-out infinite;
+}
+.silk-floor {
+  -webkit-mask-image: radial-gradient(ellipse 32% 9% at 22% 83%, #000 40%, transparent 100%);
+  mask-image: radial-gradient(ellipse 32% 9% at 22% 83%, #000 40%, transparent 100%);
+  animation: silkB 9s ease-in-out infinite;
+}
+@keyframes flapL { 0%, 100% { transform: rotate(0.5deg); } 50% { transform: rotate(-1.2deg) scale(1.008); } }
+@keyframes flapR { 0%, 100% { transform: rotate(-0.5deg); } 50% { transform: rotate(1.2deg) scale(1.008); } }
+@keyframes silkA { 0%, 100% { transform: translateY(0) skewX(-0.8deg); } 50% { transform: translateY(-0.7%) skewX(0.8deg); } }
+@keyframes silkB { 0%, 100% { transform: translateX(0) skewY(-0.7deg); } 50% { transform: translateX(1.4%) skewY(0.7deg); } }
+
+/* Halo glow and light rays (above the art, blended) */
+.halo {
+  position: absolute;
+  left: 63%;
+  top: 14.5%;
+  width: 34%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 214, 140, 0.5), rgba(255, 214, 140, 0) 65%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: breathe 6s ease-in-out infinite;
+}
+html[data-theme="light"] .halo { background: radial-gradient(circle, rgba(255, 246, 220, 0.75), rgba(255, 246, 220, 0) 65%); }
+@keyframes breathe { 0%, 100% { opacity: 0.75; transform: translate(-50%, -50%) scale(0.96); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); } }
+
+.rays {
+  position: absolute;
+  left: 63%;
+  top: 14.5%;
+  width: 230%;
+  height: 170%;
+  transform: translateX(-50%);
+  transform-origin: 50% 0;
+  background: conic-gradient(from 166deg at 50% 0%, transparent 0deg, rgba(255, 226, 170, 0.2) 7deg, transparent 13deg, transparent 21deg, rgba(255, 226, 170, 0.14) 27deg, transparent 33deg, transparent 43deg);
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 80%);
+  mask-image: linear-gradient(180deg, #000, transparent 80%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: sway 18s ease-in-out infinite alternate;
+}
+html[data-theme="light"] .rays { opacity: 0.8; }
+@keyframes sway { from { transform: translateX(-50%) rotate(-2.5deg); } to { transform: translateX(-50%) rotate(2.5deg); } }
+
+/* Dust */
+.motes { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+
+/* Cinematic light sweep on theme change */
+.sweep {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-120%);
+  mix-blend-mode: screen;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 226, 160, 0.6) 50%, transparent 70%);
+}
+.angel-stage.flash .sweep { animation: sweep 1.2s ease-in-out; }
+@keyframes sweep { 0% { opacity: 1; transform: translateX(-120%); } 100% { opacity: 1; transform: translateX(120%); } }
+
+/* Copy and brand */
+.angel-brand, .angel-copy { position: absolute; z-index: 5; color: var(--text); }
+.angel-brand {
+  left: clamp(1.25rem, 6vw, 6rem);
+  top: 1.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: ui-serif, Georgia, 'Times New Roman', serif;
+  font-size: 1.05rem;
+}
+.angel-brand svg { width: 26px; height: 26px; fill: var(--accent); filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 60%, transparent)); }
+.angel-copy { left: clamp(1.25rem, 6vw, 6rem); top: 50%; transform: translateY(-50%); max-width: min(30rem, 36vw); }
+.angel-copy .eyebrow { font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); margin-bottom: 1.1rem; }
+.angel-copy h2 {
+  font-family: ui-serif, Georgia, 'Times New Roman', serif;
+  font-weight: 500;
+  font-size: clamp(2rem, 3.4vw, 3.5rem);
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  margin: 0 0 1.2rem;
+}
+.angel-copy .pitch { color: var(--muted); font-size: 1.05rem; line-height: 1.6; max-width: 24rem; }
+.gold-rule { display: block; width: 44px; height: 2px; margin-top: 1.4rem; background: var(--accent); }
+
+.angel-theme {
+  position: absolute;
+  z-index: 6;
+  top: 1.2rem;
+  right: 1.2rem;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  backdrop-filter: blur(10px);
+  color: var(--accent);
+}
+.angel-theme .i-moon { display: none; }
+html[data-theme="light"] .angel-theme .i-sun { display: none; }
+html[data-theme="light"] .angel-theme .i-moon { display: inline-flex; }
+.angel-theme:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* Login card details */
+.login-spark { width: 30px; height: 30px; fill: var(--accent); margin-bottom: 0.6rem; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 55%, transparent)); }
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 4.6rem; }
+.pw-toggle { position: absolute; right: 0.35rem; top: 50%; transform: translateY(-50%); min-height: 34px; padding: 0 0.7rem; font-size: 0.8rem; border-color: transparent; background: transparent; color: var(--muted); }
+.login-foot { margin: 1.2rem 0 0; text-align: center; font-size: 0.78rem; color: var(--muted); }
+
+/* Mobile: angel on top, card below */
+@media (max-width: 899px) {
+  .angel-box { --h: min(70vh, 125vw); top: 2vh; margin-top: 0; }
+  .angel-copy { display: none; }
+  .angel-stage::before { background: linear-gradient(180deg, transparent 40%, var(--scrim, rgba(9, 9, 11, 0.72)) 100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx, .halo, .rays, .angel-float, .sweep { animation: none !important; }
+  .l-angel { transform: none; }
+  .plate, .sky { transition: none; }
+}
