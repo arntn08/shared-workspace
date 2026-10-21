@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { PointerEvent } from 'react'
 import { defaultPrefs } from '../lib/prefs'
 import { Icon } from './Nav'
-import './hero.css'
+import './angel.css'
 
 const BASE = import.meta.env.BASE_URL as string
 const ART = { light: `${BASE}hero/angel-light.webp`, dark: `${BASE}hero/angel-dark.webp` }
