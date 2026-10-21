@@ -1,0 +1,137 @@
+/* Premium theme: loaded last so it overrides earlier tokens and layout. */
+:root {
+  --bg: #0c0c0e;
+  --surface: #141416;
+  --surface-2: #1a1a1d;
+  --text: #efe9dd;
+  --muted: #9b958a;
+  --border: rgba(214, 178, 106, 0.16);
+  --accent: #d6b26a;
+  --accent-ink: #1b1405;
+  --accent-soft: rgba(214, 178, 106, 0.12);
+  --teal: #c9b88f;
+  --yellow: #f3d98a;
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+[data-theme="light"] {
+  --bg: #f6f2ea;
+  --surface: #fffdf8;
+  --surface-2: #faf6ee;
+  --text: #2a2418;
+  --muted: #6f6553;
+  --border: rgba(166, 130, 60, 0.24);
+  --accent: #8a6420;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(138, 100, 32, 0.1);
+  --teal: #7d6d48;
+  --yellow: #f0cf6a;
+  --shadow: 0 20px 50px rgba(120, 95, 40, 0.14);
+}
+
+body {
+  background:
+    radial-gradient(900px 500px at 85% -10%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+}
+body::before {
+  background:
+    radial-gradient(520px 380px at 18% 12%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 60%),
+    radial-gradient(620px 460px at 82% 88%, color-mix(in srgb, var(--teal) 8%, transparent), transparent 60%);
+}
+
+h1, h2, .sidebar .brand { font-family: ui-serif, Georgia, 'Times New Roman', serif; letter-spacing: -0.01em; }
+h1 { font-weight: 500; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Cards, hero, nav pill */
+.card { border-radius: 20px; }
+.hero3d {
+  background:
+    radial-gradient(520px 260px at 85% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--surface-2), var(--surface));
+}
+.hero3d::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.22;
+  pointer-events: none;
+  background: url(/hero/angel-dark.webp) right -6% top 8% / auto 170% no-repeat;
+  -webkit-mask-image: linear-gradient(90deg, transparent 25%, #000 85%);
+  mask-image: linear-gradient(90deg, transparent 25%, #000 85%);
+}
+[data-theme="light"] .hero3d::before { background-image: url(/hero/angel-light.webp); opacity: 0.35; }
+.hero3d > * { position: relative; }
+.hero3d > .topo { position: absolute; }
+.sheet-title { background: linear-gradient(180deg, var(--surface-2), var(--surface)); }
+
+/* Desktop: vertical sidebar with profile footer */
+.side-foot { display: contents; }
+.who { display: none; }
+@media (min-width: 900px) {
+  .owner-shell { flex-direction: row; align-items: stretch; }
+  .owner-shell > .sidebar {
+    position: sticky;
+    top: 0;
+    flex: none;
+    width: 248px;
+    max-width: none;
+    height: 100vh;
+    margin: 0;
+    padding: 1.4rem 0.9rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.2rem;
+    overflow-y: auto;
+    border-width: 0 1px 0 0;
+    border-radius: 0 28px 28px 0;
+  }
+  .owner-shell > .sidebar .brand { padding: 0 0.6rem 1.1rem; font-size: 1.15rem; }
+  .owner-shell > .sidebar a { padding: 0.7rem 0.9rem; border-radius: 14px; }
+  .owner-shell > .sidebar a.active { box-shadow: inset 3px 0 0 var(--accent); }
+  .owner-shell .side-foot { display: flex; align-items: center; gap: 0.4rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
+  .owner-shell .side-foot .me { flex: 1; min-width: 0; gap: 0.6rem; padding: 0; }
+  .owner-shell .who { display: grid; min-width: 0; line-height: 1.2; }
+  .owner-shell .who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.86rem; }
+  .owner-shell .who i { font-style: normal; font-size: 0.72rem; color: var(--muted); text-transform: capitalize; }
+}
+
+/* Phones: bottom tab bar with labels */
+@media (max-width: 640px) {
+  .sidebar {
+    position: fixed;
+    top: auto;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    left: 10px;
+    right: 10px;
+    margin: 0;
+    max-width: none;
+    justify-content: space-between;
+    border-radius: 26px;
+    padding: 0.4rem;
+    z-index: 30;
+  }
+  .sidebar a { flex-direction: column; gap: 2px; min-width: 0; padding: 0.45rem 0.55rem; border-radius: 16px; font-size: 0.66rem; }
+  .sidebar a:not(.active) span { display: block; }
+  .sidebar a.active { background: var(--accent-soft); color: var(--accent); }
+  .content, .employee-shell { padding-bottom: calc(6.5rem + env(safe-area-inset-bottom)); }
+}
+
+/* Login: glass card on the right (desktop) or bottom (mobile) */
+.login-stage { justify-items: end; padding-right: clamp(1rem, 6vw, 6.5rem); }
+.login-card {
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  backdrop-filter: blur(22px) saturate(1.2);
+  -webkit-backdrop-filter: blur(22px) saturate(1.2);
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  box-shadow: var(--shadow);
+  transform: none;
+  transition: none;
+}
+.login-card h1 { font-size: 1.9rem; }
+@media (max-width: 899px) {
+  .login-stage { justify-items: center; align-items: end; padding: 1rem 1rem 1.5rem; }
+  .login-card { width: min(440px, 100%); }
+}
