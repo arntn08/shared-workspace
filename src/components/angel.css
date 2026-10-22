@@ -213,7 +213,7 @@ html[data-theme="light"] .angel-theme .i-moon { display: inline-flex; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fx, .halo, .rays, .angel-float, .sweep { animation: none !important; }
+   .fx, .halo, .rays, .angel-float, .angel-box, .sweep { animation: none !important; }
   .l-angel { transform: none; }
   .plate, .sky { transition: none; }
 }
