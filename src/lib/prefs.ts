@@ -1,7 +1,10 @@
 import { supabase } from './supabase'
 import type { Prefs } from '../types'
 
-export const defaultPrefs: Prefs = { text_scale: 1, theme: 'dark', contrast: 'normal' }
+function savedTheme(): Prefs['theme'] {
+  try { return localStorage.getItem('ws-theme') === 'light' ? 'light' : 'dark' } catch { return 'dark' }
+}
+export const defaultPrefs: Prefs = { text_scale: 1, theme: savedTheme(), contrast: 'normal' }
 
 export function applyPrefs(p: Prefs) {
   const r = document.documentElement
