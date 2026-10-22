@@ -42,9 +42,10 @@ html[data-theme="light"] .angel-stage::before { --scrim: rgba(249, 244, 233, 0.8
   margin-left: calc(var(--w) * -0.66);
   margin-top: calc(var(--h) * -0.5);
 }
-.angel-float { position: absolute; inset: 0; animation: bob 8s ease-in-out infinite; }
-@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.1%); } }
-
+.angel-box { animation: descend 2.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes descend { from { opacity: 0; transform: translateY(-10%) scale(1.04); } to { opacity: 1; transform: none; } }
+.angel-float { position: absolute; inset: 0; animation: bob 7s ease-in-out 2.2s infinite; }
+@keyframes bob { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-2.4%) rotate(0.35deg); } }
 .feather {
   position: absolute;
   inset: 0;
