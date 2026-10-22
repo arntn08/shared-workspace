@@ -46,12 +46,14 @@ export default function OwnerLayout() {
         ))}
         <div className="spacer" />
         <ThemeButton />
-        <div className="me">
+       <div className="side-foot">
+          <div className="me">
           <Avatar name={profile?.full_name} email={profile?.email} />
+          <span className="who"><b>{profile?.full_name || profile?.email}</b><i>{profile?.role}</i></span>
+          </div>
+          <ThemeButton />
+            <button className="icon-btn" onClick={signOut} title="Sign out" aria-label="Sign out"><Icon name="out" /></button>
         </div>
-        <button className="icon-btn" onClick={signOut} title="Sign out" aria-label="Sign out">
-          <Icon name="out" />
-        </button>
       </nav>
       <main className="content">
         <Routes>
