@@ -2,145 +2,105 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
-import Hero from '../components/Hero'
+import { useNotifs } from '../lib/notifications'
+import { prettyDate, todayIso } from '../lib/dates'
+import { Icon } from '../components/Nav'
 import Announcements from '../components/Announcements'
 import type { DashSettings } from '../lib/settings'
 import type { FileRow } from '../types'
+import '../components/tabs.css'
 
-const WEEK = 7 * 864e5
 const nice = (w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
-
-function firstName(full: string | null | undefined, email: string | undefined) {
-  if (full && full.trim()) return nice(full.trim().split(' ')[0])
-  const last = (email ?? '').split('@')[0].split(/[._-]/).pop() ?? ''
-  return last ? nice(last) : 'there'
-}
 
 export default function EmployeeHome({ settings }: { settings: DashSettings }) {
   const { profile } = useAuth()
-  const [files, setFiles] = useState<FileRow[]>([])
-  const [added, setAdded] = useState<Record<string, string>>({})
-  const [favs, setFavs] = useState<string[]>([])
-  const [q, setQ] = useState('')
-  const [busy, setBusy] = useState(true)
+  const { items, unread, loading, error, offline, ack, done, markRead } = useNotifs()
+  const [recent, setRecent] = useState<FileRow[]>([])
+  const today = todayIso()
 
   useEffect(() => {
-    ;(async () => {
-      const [f, a, v] = await Promise.all([
-        supabase.from('files').select('*').order('created_at', { ascending: false }),
-        supabase.from('assignments').select('file_id,created_at'),
-        supabase.from('favorites').select('file_id')
-      ])
-      setFiles((f.data ?? []) as FileRow[])
-      const m: Record<string, string> = {}
-      ;(a.data ?? []).forEach((r: any) => {
-        m[r.file_id] = r.created_at
-      })
-      setAdded(m)
-      setFavs((v.data ?? []).map((r: any) => r.file_id as string))
-      setBusy(false)
-    })()
+    supabase
+      .from('files')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(4)
+      .then(({ data }) => setRecent((data ?? []) as FileRow[]))
   }, [])
 
-  async function toggleFav(f: FileRow) {
-    const on = favs.includes(f.id)
-    setFavs(on ? favs.filter((x) => x !== f.id) : [...favs, f.id])
-    if (on) await supabase.from('favorites').delete().eq('user_id', profile!.id).eq('file_id', f.id)
-    else await supabase.from('favorites').insert({ user_id: profile!.id, file_id: f.id })
-  }
-
-  const isNew = (f: FileRow) => !!added[f.id] && Date.now() - new Date(added[f.id]).getTime() < WEEK
-  const needle = q.trim().toLowerCase()
-  const shown = files.filter((f) => !needle || `${f.title} ${f.month_label ?? ''}`.toLowerCase().includes(needle))
-  const pinned = shown.filter((f) => favs.includes(f.id))
-  const rest = shown.filter((f) => !favs.includes(f.id))
-  const groups: Record<string, FileRow[]> = {}
-  rest.forEach((f) => {
-    const k = settings.group_by_month ? f.month_label || 'Other' : ''
-    ;(groups[k] = groups[k] ?? []).push(f)
-  })
-
-  const name = firstName(profile?.full_name, profile?.email)
-  const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
-  const teams = profile?.teams ?? []
-
-  const row = (f: FileRow) => {
-    const inner = (
-      <>
-        <div className="meta">
-          <strong>{f.title}</strong>
-          {isNew(f) && <span className="badge pulse">New</span>}
-        </div>
-        <span className="muted">{f.month_label ?? ''}</span>
-      </>
-    )
-    return (
-      <div className="file-row" key={f.id}>
-        {f.kind === 'gsheet' ? (
-          <Link className="file-item" to={`/file/${f.id}`}>{inner}</Link>
-        ) : (
-          <a className="file-item" href={f.url ?? '#'} target="_blank" rel="noopener noreferrer">{inner}</a>
-        )}
-        <button className={`star${favs.includes(f.id) ? ' on' : ''}`} onClick={() => toggleFav(f)} title="Pin file" aria-label="Pin file">
-          {favs.includes(f.id) ? '★' : '☆'}
-        </button>
-      </div>
-    )
-  }
+  const name = profile?.full_name?.trim() ? nice(profile.full_name.trim().split(' ')[0]) : 'there'
+  const open = items.filter((n) => !n.done_at)
+  const attention = open.filter((n) => !n.ack_at).slice(0, 3)
+  const deadlines = open
+    .filter((n) => n.due_on)
+    .sort((a, b) => (a.due_on! < b.due_on! ? -1 : 1))
+    .slice(0, 5)
+  const updated = new Set(items.filter((n) => !n.read_at && n.file_id).map((n) => n.file_id))
 
   return (
     <>
-      <Hero name={name} subtitle={`${today} · welcome back`} canUpload={false} />
-
-      {teams.length > 0 && (
-        <div className="row" style={{ marginBottom: '1rem', gap: '0.4rem' }}>
-          {teams.map((t) => (
-            <span key={t} className="badge">{t}</span>
-          ))}
-        </div>
-      )}
-
-      <div className="grid metrics stagger" style={{ marginBottom: '1rem' }}>
-        <div className="card">
-          <div className="muted">Files for you</div>
-          <div className="metric-value">{files.length}</div>
-        </div>
-        <div className="card">
-          <div className="muted">New this week</div>
-          <div className="metric-value">{files.filter(isNew).length}</div>
-        </div>
-        <Link className="card" to="/schedule" style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
-          <div className="muted">My schedule</div>
-          <div className="metric-value" style={{ fontSize: '1.4rem' }}>Open →</div>
-        </Link>
+      <div className="card glass">
+        <h1 style={{ marginBottom: '0.15rem' }}>Hi, {name} 👋</h1>
+        <p className="muted" style={{ margin: 0 }}>
+          {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+          {' · '}
+          {unread > 0 ? `${unread} unread` : 'all caught up'}
+        </p>
       </div>
+
+      {offline && <div className="notice">You are offline. Showing reminders saved on this device.</div>}
+      {error && !offline && <div className="notice error">{error}</div>}
+
+      <div className="quick-grid">
+        <Link to="/schedule" className="qa"><Icon name="schedule" /><span>My schedule</span></Link>
+        <Link to="/files" className="qa"><Icon name="files" /><span>Files</span></Link>
+        <Link to="/notifications" className="qa"><Icon name="bell" /><span>Alerts{unread > 0 ? ` (${unread})` : ''}</span></Link>
+        <Link to="/settings" className="qa"><Icon name="user" /><span>Profile</span></Link>
+      </div>
+
+      <div className="section-title">Needs your attention</div>
+      {loading && <div className="skeleton" />}
+      {!loading && attention.length === 0 && <div className="empty">Nothing needs your attention.</div>}
+      {attention.map((n) => (
+        <div key={n.id} className="notif-card unread">
+          <strong>{n.title}</strong>
+          {n.body && <p style={{ margin: '0.3rem 0' }}>{n.body}</p>}
+          <div className="row" style={{ gap: '0.4rem' }}>
+            {n.file_id && <Link className="btn small" to={`/file/${n.file_id}`} onClick={() => markRead([n.id])}>Open file</Link>}
+            <button className="small" onClick={() => ack(n.id)}>Got it</button>
+            <button className="small primary" onClick={() => done(n.id)}>Mark done</button>
+          </div>
+        </div>
+      ))}
+
+      <div className="section-title">Upcoming deadlines</div>
+      {!loading && deadlines.length === 0 && <div className="empty">No deadlines right now.</div>}
+      {deadlines.map((n) => {
+        const late = n.due_on! < today
+        return (
+          <div key={n.id} className="deadline">
+            <div>
+              <strong>{n.title}</strong>
+              <div className="muted" style={{ fontSize: '0.82rem' }}>{prettyDate(n.due_on!)}</div>
+            </div>
+            <span className={`badge${late ? ' admin' : n.due_on === today ? ' pulse' : ''}`}>{late ? 'Overdue' : n.due_on === today ? 'Today' : 'Upcoming'}</span>
+          </div>
+        )
+      })}
 
       <Announcements canPost={false} />
 
-      {settings.show_search && (
-        <input placeholder="Search files" value={q} onChange={(e) => setQ(e.target.value)} style={{ margin: '0.5rem 0 0.25rem' }} />
-      )}
-
-      {busy && (
-        <>
-          <div className="skeleton" />
-          <div className="skeleton" />
-        </>
-      )}
-      {!busy && shown.length === 0 && <p className="muted">No files to show.</p>}
-
-      {pinned.length > 0 && (
-        <>
-          <div className="section-title">Pinned</div>
-          {pinned.map(row)}
-        </>
-      )}
-      {Object.entries(groups).map(([k, list]) => (
-        <div key={k}>
-          <div className="section-title">{k || 'All files'}</div>
-          {list.map(row)}
-        </div>
+      <div className="section-title">Recent files</div>
+      {recent.length === 0 && <div className="empty">No files shared with you yet.</div>}
+      {recent.map((f) => (
+        <Link key={f.id} className="file-item" to={f.kind === 'gsheet' ? `/file/${f.id}` : '/files'}>
+          <div className="meta">
+            <strong>{f.title}</strong>
+            {updated.has(f.id) && <span className="badge pulse">Updated</span>}
+          </div>
+          <span className="muted">{f.month_label ?? ''}</span>
+        </Link>
       ))}
+      {settings.show_search && <p className="muted" style={{ fontSize: '0.8rem' }}>Search all your files on the Files tab.</p>}
     </>
   )
 }
