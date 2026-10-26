@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { useNotifs } from '../lib/notifications'
+import { ageLabel, cacheGet, cacheSet } from '../lib/offline'
 import type { DashSettings } from '../lib/settings'
 import type { FileRow } from '../types'
 import '../components/tabs.css'
@@ -18,6 +19,7 @@ export default function EmployeeFiles({ settings }: { settings: DashSettings }) 
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState(true)
   const [err, setErr] = useState('')
+  const [savedAt, setSavedAt] = useState<number | null>(null)
 
   useEffect(() => {
     ;(async () => {
@@ -26,14 +28,30 @@ export default function EmployeeFiles({ settings }: { settings: DashSettings }) 
         supabase.from('assignments').select('file_id,created_at'),
         supabase.from('favorites').select('file_id')
       ])
-      if (f.error) setErr('Could not load your files.')
-      setFiles((f.data ?? []) as FileRow[])
+      const uid = profile?.id
+      type Snap = { files: FileRow[]; added: Record<string, string>; favs: string[] }
+      if (f.error) {
+        const c = uid ? cacheGet<Snap>(uid, 'files') : null
+        if (c) {
+          setFiles(c.data.files)
+          setAdded(c.data.added)
+          setFavs(c.data.favs)
+          setSavedAt(c.at)
+          setBusy(false)
+          return
+        }
+        setErr('Could not load your files.')
+      }
+      const list = (f.data ?? []) as FileRow[]
       const m: Record<string, string> = {}
       ;(a.data ?? []).forEach((r: any) => {
         m[r.file_id] = r.created_at
       })
+      const fav = (v.data ?? []).map((r: any) => r.file_id as string)
+      setFiles(list)
       setAdded(m)
-      setFavs((v.data ?? []).map((r: any) => r.file_id as string))
+      setFavs(fav)
+      if (!f.error && uid) cacheSet<Snap>(uid, 'files', { files: list, added: m, favs: fav })
       setBusy(false)
     })()
   }, [])
@@ -82,6 +100,7 @@ export default function EmployeeFiles({ settings }: { settings: DashSettings }) 
       <div className="page-head"><h1>{settings.welcome || 'Files'}</h1></div>
       {settings.show_search && <input placeholder="Search files" value={q} onChange={(e) => setQ(e.target.value)} style={{ marginBottom: '0.75rem' }} />}
       {err && <div className="notice error">{err}</div>}
+      {savedAt && <div className="notice">Offline: showing the list saved {ageLabel(savedAt)}.</div>}
       {busy && (
         <>
           <div className="skeleton" />
