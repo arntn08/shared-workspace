@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useNotifs } from '../lib/notifications'
+import { useAuth } from '../lib/auth'
+import { useLocalUpdates } from '../lib/offline'
 import { prettyDate, todayIso } from '../lib/dates'
 import '../components/tabs.css'
 
@@ -16,6 +18,8 @@ function ago(iso: string) {
 
 export default function Notifications() {
   const { items, unread, loading, error, offline, reload, markRead, ack, done } = useNotifs()
+  const { profile } = useAuth()
+  const local = useLocalUpdates(profile?.id)
   const [filter, setFilter] = useState<Filter>('all')
   const today = todayIso()
 
@@ -32,6 +36,28 @@ export default function Notifications() {
           <button className="small" onClick={() => markRead(items.filter((n) => !n.read_at).map((n) => n.id))}>Mark all read</button>
         )}
       </div>
+
+      {local.list.length > 0 && (
+        <>
+          <div className="row between">
+            <div className="section-title" style={{ margin: '0.5rem 0' }}>Updates on this device</div>
+            {local.unread > 0 && <button className="small" onClick={local.markAllRead}>Mark read</button>}
+          </div>
+          {local.list.map((u) => (
+            <div key={u.id} className={`notif-card${u.read ? '' : ' unread'}`}>
+              <div className="row between">
+                <strong>{u.title}</strong>
+                <span className="muted" style={{ fontSize: '0.8rem' }}>{ago(new Date(u.at).toISOString())}</span>
+              </div>
+              <p style={{ margin: '0.35rem 0' }}>{u.body}</p>
+              <div className="row" style={{ gap: '0.4rem' }}>
+                <Link className="btn small" to="/schedule">Open schedule</Link>
+                <button className="small" onClick={() => local.dismiss(u.id)}>Dismiss</button>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
 
       {offline && <div className="notice">You are offline. Showing the reminders saved on this device.</div>}
       {error && !offline && (
