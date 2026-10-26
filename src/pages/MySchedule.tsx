@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import { addLocalUpdate, ageLabel, cacheGet, cacheSet } from '../lib/offline'
 import type { FileRow } from '../types'
 
 const ERR = /^#(REF|N\/A|VALUE|DIV\/0|NAME|NULL|NUM|ERROR)[!?]?$/i
@@ -25,6 +26,11 @@ interface Hit {
   section: string
   labels: string[]
   cells: string[]
+}
+interface Sheet {
+  tabs: string[]
+  tab: string
+  rows: string[][]
 }
 
 function findHits(rows: string[][], needle: string): Hit[] {
@@ -61,6 +67,7 @@ function findHits(rows: string[][], needle: string): Hit[] {
 
 export default function MySchedule() {
   const { profile } = useAuth()
+  const uid = profile?.id as string | undefined
   const [files, setFiles] = useState<FileRow[]>([])
   const [fileId, setFileId] = useState('')
   const [tabs, setTabs] = useState<string[]>([])
@@ -69,23 +76,7 @@ export default function MySchedule() {
   const [name, setName] = useState(profile?.full_name ?? '')
   const [busy, setBusy] = useState(true)
   const [err, setErr] = useState('')
-
-  async function load(id: string, t: string) {
-    setBusy(true)
-    setErr('')
-    const { data, error } = await supabase.functions.invoke('read-sheet', {
-      body: { fileId: id, tab: t || undefined }
-    })
-    if (error || !data || data.error) {
-      setErr('Could not load the schedule.')
-      setBusy(false)
-      return
-    }
-    setTabs(data.tabs)
-    setTab(data.tab)
-    setRows(data.rows)
-    setBusy(false)
-  }
+  const [savedAt, setSavedAt] = useState<number | null>(null)
 
   useEffect(() => {
     supabase
@@ -93,13 +84,53 @@ export default function MySchedule() {
       .select('*')
       .eq('kind', 'gsheet')
       .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        const list = (data ?? []) as FileRow[]
+      .then(({ data, error }: any) => {
+        let list = (data ?? []) as FileRow[]
+        if (error && uid) list = cacheGet<FileRow[]>(uid, 'sched-files')?.data ?? []
+        else if (uid) cacheSet(uid, 'sched-files', list)
         setFiles(list)
         if (list[0]) setFileId(list[0].id)
         else setBusy(false)
       })
   }, [])
+
+  async function load(id: string, t: string) {
+    setBusy(true)
+    setErr('')
+    setSavedAt(null)
+    const { data, error } = await supabase.functions.invoke('read-sheet', { body: { fileId: id, tab: t || undefined } })
+    const key = `sched:${id}:${t || '_'}`
+    if (error || !data || data.error) {
+      const c = uid ? cacheGet<Sheet>(uid, key) : null
+      if (c) {
+        setTabs(c.data.tabs)
+        setTab(c.data.tab)
+        setRows(c.data.rows)
+        setSavedAt(c.at)
+      } else setErr('Could not load the schedule.')
+      setBusy(false)
+      return
+    }
+    const sheet: Sheet = { tabs: data.tabs, tab: data.tab, rows: data.rows }
+    setTabs(sheet.tabs)
+    setTab(sheet.tab)
+    setRows(sheet.rows)
+    setBusy(false)
+    if (!uid) return
+    cacheSet(uid, key, sheet)
+    // In-app update: tell the person when their own rows changed since the last time they looked.
+    const own = profile?.full_name as string | undefined
+    if (own && norm(own).length >= 3) {
+      const mine = findHits(sheet.rows, own)
+      const hitsKey = `hits:${id}:${sheet.tab}`
+      const before = cacheGet<Hit[]>(uid, hitsKey)
+      if (before && JSON.stringify(before.data) !== JSON.stringify(mine)) {
+        const title = files.find((f) => f.id === id)?.title ?? 'the schedule'
+        addLocalUpdate(uid, 'Your schedule changed', `${title} · ${sheet.tab}: your rows were updated. Please check them.`)
+      }
+      cacheSet(uid, hitsKey, mine)
+    }
+  }
 
   useEffect(() => {
     if (fileId) load(fileId, '')
@@ -120,6 +151,7 @@ export default function MySchedule() {
       {!profile?.full_name && (
         <div className="notice">Your account has no name saved yet. Type your name below, and ask the owner to set it on the People page.</div>
       )}
+      {savedAt && <div className="notice">Offline: showing your schedule saved {ageLabel(savedAt)}. It may be out of date.</div>}
 
       <div className="row" style={{ marginBottom: '0.75rem' }}>
         {files.length > 1 && (
