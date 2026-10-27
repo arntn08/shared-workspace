@@ -1,4 +1,6 @@
-import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+
+import { useState } from 'react'
+import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { useSettings } from '../lib/settings'
 import { Avatar, Icon, ThemeButton } from './Nav'
@@ -13,68 +15,170 @@ import FileViewer from '../pages/FileViewer'
 import Tally from '../pages/Tally'
 import TeamSettings from '../pages/TeamSettings'
 
-const ownerLinks: [string, string, string][] = [
-  ['/', 'Overview', 'home'],
-  ['/files', 'Files', 'files'],
-  ['/tally', 'Tally', 'tally'],
-  ['/schedule', 'Schedule', 'schedule'],
-  ['/people', 'People', 'people'],
-  ['/design', 'Design', 'design'],
-  ['/activity', 'Activity', 'activity'],
-  ['/teams', 'Team Settings', 'settings'],
-  ['/settings', 'Settings', 'settings']
+const ownerLinks: [string, string, string, string][] = [
+  ['/', 'Overview', 'home', 'Workspace'],
+  ['/tally', 'Installation Tally', 'tally', 'Operations'],
+  ['/schedule', 'Schedule', 'schedule', 'Operations'],
+  ['/files', 'Files & resources', 'files', 'Workspace'],
+  ['/teams', 'Team Settings', 'settings', 'Management'],
+  ['/people', 'People', 'people', 'Management'],
+  ['/design', 'Dashboard design', 'design', 'Management'],
+  ['/activity', 'Activity log', 'activity', 'Management'],
+  ['/settings', 'Settings', 'settings', 'Account']
 ]
 
-const editorLinks: [string, string, string][] = [
-  ['/', 'Overview', 'home'],
-  ['/files', 'Files', 'files'],
-  ['/tally', 'Tally', 'tally'],
-  ['/schedule', 'Schedule', 'schedule'],
-  ['/teams', 'Team Settings', 'settings'],
-  ['/settings', 'Settings', 'settings']
+const editorLinks: [string, string, string, string][] = [
+  ['/', 'Overview', 'home', 'Workspace'],
+  ['/tally', 'Installation Tally', 'tally', 'Operations'],
+  ['/schedule', 'Schedule', 'schedule', 'Operations'],
+  ['/files', 'Files & resources', 'files', 'Workspace'],
+  ['/teams', 'Team Settings', 'settings', 'Management'],
+  ['/settings', 'Settings', 'settings', 'Account']
 ]
 
 export default function OwnerLayout() {
   const { profile, signOut } = useAuth()
-  const [s] = useSettings()
+  const [settings] = useSettings()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const location = useLocation()
+
   const isOwner = profile?.role === 'owner'
   const links = isOwner ? ownerLinks : editorLinks
+  const currentPage =
+    links.find(([to]) =>
+      to === '/' ? location.pathname === '/' : location.pathname.startsWith(to)
+    )?.[1] ?? 'Workspace'
+
+  const groups = ['Workspace', 'Operations', 'Management', 'Account']
 
   return (
-    <div className="owner-shell">
-      <nav className="sidebar">
-        <div className="brand">{s.title}</div>
-        {links.map(([to, label, icon]) => (
-          <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}>
-            <Icon name={icon} />
-            <span>{label}</span>
-          </NavLink>
-        ))}
-        <div className="spacer" />
-        <ThemeButton />
-       <div className="side-foot">
-          <div className="me">
-          <Avatar name={profile?.full_name} email={profile?.email} />
-          <span className="who"><b>{profile?.full_name || profile?.email}</b><i>{profile?.role}</i></span>
+    <div className="ops-shell">
+      <button
+        className="ops-mobile-toggle"
+        type="button"
+        aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+        aria-expanded={mobileOpen}
+        onClick={() => setMobileOpen(value => !value)}
+      >
+        <span className="ops-toggle-lines">{mobileOpen ? '×' : '☰'}</span>
+        <span>{settings.title || 'AHBA Workspace'}</span>
+      </button>
+
+      {mobileOpen && (
+        <button
+          className="ops-mobile-scrim"
+          aria-label="Close navigation"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      <aside className={`ops-sidebar${mobileOpen ? ' is-open' : ''}`}>
+        <div className="ops-brand">
+          <div className="ops-brand-mark">A</div>
+          <div className="ops-brand-copy">
+            <strong>AHBA</strong>
+            <span>{settings.title || 'Development Workspace'}</span>
           </div>
-          <ThemeButton />
-            <button className="icon-btn" onClick={signOut} title="Sign out" aria-label="Sign out"><Icon name="out" /></button>
+          <button
+            className="ops-sidebar-close"
+            type="button"
+            aria-label="Close navigation"
+            onClick={() => setMobileOpen(false)}
+          >
+            ×
+          </button>
         </div>
-      </nav>
-      <main className="content">
-        <Routes>
-          <Route path="/" element={<Overview />} />
-          <Route path="/files" element={<Files />} />
-          <Route path="/file/:id" element={<FileViewer />} />
-          <Route path="/tally" element={<Tally />} />
-          <Route path="/schedule" element={<MySchedule />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/teams" element={<TeamSettings />} />
-          {isOwner && <Route path="/people" element={<People />} />}
-          {isOwner && <Route path="/design" element={<DashboardDesign />} />}
-          {isOwner && <Route path="/activity" element={<Activity />} />}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+
+        <div className="ops-workspace-label">WORKSPACE</div>
+
+        <nav className="ops-nav" aria-label="Main navigation">
+          {groups.map(group => {
+            const groupLinks = links.filter(item => item[3] === group)
+            if (!groupLinks.length) return null
+
+            return (
+              <div className="ops-nav-group" key={group}>
+                <div className="ops-nav-heading">{group}</div>
+                {groupLinks.map(([to, label, icon]) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={to === '/'}
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      `ops-nav-link${isActive ? ' active' : ''}`
+                    }
+                  >
+                    <span className="ops-nav-icon"><Icon name={icon} /></span>
+                    <span className="ops-nav-label">{label}</span>
+                    {to === '/tally' && (
+                      <span className="ops-nav-tag">LIVE</span>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            )
+          })}
+        </nav>
+
+        <div className="ops-sidebar-bottom">
+          <div className="ops-help-card">
+            <span className="ops-help-icon">✦</span>
+            <div>
+              <strong>Workspace access</strong>
+              <span>{isOwner ? 'Owner permissions' : 'Editor permissions'}</span>
+            </div>
+          </div>
+
+          <div className="ops-profile">
+            <Avatar name={profile?.full_name} email={profile?.email} />
+            <div className="ops-profile-copy">
+              <strong>{profile?.full_name || profile?.email || 'Account'}</strong>
+              <span>{profile?.role || 'Member'}</span>
+            </div>
+            <ThemeButton />
+            <button
+              className="ops-icon-button"
+              type="button"
+              onClick={signOut}
+              title="Sign out"
+              aria-label="Sign out"
+            >
+              <Icon name="out" />
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <main className="ops-main">
+        <header className="ops-topbar">
+          <div className="ops-breadcrumb">
+            <span>AHBA WORKSPACE</span>
+            <span className="ops-breadcrumb-divider">/</span>
+            <strong>{currentPage}</strong>
+          </div>
+          <div className="ops-topbar-right">
+            <span className="ops-status-dot" />
+            <span className="ops-status-label">Workspace connected</span>
+            <span className="ops-role-pill">{profile?.role}</span>
+          </div>
+        </header>
+
+        <div className="ops-page">
+          <Routes>
+            <Route path="/" element={<Overview />} />
+            <Route path="/files" element={<Files />} />
+            <Route path="/file/:id" element={<FileViewer />} />
+            <Route path="/tally" element={<Tally />} />
+            <Route path="/schedule" element={<MySchedule />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/teams" element={<TeamSettings />} />
+            {isOwner && <Route path="/people" element={<People />} />}
+            {isOwner && <Route path="/design" element={<DashboardDesign />} />}
+            {isOwner && <Route path="/activity" element={<Activity />} />}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
       </main>
     </div>
   )
