@@ -109,9 +109,10 @@ export default function Tally() {
     setTeams(teamData)
 
     const chosenDepartment =
-      departmentData.find((d) => d.id === departmentId && d.active) ??
-      departmentData.find((d) => d.active)
-
+    departmentData.find((d) => d.id === departmentId && d.active) ??
+    departmentData.find((d) => d.code === 'SLI' && d.active) ??
+    departmentData.find((d) => d.active)
+    
     if (!chosenDepartment) {
       setDailyCounts({})
       setMonthlyTotals({})
@@ -302,7 +303,7 @@ export default function Tally() {
       `"${String(value).replace(/"/g, '""')}"`
 
     const rows = [
-      ['Team', ...dates.map((date) => `${Number(date.slice(5))}/${date.slice(2, 4)}`), 'WID', 'MID'],
+      ['Team', ...dates.map((date) => String(Number(date.slice(8)))), 'WID', 'MID'],
       ...activeTeams.map((team) => [
         team.code,
         ...dates.map((date) => Number(dailyCounts[cellKey(team.id, date)] || 0)),
@@ -374,15 +375,46 @@ export default function Tally() {
 
           <label>
             Month
-            <input
-              type="month"
-              value={month}
-              onChange={(e) => {
-                if (e.target.value) setMonth(e.target.value)
-              }}
-            />
-          </label>
-        </div>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+  <button
+    type="button"
+    className="btn"
+    aria-label="Previous month"
+    onClick={() => {
+      const [year, monthNumber] = month.split('-').map(Number)
+      const previous = new Date(year, monthNumber - 2, 1)
+      setMonth(
+        `${previous.getFullYear()}-${String(previous.getMonth() + 1).padStart(2, '0')}`
+      )
+    }}
+  >
+    ←
+  </button>
+
+  <input
+      type="month"
+      value={month}
+      onChange={(e) => {
+        if (e.target.value) setMonth(e.target.value)
+      }}
+      style={{ flex: 1 }}
+    />
+
+    <button
+      type="button"
+      className="btn"
+      aria-label="Next month"
+      onClick={() => {
+        const [year, monthNumber] = month.split('-').map(Number)
+        const next = new Date(year, monthNumber, 1)
+          setMonth(
+          `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`
+          )
+        }}
+        >
+          →
+        </button>
+      div>
 
         <div className="muted" style={{ marginTop: '0.75rem', fontSize: '0.85rem' }}>
           {canEdit
@@ -469,7 +501,7 @@ export default function Tally() {
                         borderBottom: '2px solid var(--border)'
                       }}
                     >
-                      {Number(date.slice(5))}/{Number(date.slice(8))}
+                      {Number(date.slice(8))}
                     </th>
                   ))}
 
