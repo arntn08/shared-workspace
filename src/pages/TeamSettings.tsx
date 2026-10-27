@@ -35,6 +35,7 @@ export default function TeamSettings() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [viewDepartmentId, setViewDepartmentId] = useState('all')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -173,6 +174,14 @@ export default function TeamSettings() {
   const visibleDepartments = departments.filter(
     (department) => showInactive || department.active
   )
+    const visibleDepartments = departments.filter((department) => {
+  const matchesDepartment =
+    viewDepartmentId === 'all' || department.id === viewDepartmentId
+
+  const matchesStatus = showInactive || department.active
+
+  return matchesDepartment && matchesStatus
+ })
 
   return (
     <section>
@@ -260,6 +269,22 @@ export default function TeamSettings() {
             onChange={(e) => setShowInactive(e.target.checked)}
             style={{ width: 'auto' }}
           />
+          <label style={{ display: 'block', marginBottom: '1rem' }}>
+              View department
+                <select
+                  value={viewDepartmentId}
+                    onChange={(e) => setViewDepartmentId(e.target.value)}
+          >
+                <option value="all">All departments</option>
+                {departments
+                .filter((department) => showInactive || department.active)
+                .map((department) => (
+                <option key={department.id} value={department.id}>
+                {department.code} — {department.name}
+              </option>
+              ))}
+           </select>
+          </label>
           Show inactive departments and teams
         </label>
         <p className="muted" style={{ marginBottom: 0 }}>
