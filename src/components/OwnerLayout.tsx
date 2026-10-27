@@ -20,7 +20,7 @@ const ownerLinks: [string, string, string, string][] = [
   ['/tally', 'Installation Tally', 'tally', 'Operations'],
   ['/schedule', 'Schedule', 'schedule', 'Operations'],
   ['/files', 'Files & resources', 'files', 'Workspace'],
-  ['/teams', 'Team Settings', 'settings', 'Management'],
+  ['/teams', 'Team Settings', 'users-round', 'Management'],
   ['/people', 'People', 'people', 'Management'],
   ['/design', 'Dashboard design', 'design', 'Management'],
   ['/activity', 'Activity log', 'activity', 'Management'],
@@ -32,7 +32,7 @@ const editorLinks: [string, string, string, string][] = [
   ['/tally', 'Installation Tally', 'tally', 'Operations'],
   ['/schedule', 'Schedule', 'schedule', 'Operations'],
   ['/files', 'Files & resources', 'files', 'Workspace'],
-  ['/teams', 'Team Settings', 'settings', 'Management'],
+  ['/teams', 'Team Settings', 'users-round', 'Management'],
   ['/settings', 'Settings', 'settings', 'Account']
 ]
 
