@@ -25,18 +25,6 @@ type DailyRecord = {
   daily_count: number
 }
 
-type MonthlyRecord = {
-  team_id: string
-  month_start: string
-  wid: number
-  mid: number
-}
-
-type MonthlyTotal = {
-  wid: string
-  mid: string
-}
-
 const getCurrentMonth = () => {
   const now = new Date()
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -53,6 +41,20 @@ const getMonthDates = (month: string) => {
 
 const dailyKey = (teamId: string, date: string) => `${teamId}|${date}`
 
+const formatDate = (date: Date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const getWeekStart = (dateString: string) => {
+  const date = new Date(`${dateString}T12:00:00`)
+  const day = date.getDay()
+  date.setDate(date.getDate() - (day === 0 ? 6 : day - 1))
+  return formatDate(date)
+}
+
 export default function Tally() {
   const { profile } = useAuth()
 
@@ -65,7 +67,6 @@ export default function Tally() {
   const [departmentId, setDepartmentId] = useState('')
   const [month, setMonth] = useState(getCurrentMonth)
   const [dailyCounts, setDailyCounts] = useState<Record<string, string>>({})
-  const [monthlyTotals, setMonthlyTotals] = useState<Record<string, MonthlyTotal>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -75,10 +76,22 @@ export default function Tally() {
   const monthStart = `${month}-01`
   const monthEnd = dates[dates.length - 1]
 
+  const now = new Date()
+  const currentMonth = getCurrentMonth()
+  const reportDate =
+    month === currentMonth
+      ? formatDate(now) < monthEnd
+        ? formatDate(now)
+        : monthEnd
+      : monthEnd
+
+  const weekStart = getWeekStart(reportDate)
+
   const activeTeams = useMemo(
-    () => teams
-      .filter(team => team.active && team.department_id === departmentId)
-      .sort((a, b) => a.code.localeCompare(b.code)),
+    () =>
+      teams
+        .filter(team => team.active && team.department_id === departmentId)
+        .sort((a, b) => a.code.localeCompare(b.code)),
     [teams, departmentId]
   )
 
@@ -89,10 +102,12 @@ export default function Tally() {
 
     try {
       const [departmentResult, teamResult] = await Promise.all([
-        supabase.from('installation_departments')
+        supabase
+          .from('installation_departments')
           .select('id,code,name,active')
           .order('code'),
-        supabase.from('installation_teams')
+        supabase
+          .from('installation_teams')
           .select('id,department_id,code,name,active')
           .order('code')
       ])
@@ -107,14 +122,17 @@ export default function Tally() {
       setTeams(teamRows)
 
       const selectedDepartment =
-        departmentRows.find(item => item.id === departmentId && item.active) ??
-        departmentRows.find(item => item.code === 'SLI' && item.active) ??
+        departmentRows.find(
+          item => item.id === departmentId && item.active
+        ) ??
+        departmentRows.find(
+          item => item.code === 'SLI' && item.active
+        ) ??
         departmentRows.find(item => item.active)
 
       if (!selectedDepartment) {
         setDepartmentId('')
         setDailyCounts({})
-        setMonthlyTotals({})
         return
       }
 
@@ -123,51 +141,54 @@ export default function Tally() {
       }
 
       const teamIds = teamRows
-        .filter(team => team.active && team.department_id === selectedDepartment.id)
+        .filter(
+          team =>
+            team.active &&
+            team.department_id === selectedDepartment.id
+        )
         .map(team => team.id)
 
       if (teamIds.length === 0) {
         setDailyCounts({})
-        setMonthlyTotals({})
         return
       }
 
-      const [dailyResult, totalsResult] = await Promise.all([
-        supabase.from('installation_daily_counts')
-          .select('team_id,work_date,daily_count')
-          .in('team_id', teamIds)
-          .gte('work_date', monthStart)
-          .lte('work_date', monthEnd),
-        supabase.from('installation_monthly_totals')
-          .select('team_id,month_start,wid,mid')
-          .in('team_id', teamIds)
-          .eq('month_start', monthStart)
-      ])
+      // Load the days before the first of the month when needed,
+      // so WTD can include Monday-to-month-boundary dates.
+      const [year, monthNumber] = month.split('-').map(Number)
+      const firstOfMonth = new Date(year, monthNumber - 1, 1)
+      const firstDayOfWeek = firstOfMonth.getDay()
+      const daysBack = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1
+      firstOfMonth.setDate(firstOfMonth.getDate() - daysBack)
+      const queryStart = formatDate(firstOfMonth)
+
+      const dailyResult = await supabase
+        .from('installation_daily_counts')
+        .select('team_id,work_date,daily_count')
+        .in('team_id', teamIds)
+        .gte('work_date', queryStart)
+        .lte('work_date', monthEnd)
 
       if (dailyResult.error) throw dailyResult.error
-      if (totalsResult.error) throw totalsResult.error
 
       const nextDaily: Record<string, string> = {}
-      ;((dailyResult.data ?? []) as DailyRecord[]).forEach(row => {
-        nextDaily[dailyKey(row.team_id, row.work_date)] = String(row.daily_count)
-      })
 
-      const nextTotals: Record<string, MonthlyTotal> = {}
-      ;((totalsResult.data ?? []) as MonthlyRecord[]).forEach(row => {
-        nextTotals[row.team_id] = {
-          wid: String(row.wid),
-          mid: String(row.mid)
-        }
+      ;((dailyResult.data ?? []) as DailyRecord[]).forEach(row => {
+        nextDaily[dailyKey(row.team_id, row.work_date)] =
+          String(row.daily_count)
       })
 
       setDailyCounts(nextDaily)
-      setMonthlyTotals(nextTotals)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load the tally board.')
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Could not load the tally board.'
+      )
     } finally {
       setLoading(false)
     }
-  }, [departmentId, monthStart, monthEnd])
+  }, [departmentId, month, monthEnd])
 
   useEffect(() => {
     void loadBoard()
@@ -183,7 +204,13 @@ export default function Tally() {
   }
 
   function updateDaily(teamId: string, date: string, value: string) {
-    if (value !== '' && (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)))) return
+    if (
+      value !== '' &&
+      (!/^\d+$/.test(value) ||
+        !Number.isSafeInteger(Number(value)))
+    ) {
+      return
+    }
 
     setDailyCounts(current => ({
       ...current,
@@ -191,24 +218,12 @@ export default function Tally() {
     }))
   }
 
-  function updateMonthly(teamId: string, field: 'wid' | 'mid', value: string) {
-    if (value !== '' && (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)))) return
-
-    setMonthlyTotals(current => ({
-      ...current,
-      [teamId]: {
-        wid: current[teamId]?.wid ?? '',
-        mid: current[teamId]?.mid ?? '',
-        [field]: value
-      }
-    }))
-  }
-
   async function saveDaily(teamId: string, date: string) {
     if (!canEdit) return
 
     const key = dailyKey(teamId, date)
-    const count = (dailyCounts[key] ?? '') === '' ? 0 : Number(dailyCounts[key])
+    const raw = dailyCounts[key] ?? ''
+    const count = raw === '' ? 0 : Number(raw)
 
     if (!Number.isSafeInteger(count) || count < 0) {
       setError('Daily counts must be whole numbers of zero or more.')
@@ -222,13 +237,16 @@ export default function Tally() {
     try {
       const { error: saveError } = await supabase
         .from('installation_daily_counts')
-        .upsert({
-          team_id: teamId,
-          work_date: date,
-          daily_count: count,
-          updated_at: new Date().toISOString(),
-          updated_by: profile?.id
-        }, { onConflict: 'team_id,work_date' })
+        .upsert(
+          {
+            team_id: teamId,
+            work_date: date,
+            daily_count: count,
+            updated_at: new Date().toISOString(),
+            updated_by: profile?.id
+          },
+          { onConflict: 'team_id,work_date' }
+        )
 
       if (saveError) throw saveError
 
@@ -236,65 +254,72 @@ export default function Tally() {
         ...current,
         [key]: String(count)
       }))
-      setMessage(`Saved day ${Number(date.slice(8))}.`)
+
+      setMessage(`Saved ${date}. WTD and MTD have been recalculated.`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Could not save ${date}.`)
+      setError(
+        err instanceof Error
+          ? err.message
+          : `Could not save ${date}.`
+      )
     } finally {
       setSaving(null)
     }
   }
 
-  async function saveMonthly(teamId: string, field: 'wid' | 'mid') {
-    if (!canEdit) return
-
-    const current = monthlyTotals[teamId] ?? { wid: '', mid: '' }
-    const raw = current[field]
-    const count = raw === '' ? 0 : Number(raw)
-    const savingKey = `${teamId}|${field}`
-
-    if (!Number.isSafeInteger(count) || count < 0) {
-      setError('WID and MID must be whole numbers of zero or more.')
-      return
-    }
-
-    setSaving(savingKey)
-    setError('')
-    setMessage('')
-
-    try {
-      const { error: saveError } = await supabase
-        .from('installation_monthly_totals')
-        .upsert({
-          team_id: teamId,
-          month_start: monthStart,
-          wid: field === 'wid' ? count : Number(current.wid || 0),
-          mid: field === 'mid' ? count : Number(current.mid || 0),
-          updated_at: new Date().toISOString(),
-          updated_by: profile?.id
-        }, { onConflict: 'team_id,month_start' })
-
-      if (saveError) throw saveError
-
-      setMonthlyTotals(previous => ({
-        ...previous,
-        [teamId]: { ...current, [field]: String(count) }
-      }))
-      setMessage(`${field.toUpperCase()} saved.`)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : `Could not save ${field}.`)
-    } finally {
-      setSaving(null)
-    }
+  function getCount(teamId: string, date: string) {
+    return Number(dailyCounts[dailyKey(teamId, date)] || 0)
   }
 
-  const departmentWid = activeTeams.reduce(
-    (sum, team) => sum + Number(monthlyTotals[team.id]?.wid || 0),
+  function getWTD(teamId: string) {
+    return dates
+      .filter(date => date >= weekStart && date <= reportDate)
+      .reduce((sum, date) => sum + getCount(teamId, date), 0)
+      // Include days from the preceding month if this reporting week
+      // crosses a month boundary.
+      + Object.entries(dailyCounts).reduce((sum, [key, value]) => {
+        const separator = key.lastIndexOf('|')
+        const id = key.slice(0, separator)
+        const date = key.slice(separator + 1)
+
+        if (
+          id === teamId &&
+          date >= weekStart &&
+          date < monthStart &&
+          date <= reportDate
+        ) {
+          return sum + Number(value || 0)
+        }
+
+        return sum
+      }, 0)
+  }
+
+  function getMTD(teamId: string) {
+    return dates
+      .filter(date => date >= monthStart && date <= reportDate)
+      .reduce((sum, date) => sum + getCount(teamId, date), 0)
+  }
+
+  const departmentWTD = activeTeams.reduce(
+    (sum, team) => sum + getWTD(team.id),
     0
   )
 
-  const departmentMid = activeTeams.reduce(
-    (sum, team) => sum + Number(monthlyTotals[team.id]?.mid || 0),
+  const departmentMTD = activeTeams.reduce(
+    (sum, team) => sum + getMTD(team.id),
     0
+  )
+
+  const departmentDailyTotals = useMemo(
+    () =>
+      dates.map(date =>
+        activeTeams.reduce(
+          (sum, team) => sum + getCount(team.id, date),
+          0
+        )
+      ),
+    [dates, activeTeams, dailyCounts]
   )
 
   function exportCsv() {
@@ -302,17 +327,15 @@ export default function Tally() {
       `"${String(value).replace(/"/g, '""')}"`
 
     const rows: (string | number)[][] = [
-      ['Team', ...dates.map(date => Number(date.slice(8))), 'WID', 'MID']
+      ['Team', ...dates.map(date => Number(date.slice(8))), 'WTD', 'MTD']
     ]
 
     activeTeams.forEach(team => {
       rows.push([
         team.code,
-        ...dates.map(date =>
-          Number(dailyCounts[dailyKey(team.id, date)] || 0)
-        ),
-        Number(monthlyTotals[team.id]?.wid || 0),
-        Number(monthlyTotals[team.id]?.mid || 0)
+        ...dates.map(date => getCount(team.id, date)),
+        getWTD(team.id),
+        getMTD(team.id)
       ])
     })
 
@@ -332,16 +355,16 @@ export default function Tally() {
   const cellInputStyle: CSSProperties = {
     width: '100%',
     minWidth: 0,
-    minHeight: '42px',
+    minHeight: '54px',
     boxSizing: 'border-box',
-    padding: '0.45rem 0.3rem',
+    padding: '0.65rem 0.4rem',
     textAlign: 'center',
-    border: '1px solid transparent',
-    borderRadius: '7px',
-    background: 'transparent',
-    color: 'inherit',
-    fontSize: '0.95rem',
-    fontWeight: 500,
+    border: '1px solid #e0d0b3',
+    borderRadius: '10px',
+    background: '#fffdf8',
+    color: '#30291e',
+    fontSize: '1.1rem',
+    fontWeight: 600,
     outlineOffset: '-1px'
   }
 
@@ -354,9 +377,10 @@ export default function Tally() {
 
     event.preventDefault()
 
-    const nextTeamIndex = event.key === 'ArrowUp'
-      ? Math.max(0, teamIndex - 1)
-      : Math.min(activeTeams.length - 1, teamIndex + 1)
+    const nextTeamIndex =
+      event.key === 'ArrowUp'
+        ? Math.max(0, teamIndex - 1)
+        : Math.min(activeTeams.length - 1, teamIndex + 1)
 
     const nextTeam = activeTeams[nextTeamIndex]
     const nextDate = dates[dateIndex]
@@ -379,6 +403,7 @@ export default function Tally() {
           --tally-border: var(--border, #e8dcc6);
           --tally-card: var(--card, #fffdf8);
           --tally-soft: var(--surface, #f7f1e6);
+          color: var(--text, #30291e);
         }
 
         .tally-page .tally-toolbar {
@@ -391,9 +416,9 @@ export default function Tally() {
         .tally-page .tally-scroll {
           overflow: auto;
           max-width: 100%;
-          max-height: 72vh;
+          max-height: 75vh;
           border: 1px solid var(--tally-border);
-          border-radius: 14px;
+          border-radius: 16px;
           background: var(--tally-card);
           scrollbar-gutter: stable;
         }
@@ -403,69 +428,76 @@ export default function Tally() {
           border-spacing: 0;
           width: max-content;
           min-width: 100%;
-          font-size: 0.95rem;
+          font-size: 1rem;
         }
 
         .tally-page .tally-table th,
         .tally-page .tally-table td {
           border-bottom: 1px solid var(--tally-border);
-          border-right: 1px solid rgba(140, 110, 65, 0.07);
-        }
-
-        .tally-page .tally-table td {
-          min-width: 66px;
-          padding: 5px;
-          text-align: center;
+          border-right: 1px solid rgba(140, 110, 65, 0.12);
         }
 
         .tally-page .tally-table thead th {
           position: sticky;
           top: 0;
           z-index: 3;
-          height: 48px;
-          padding: 0.75rem 0.5rem;
-          background: var(--tally-soft);
-          color: var(--tally-accent);
+          min-width: 84px;
+          height: 60px;
+          padding: 1rem 0.75rem;
+          background: #efe2c9;
+          color: #674615;
           text-align: center;
-          font-weight: 700;
+          font-size: 1.05rem;
+          font-weight: 800;
           white-space: nowrap;
         }
 
         .tally-page .tally-table thead th:first-child {
           left: 0;
           z-index: 5;
-          min-width: 160px;
+          min-width: 210px;
           text-align: left;
+          background: #dfc797;
+          color: #503510;
         }
 
         .tally-page .tally-table thead th:nth-last-child(-n+2) {
-          min-width: 94px;
-          background: rgba(149, 107, 37, 0.12);
+          min-width: 120px;
+          background: #956b25;
+          color: white;
         }
 
         .tally-page .tally-table tbody th:first-child {
           position: sticky;
           left: 0;
           z-index: 2;
-          min-width: 160px;
-          padding: 0.65rem 0.9rem;
-          background: var(--tally-card);
-          color: var(--tally-accent);
+          min-width: 210px;
+          padding: 1rem;
+          background: #f1e5cf;
+          color: #704b15;
           text-align: left;
           white-space: nowrap;
-          font-weight: 700;
+          font-size: 1.05rem;
+          font-weight: 800;
         }
 
         .tally-page .tally-table tbody tr:nth-child(even) td {
-          background: rgba(149, 107, 37, 0.035);
+          background: #faf6ee;
         }
 
         .tally-page .tally-table tbody tr:hover td {
-          background: rgba(149, 107, 37, 0.075);
+          background: #f1e6d1;
         }
 
         .tally-page .tally-table tbody tr:hover th:first-child {
-          background: var(--tally-soft);
+          background: #e6d3ad;
+        }
+
+        .tally-page .tally-table td {
+          min-width: 84px;
+          padding: 8px;
+          text-align: center;
+          height: 72px;
         }
 
         .tally-page .tally-table input {
@@ -473,14 +505,14 @@ export default function Tally() {
         }
 
         .tally-page .tally-table input:hover {
-          background: var(--tally-soft) !important;
-          border-color: var(--tally-border) !important;
+          background: #f7eddb !important;
+          border-color: #c5a66e !important;
         }
 
         .tally-page .tally-table input:focus {
-          background: var(--tally-card) !important;
-          border-color: var(--tally-accent) !important;
-          outline: 2px solid var(--tally-accent);
+          background: white !important;
+          border-color: #956b25 !important;
+          outline: 2px solid #956b25;
         }
 
         .tally-page .tally-table input:disabled {
@@ -489,12 +521,16 @@ export default function Tally() {
         }
 
         .tally-page .tally-table td:nth-last-child(-n+2) {
-          background: rgba(149, 107, 37, 0.045);
+          background: #f0e4cc;
         }
 
         .tally-page .tally-table td:nth-last-child(-n+2) input {
-          font-weight: 700;
-          color: var(--tally-accent);
+          background: #f8efde;
+          border-color: #d8c29b;
+          color: #704b15;
+          font-size: 1.2rem;
+          font-weight: 800;
+          text-align: center;
         }
 
         .tally-page .tally-summary {
@@ -530,6 +566,13 @@ export default function Tally() {
           margin-bottom: 1rem;
         }
 
+        .tally-page .tally-note {
+          margin: 0.8rem 0 0;
+          color: var(--muted, #776b58);
+          font-size: 0.88rem;
+          line-height: 1.5;
+        }
+
         @media (max-width: 760px) {
           .tally-page .tally-toolbar {
             grid-template-columns: 1fr;
@@ -548,11 +591,17 @@ export default function Tally() {
           }
 
           .tally-page .tally-table {
-            font-size: 0.9rem;
+            font-size: 0.95rem;
           }
 
+          .tally-page .tally-table thead th,
           .tally-page .tally-table td {
-            min-width: 62px;
+            min-width: 76px;
+          }
+
+          .tally-page .tally-table thead th:first-child,
+          .tally-page .tally-table tbody th:first-child {
+            min-width: 175px;
           }
         }
       `}</style>
@@ -589,9 +638,11 @@ export default function Tally() {
               {departments
                 .filter(department => department.active)
                 .sort((a, b) =>
-                  a.code === 'SLI' ? -1 :
-                  b.code === 'SLI' ? 1 :
-                  a.code.localeCompare(b.code)
+                  a.code === 'SLI'
+                    ? -1
+                    : b.code === 'SLI'
+                      ? 1
+                      : a.code.localeCompare(b.code)
                 )
                 .map(department => (
                   <option key={department.id} value={department.id}>
@@ -636,31 +687,31 @@ export default function Tally() {
           </div>
         </div>
 
-        <p className="muted" style={{ marginBottom: 0, marginTop: '1rem', fontSize: '0.88rem' }}>
+        <p className="tally-note">
           {canEdit
-            ? 'Select a daily value to edit it. Changes save when you leave the cell. Use Enter or the up/down arrows to move between teams.'
+            ? 'Enter a daily count and leave the field to save. WTD and MTD update automatically from saved daily counts.'
             : 'Read-only view. Contact an owner or editor to update counts.'}
         </p>
       </div>
 
       <div className="tally-summary">
         <div className="tally-summary-card">
-          <div className="muted">Department WID</div>
+          <div className="muted">Department WTD</div>
           <div className="tally-summary-number">
-            {departmentWid.toLocaleString()}
+            {departmentWTD.toLocaleString()}
           </div>
           <div className="muted" style={{ fontSize: '0.8rem' }}>
-            Total across active teams
+            Week-to-Date · all active teams
           </div>
         </div>
 
         <div className="tally-summary-card">
-          <div className="muted">Department MID</div>
+          <div className="muted">Department MTD</div>
           <div className="tally-summary-number">
-            {departmentMid.toLocaleString()}
+            {departmentMTD.toLocaleString()}
           </div>
           <div className="muted" style={{ fontSize: '0.8rem' }}>
-            Total across active teams
+            Month-to-Date · all active teams
           </div>
         </div>
 
@@ -687,12 +738,12 @@ export default function Tally() {
               })}
             </h2>
             <p className="muted" style={{ margin: '0.35rem 0 0' }}>
-              Daily counts by team
+              Daily counts by team · WTD and MTD calculated automatically
             </p>
           </div>
 
           <span className="muted" style={{ fontSize: '0.85rem' }}>
-            {dates.length} days · scroll horizontally
+            {dates.length} days · scroll inside the table
           </span>
         </div>
 
@@ -708,15 +759,11 @@ export default function Tally() {
               <thead>
                 <tr>
                   <th>Team</th>
-
                   {dates.map(date => (
-                    <th key={date}>
-                      {Number(date.slice(8))}
-                    </th>
+                    <th key={date}>{Number(date.slice(8))}</th>
                   ))}
-
-                  <th>WID</th>
-                  <th>MID</th>
+                  <th title="Week-to-Date">WTD</th>
+                  <th title="Month-to-Date">MTD</th>
                 </tr>
               </thead>
 
@@ -731,7 +778,6 @@ export default function Tally() {
                       return (
                         <td key={date}>
                           <input
-                            className="tally-cell"
                             data-tally-key={key}
                             aria-label={`${team.code} count for ${date}`}
                             title={`${team.code} · ${date}`}
@@ -752,40 +798,51 @@ export default function Tally() {
                             style={cellInputStyle}
                           />
                           {saving === key && (
-                            <span style={{ fontSize: '0.7rem' }}>Saving…</span>
+                            <span style={{ fontSize: '0.75rem' }}>
+                              Saving…
+                            </span>
                           )}
                         </td>
                       )
                     })}
 
-                    {(['wid', 'mid'] as const).map(field => {
-                      const key = `${team.id}|${field}`
+                    <td>
+                      <strong
+                        title="Week-to-Date"
+                        style={{
+                          display: 'inline-flex',
+                          minWidth: '72px',
+                          minHeight: '42px',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '10px',
+                          background: '#e8d6b3',
+                          color: '#674615',
+                          fontSize: '1.15rem'
+                        }}
+                      >
+                        {getWTD(team.id).toLocaleString()}
+                      </strong>
+                    </td>
 
-                      return (
-                        <td key={field}>
-                          <input
-                            className="tally-cell"
-                            aria-label={`${team.code} ${field.toUpperCase()} total`}
-                            title={`${team.code} ${field.toUpperCase()}`}
-                            type="number"
-                            min="0"
-                            step="1"
-                            inputMode="numeric"
-                            disabled={!canEdit}
-                            value={monthlyTotals[team.id]?.[field] ?? ''}
-                            placeholder="0"
-                            onChange={event =>
-                              updateMonthly(team.id, field, event.target.value)
-                            }
-                            onBlur={() => void saveMonthly(team.id, field)}
-                            style={cellInputStyle}
-                          />
-                          {saving === key && (
-                            <span style={{ fontSize: '0.7rem' }}>Saving…</span>
-                          )}
-                        </td>
-                      )
-                    })}
+                    <td>
+                      <strong
+                        title="Month-to-Date"
+                        style={{
+                          display: 'inline-flex',
+                          minWidth: '72px',
+                          minHeight: '42px',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '10px',
+                          background: '#dfc797',
+                          color: '#503510',
+                          fontSize: '1.15rem'
+                        }}
+                      >
+                        {getMTD(team.id).toLocaleString()}
+                      </strong>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -793,9 +850,11 @@ export default function Tally() {
           </div>
         )}
 
-        <p className="muted" style={{ fontSize: '0.83rem', marginBottom: 0, marginTop: '1rem' }}>
-          WID and MID totals above are calculated from the team-level WID and MID entries.
-          Daily counts are recorded separately. Blank daily cells are treated as zero in exports.
+        <p className="tally-note">
+          WTD means Week-to-Date (Monday through the reporting date). MTD means
+          Month-to-Date (the first day of the month through the reporting date).
+          Historical months use their final day as the reporting date. Totals are
+          calculated per team from daily counts; no separate WID/MID entry is needed.
         </p>
       </div>
     </section>
