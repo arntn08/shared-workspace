@@ -171,9 +171,6 @@ export default function TeamSettings() {
     await load()
   }
 
-  const visibleDepartments = departments.filter(
-    (department) => showInactive || department.active
-  )
     const visibleDepartments = departments.filter((department) => {
   const matchesDepartment =
     viewDepartmentId === 'all' || department.id === viewDepartmentId
@@ -262,35 +259,37 @@ export default function TeamSettings() {
       )}
 
       <div className="card" style={{ marginBottom: '1rem' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <input
-            type="checkbox"
-            checked={showInactive}
-            onChange={(e) => setShowInactive(e.target.checked)}
-            style={{ width: 'auto' }}
-          />
-          <label style={{ display: 'block', marginBottom: '1rem' }}>
-              View department
-                <select
-                  value={viewDepartmentId}
-                    onChange={(e) => setViewDepartmentId(e.target.value)}
-          >
-                <option value="all">All departments</option>
-                {departments
-                .filter((department) => showInactive || department.active)
-                .map((department) => (
-                <option key={department.id} value={department.id}>
-                {department.code} — {department.name}
-              </option>
-              ))}
-           </select>
-          </label>
-          Show inactive departments and teams
-        </label>
-        <p className="muted" style={{ marginBottom: 0 }}>
-          Deactivated teams are hidden from the active team list. They are not deleted.
-        </p>
-      </div>
+  <label style={{ display: 'block', marginBottom: '1rem' }}>
+    View department
+    <select
+      value={viewDepartmentId}
+      onChange={(e) => setViewDepartmentId(e.target.value)}
+    >
+      <option value="all">All departments</option>
+      {departments
+        .filter((department) => showInactive || department.active)
+        .map((department) => (
+          <option key={department.id} value={department.id}>
+            {department.code} — {department.name}
+          </option>
+        ))}
+    </select>
+  </label>
+
+  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+    <input
+      type="checkbox"
+      checked={showInactive}
+      onChange={(e) => setShowInactive(e.target.checked)}
+      style={{ width: 'auto' }}
+    />
+    Show inactive departments and teams
+  </label>
+
+  <p className="muted" style={{ marginBottom: 0 }}>
+    Deactivated teams are hidden from the active team list. They are not deleted.
+  </p>
+</div>
 
       {loading ? (
         <div className="card"><p className="muted">Loading teams…</p></div>
