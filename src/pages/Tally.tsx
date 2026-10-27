@@ -3,193 +3,333 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 
-const TEAMS = ['SLI', 'MIG/OSP', 'SLR', 'QA', 'OMT'] as const
-type Team = (typeof TEAMS)[number]
-
-type Entry = {
+type Department = {
   id: string
-  installation_date: string
-  team: Team
+  code: string
+  name: string
+  active: boolean
+}
+
+type Team = {
+  id: string
+  department_id: string
+  code: string
+  name: string
+  active: boolean
+}
+
+type DailyRecord = {
+  team_id: string
+  work_date: string
+  daily_count: number
+}
+
+type MonthlyRecord = {
+  team_id: string
+  month_start: string
   wid: number
   mid: number
-  notes: string | null
 }
 
-const today = () => {
+const currentMonth = () => {
   const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-const monthStart = () => `${today().slice(0, 7)}-01`
+const monthDates = (month: string) => {
+  const [year, monthNumber] = month.split('-').map(Number)
+  const count = new Date(year, monthNumber, 0).getDate()
+  return Array.from({ length: count }, (_, i) => {
+    const day = String(i + 1).padStart(2, '0')
+    return `${month}-${day}`
+  })
+}
+
+const cellKey = (teamId: string, date: string) => `${teamId}|${date}`
+const totalKey = (teamId: string) => teamId
 
 export default function Tally() {
   const { profile } = useAuth()
-  const canEdit = profile?.active === true &&
+  const canEdit =
+    profile?.active === true &&
     (profile.role === 'owner' || profile.role === 'editor')
 
-  const [from, setFrom] = useState(monthStart)
-  const [to, setTo] = useState(today)
-  const [teamFilter, setTeamFilter] = useState('all')
-  const [entries, setEntries] = useState<Entry[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
+  const [departmentId, setDepartmentId] = useState('')
+  const [month, setMonth] = useState(currentMonth)
+  const [dailyCounts, setDailyCounts] = useState<Record<string, string>>({})
+  const [monthlyTotals, setMonthlyTotals] = useState<
+    Record<string, { wid: string; mid: string }>
+  >({})
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
-  const [editing, setEditing] = useState(false)
-  const [date, setDate] = useState(today)
-  const [team, setTeam] = useState<Team>('SLI')
-  const [wid, setWid] = useState('0')
-  const [mid, setMid] = useState('0')
-  const [notes, setNotes] = useState('')
-  const [editId, setEditId] = useState<string | null>(null)
+
+  const dates = useMemo(() => monthDates(month), [month])
+  const monthStart = `${month}-01`
+
+  const activeTeams = useMemo(
+    () => teams.filter((team) => team.active && team.department_id === departmentId)
+      .sort((a, b) => a.code.localeCompare(b.code)),
+    [teams, departmentId]
+  )
 
   const load = useCallback(async () => {
     setLoading(true)
     setError('')
+    setMessage('')
 
-    let query = supabase
-      .from('installation_tally')
-      .select('id,installation_date,team,wid,mid,notes')
-      .gte('installation_date', from)
-      .lte('installation_date', to)
-      .order('installation_date', { ascending: false })
-      .order('team', { ascending: true })
+    const [departmentResult, teamResult] = await Promise.all([
+      supabase
+        .from('installation_departments')
+        .select('id,code,name,active')
+        .order('code'),
+      supabase
+        .from('installation_teams')
+        .select('id,department_id,code,name,active')
+        .order('code')
+    ])
 
-    if (teamFilter !== 'all') query = query.eq('team', teamFilter)
-
-    const { data, error: fetchError } = await query
-
-    if (fetchError) {
-      setError(fetchError.message)
-      setEntries([])
-    } else {
-      setEntries((data ?? []) as Entry[])
+    if (departmentResult.error || teamResult.error) {
+      setError(
+        departmentResult.error?.message ||
+        teamResult.error?.message ||
+        'Could not load departments and teams.'
+      )
+      setLoading(false)
+      return
     }
 
+    const departmentData = (departmentResult.data ?? []) as Department[]
+    const teamData = (teamResult.data ?? []) as Team[]
+
+    setDepartments(departmentData)
+    setTeams(teamData)
+
+    const chosenDepartment =
+      departmentData.find((d) => d.id === departmentId && d.active) ??
+      departmentData.find((d) => d.active)
+
+    if (!chosenDepartment) {
+      setDailyCounts({})
+      setMonthlyTotals({})
+      setLoading(false)
+      return
+    }
+
+    if (chosenDepartment.id !== departmentId) {
+      setDepartmentId(chosenDepartment.id)
+    }
+
+    const teamIds = teamData
+      .filter((t) => t.active && t.department_id === chosenDepartment.id)
+      .map((t) => t.id)
+
+    if (teamIds.length === 0) {
+      setDailyCounts({})
+      setMonthlyTotals({})
+      setLoading(false)
+      return
+    }
+
+    const endDate = dates[dates.length - 1]
+
+    const [dailyResult, totalsResult] = await Promise.all([
+      supabase
+        .from('installation_daily_counts')
+        .select('team_id,work_date,daily_count')
+        .in('team_id', teamIds)
+        .gte('work_date', monthStart)
+        .lte('work_date', endDate),
+      supabase
+        .from('installation_monthly_totals')
+        .select('team_id,month_start,wid,mid')
+        .in('team_id', teamIds)
+        .eq('month_start', monthStart)
+    ])
+
+    if (dailyResult.error || totalsResult.error) {
+      setError(
+        dailyResult.error?.message ||
+        totalsResult.error?.message ||
+        'Could not load the monthly board.'
+      )
+      setLoading(false)
+      return
+    }
+
+    const nextDaily: Record<string, string> = {}
+    for (const row of (dailyResult.data ?? []) as DailyRecord[]) {
+      nextDaily[cellKey(row.team_id, row.work_date)] = String(row.daily_count)
+    }
+
+    const nextTotals: Record<string, { wid: string; mid: string }> = {}
+    for (const row of (totalsResult.data ?? []) as MonthlyRecord[]) {
+      nextTotals[totalKey(row.team_id)] = {
+        wid: String(row.wid),
+        mid: String(row.mid)
+      }
+    }
+
+    setDailyCounts(nextDaily)
+    setMonthlyTotals(nextTotals)
     setLoading(false)
-  }, [from, to, teamFilter])
+  }, [departmentId, month, monthStart, dates])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  const totals = useMemo(() => entries.reduce(
-    (sum, e) => ({ wid: sum.wid + e.wid, mid: sum.mid + e.mid }),
-    { wid: 0, mid: 0 }
-  ), [entries])
-
-  const teamTotals = useMemo(() => TEAMS.map((name) => {
-    const rows = entries.filter((e) => e.team === name)
-    return {
-      team: name,
-      wid: rows.reduce((s, e) => s + e.wid, 0),
-      mid: rows.reduce((s, e) => s + e.mid, 0),
-      days: rows.length
-    }
-  }), [entries])
-
-  function startNew() {
-    setEditId(null)
-    setDate(today())
-    setTeam(TEAMS[0])
-    setWid('0')
-    setMid('0')
-    setNotes('')
-    setMessage('')
-    setEditing(true)
+  function updateDailyInput(teamId: string, date: string, value: string) {
+    if (value !== '' && (!/^\d+$/.test(value) || Number(value) < 0)) return
+    setDailyCounts((current) => ({
+      ...current,
+      [cellKey(teamId, date)]: value
+    }))
   }
 
-  function startEdit(entry: Entry) {
-    if (!canEdit) return
-    setEditId(entry.id)
-    setDate(entry.installation_date)
-    setTeam(entry.team)
-    setWid(String(entry.wid))
-    setMid(String(entry.mid))
-    setNotes(entry.notes ?? '')
-    setMessage('')
-    setEditing(true)
+  function updateTotalInput(teamId: string, field: 'wid' | 'mid', value: string) {
+    if (value !== '' && (!/^\d+$/.test(value) || Number(value) < 0)) return
+    setMonthlyTotals((current) => ({
+      ...current,
+      [teamId]: {
+        wid: current[teamId]?.wid ?? '0',
+        mid: current[teamId]?.mid ?? '0',
+        [field]: value
+      }
+    }))
   }
 
-  async function save() {
+  async function saveDaily(teamId: string, date: string) {
     if (!canEdit) return
 
-    const w = Number(wid)
-    const m = Number(mid)
+    const key = cellKey(teamId, date)
+    const rawValue = dailyCounts[key] ?? ''
+    const value = rawValue === '' ? 0 : Number(rawValue)
 
-    if (!date || !Number.isInteger(w) || !Number.isInteger(m) || w < 0 || m < 0) {
-      setError('Enter a valid date and whole-number WID/MID counts of zero or more.')
+    if (!Number.isSafeInteger(value) || value < 0) {
+      setError('Daily counts must be whole numbers of zero or more.')
       return
     }
 
-    setSaving(true)
+    setSaving(key)
     setError('')
     setMessage('')
 
-    const payload = {
-      installation_date: date,
-      team,
-      wid: w,
-      mid: m,
-      notes: notes.trim() || null,
-      updated_by: profile.id,
-      ...(editId ? {} : { created_by: profile.id })
-    }
+    const { error: saveError } = await supabase
+      .from('installation_daily_counts')
+      .upsert(
+        {
+          team_id: teamId,
+          work_date: date,
+          daily_count: value,
+          updated_at: new Date().toISOString(),
+          updated_by: profile?.id
+        },
+        { onConflict: 'team_id,work_date' }
+      )
 
-    const result = await supabase
-      .from('installation_tally')
-      .upsert(payload, { onConflict: 'installation_date,team' })
+    setSaving(null)
 
-    setSaving(false)
-
-    if (result.error) {
-      setError(result.error.message)
+    if (saveError) {
+      setError(`Could not save ${date}: ${saveError.message}`)
       return
     }
 
-    setEditing(false)
-    setMessage('Tally saved.')
-    await load()
+    setDailyCounts((current) => ({ ...current, [key]: String(value) }))
+    setMessage(`Saved ${date}.`)
   }
 
-  async function remove(entry: Entry) {
-    if (!canEdit || profile?.role !== 'owner') return
-    if (!window.confirm(`Delete ${entry.team} tally for ${entry.installation_date}?`)) return
+  async function saveMonthly(teamId: string, field: 'wid' | 'mid') {
+    if (!canEdit) return
 
+    const key = totalKey(teamId)
+    const current = monthlyTotals[key] ?? { wid: '0', mid: '0' }
+    const rawValue = current[field]
+    const value = rawValue === '' ? 0 : Number(rawValue)
+
+    if (!Number.isSafeInteger(value) || value < 0) {
+      setError('WID and MID must be whole numbers of zero or more.')
+      return
+    }
+
+    const savingKey = `${teamId}|${field}`
+    setSaving(savingKey)
     setError('')
     setMessage('')
 
-    const { error: deleteError } = await supabase
-      .from('installation_tally')
-      .delete()
-      .eq('id', entry.id)
+    const { error: saveError } = await supabase
+      .from('installation_monthly_totals')
+      .upsert(
+        {
+          team_id: teamId,
+          month_start: monthStart,
+          wid: field === 'wid' ? value : Number(current.wid || 0),
+          mid: field === 'mid' ? value : Number(current.mid || 0),
+          updated_at: new Date().toISOString(),
+          updated_by: profile?.id
+        },
+        { onConflict: 'team_id,month_start' }
+      )
 
-    if (deleteError) {
-      setError(deleteError.message)
+    setSaving(null)
+
+    if (saveError) {
+      setError(`Could not save ${field.toUpperCase()}: ${saveError.message}`)
       return
     }
 
-    setMessage('Entry deleted.')
-    await load()
+    setMonthlyTotals((existing) => ({
+      ...existing,
+      [key]: { ...current, [field]: String(value) }
+    }))
+    setMessage(`${field.toUpperCase()} total saved.`)
   }
+
+  const departmentWid = activeTeams.reduce(
+    (sum, team) => sum + Number(monthlyTotals[team.id]?.wid || 0),
+    0
+  )
+  const departmentMid = activeTeams.reduce(
+    (sum, team) => sum + Number(monthlyTotals[team.id]?.mid || 0),
+    0
+  )
 
   function exportCsv() {
-    const csvCell = (v: string | number | null) =>
-      `"${String(v ?? '').replace(/"/g, '""')}"`
+    const csvCell = (value: string | number) =>
+      `"${String(value).replace(/"/g, '""')}"`
 
     const rows = [
-      ['Installation date', 'Team', 'WID', 'MID', 'Notes'],
-      ...entries.map((e) => [
-        e.installation_date, e.team, e.wid, e.mid, e.notes ?? ''
-      ])
+      ['Team', ...dates.map((date) => `${Number(date.slice(5))}/${date.slice(2, 4)}`), 'WID', 'MID'],
+      ...activeTeams.map((team) => [
+        team.code,
+        ...dates.map((date) => Number(dailyCounts[cellKey(team.id, date)] || 0)),
+        Number(monthlyTotals[team.id]?.wid || 0),
+        Number(monthlyTotals[team.id]?.mid || 0)
+      ]),
+      [
+        'Department total',
+        ...dates.map((date) =>
+          activeTeams.reduce(
+            (sum, team) => sum + Number(dailyCounts[cellKey(team.id, date)] || 0),
+            0
+          )
+        ),
+        departmentWid,
+        departmentMid
+      ]
     ]
 
-    const csv = rows.map((r) => r.map(csvCell).join(',')).join('\r\n')
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `installation-tally-${from}-to-${to}.csv`
-    a.click()
+    const csv = rows.map((row) => row.map(csvCell).join(',')).join('\r\n')
+    const url = URL.createObjectURL(
+      new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    )
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `installation-tally-${month}-${departments.find((d) => d.id === departmentId)?.code ?? 'department'}.csv`
+    anchor.click()
     URL.revokeObjectURL(url)
   }
 
@@ -199,157 +339,306 @@ export default function Tally() {
         <div>
           <h1>Installation Tally</h1>
           <p className="muted" style={{ margin: 0 }}>
-            Daily team counts for WID and MID
+            Monthly team board · daily counts, WID and MID
           </p>
         </div>
-        {canEdit && (
-          <button className="btn primary" onClick={startNew}>
-            + Add tally
-          </button>
-        )}
+        <button className="btn" onClick={exportCsv} disabled={loading || activeTeams.length === 0}>
+          Export CSV
+        </button>
       </div>
 
       {error && <div className="notice error">{error}</div>}
       {message && <div className="notice">{message}</div>}
 
-      <div className="grid metrics" style={{ marginBottom: '1rem' }}>
-        <div className="card">
-          <div className="muted">Total WID</div>
-          <div className="metric-value">{totals.wid.toLocaleString()}</div>
-        </div>
-        <div className="card">
-          <div className="muted">Total MID</div>
-          <div className="metric-value">{totals.mid.toLocaleString()}</div>
-        </div>
-      </div>
-
       <div className="card" style={{ marginBottom: '1rem' }}>
-        <h2>Filters</h2>
-        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem' }}>
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '0.75rem'
+          }}
+        >
           <label>
-            From
-            <input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
-          </label>
-          <label>
-            To
-            <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
-          </label>
-          <label>
-            Team
-            <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)}>
-              <option value="all">All teams</option>
-              {TEAMS.map((t) => <option key={t} value={t}>{t}</option>)}
+            Department
+            <select
+              value={departmentId}
+              onChange={(e) => setDepartmentId(e.target.value)}
+            >
+              {departments.filter((d) => d.active).map((department) => (
+                <option key={department.id} value={department.id}>
+                  {department.code} — {department.name}
+                </option>
+              ))}
             </select>
           </label>
-          <div style={{ display: 'flex', alignItems: 'end' }}>
-            <button className="btn" onClick={exportCsv} disabled={entries.length === 0}>
-              Export CSV
-            </button>
-          </div>
+
+          <label>
+            Month
+            <input
+              type="month"
+              value={month}
+              onChange={(e) => {
+                if (e.target.value) setMonth(e.target.value)
+              }}
+            />
+          </label>
+        </div>
+
+        <div className="muted" style={{ marginTop: '0.75rem', fontSize: '0.85rem' }}>
+          {canEdit
+            ? 'Enter a daily count and move out of the cell to save. WID/MID are monthly totals entered separately.'
+            : 'Read-only view. Contact an owner or editor to change counts.'}
         </div>
       </div>
 
-      {editing && canEdit && (
-        <div className="card" style={{ marginBottom: '1rem' }}>
-          <h2>{editId ? 'Edit tally' : 'Add daily tally'}</h2>
-          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem' }}>
-            <label>
-              Installation date
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-            </label>
-            <label>
-              Team
-              <select value={team} onChange={(e) => setTeam(e.target.value as Team)}>
-                {TEAMS.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </label>
-            <label>
-              WID
-              <input type="number" min="0" step="1" value={wid} onChange={(e) => setWid(e.target.value)} />
-            </label>
-            <label>
-              MID
-              <input type="number" min="0" step="1" value={mid} onChange={(e) => setMid(e.target.value)} />
-            </label>
-          </div>
-          <label style={{ display: 'block', marginTop: '0.75rem' }}>
-            Notes (optional)
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
-          </label>
-          <div className="row" style={{ marginTop: '0.75rem' }}>
-            <button className="btn primary" onClick={save} disabled={saving}>
-              {saving ? 'Saving…' : 'Save tally'}
-            </button>
-            <button className="btn" onClick={() => setEditing(false)} disabled={saving}>
-              Cancel
-            </button>
-          </div>
+      <div className="grid metrics" style={{ marginBottom: '1rem' }}>
+        <div className="card">
+          <div className="muted">Department WID</div>
+          <div className="metric-value">{departmentWid.toLocaleString()}</div>
         </div>
-      )}
-
-      <div className="card" style={{ marginBottom: '1rem' }}>
-        <h2>Team totals</h2>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'left', padding: '0.65rem' }}>Team</th>
-                <th style={{ textAlign: 'right', padding: '0.65rem' }}>WID</th>
-                <th style={{ textAlign: 'right', padding: '0.65rem' }}>MID</th>
-                <th style={{ textAlign: 'right', padding: '0.65rem' }}>Days recorded</th>
-              </tr>
-            </thead>
-            <tbody>
-              {teamTotals.map((t) => (
-                <tr key={t.team} style={{ borderTop: '1px solid var(--border)' }}>
-                  <td style={{ padding: '0.65rem' }}>{t.team}</td>
-                  <td style={{ textAlign: 'right', padding: '0.65rem' }}>{t.wid.toLocaleString()}</td>
-                  <td style={{ textAlign: 'right', padding: '0.65rem' }}>{t.mid.toLocaleString()}</td>
-                  <td style={{ textAlign: 'right', padding: '0.65rem' }}>{t.days}</td>
-                </tr>
-              ))}
-              <tr style={{ borderTop: '2px solid var(--border)', fontWeight: 700 }}>
-                <td style={{ padding: '0.65rem' }}>Total</td>
-                <td style={{ textAlign: 'right', padding: '0.65rem' }}>{totals.wid.toLocaleString()}</td>
-                <td style={{ textAlign: 'right', padding: '0.65rem' }}>{totals.mid.toLocaleString()}</td>
-                <td />
-              </tr>
-            </tbody>
-          </table>
+        <div className="card">
+          <div className="muted">Department MID</div>
+          <div className="metric-value">{departmentMid.toLocaleString()}</div>
+        </div>
+        <div className="card">
+          <div className="muted">Active teams</div>
+          <div className="metric-value">{activeTeams.length}</div>
         </div>
       </div>
 
       <div className="card">
-        <h2>Daily records</h2>
-        {loading && <p className="muted">Loading tally…</p>}
-        {!loading && entries.length === 0 && (
-          <div className="empty">No tally records for this date range yet.</div>
-        )}
-        {entries.map((e) => (
-          <div key={e.id} style={{ padding: '0.8rem 0', borderBottom: '1px solid var(--border)' }}>
-            <div className="row between" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
-              <div>
-                <strong>{e.team}</strong>
-                <div className="muted" style={{ fontSize: '0.85rem' }}>
-                  {e.installation_date}
-                </div>
-              </div>
-              <div className="row" style={{ gap: '0.75rem' }}>
-                <span>WID <strong>{e.wid}</strong></span>
-                <span>MID <strong>{e.mid}</strong></span>
-              </div>
-            </div>
-            {e.notes && <p className="muted" style={{ margin: '0.4rem 0' }}>{e.notes}</p>}
-            {canEdit && (
-              <div className="row" style={{ marginTop: '0.5rem', gap: '0.4rem' }}>
-                <button className="btn small" onClick={() => startEdit(e)}>Edit</button>
-                {profile?.role === 'owner' && (
-                  <button className="btn small" onClick={() => void remove(e)}>Delete</button>
-                )}
-              </div>
-            )}
+        <div className="row between" style={{ gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+          <h2 style={{ margin: 0 }}>
+            {departments.find((d) => d.id === departmentId)?.code ?? 'Department'} — {month}
+          </h2>
+          <span className="muted" style={{ fontSize: '0.85rem' }}>
+            {dates.length} days · scroll horizontally
+          </span>
+        </div>
+
+        {loading ? (
+          <p className="muted">Loading monthly board…</p>
+        ) : activeTeams.length === 0 ? (
+          <div className="empty">
+            No active teams in this department. Add teams in Team Settings first.
           </div>
-        ))}
+        ) : (
+          <div
+            style={{
+              overflowX: 'auto',
+              maxWidth: '100%',
+              border: '1px solid var(--border)',
+              borderRadius: '0.65rem'
+            }}
+          >
+            <table
+              style={{
+                borderCollapse: 'separate',
+                borderSpacing: 0,
+                width: 'max-content',
+                minWidth: '100%',
+                fontSize: '0.85rem'
+              }}
+            >
+              <thead>
+                <tr>
+                  <th
+                    style={{
+                      position: 'sticky',
+                      left: 0,
+                      zIndex: 3,
+                      background: 'var(--card, #fff)',
+                      minWidth: '150px',
+                      textAlign: 'left',
+                      padding: '0.65rem',
+                      borderBottom: '2px solid var(--border)'
+                    }}
+                  >
+                    Team
+                  </th>
+
+                  {dates.map((date) => (
+                    <th
+                      key={date}
+                      style={{
+                        minWidth: '64px',
+                        textAlign: 'center',
+                        padding: '0.65rem 0.35rem',
+                        whiteSpace: 'nowrap',
+                        background: 'var(--card, #fff)',
+                        borderBottom: '2px solid var(--border)'
+                      }}
+                    >
+                      {Number(date.slice(5))}/{Number(date.slice(8))}
+                    </th>
+                  ))}
+
+                  {(['wid', 'mid'] as const).map((field) => (
+                    <th
+                      key={field}
+                      style={{
+                        minWidth: '82px',
+                        textAlign: 'center',
+                        padding: '0.65rem',
+                        background: 'var(--card, #fff)',
+                        borderBottom: '2px solid var(--border)'
+                      }}
+                    >
+                      {field.toUpperCase()}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {activeTeams.map((team) => (
+                  <tr key={team.id}>
+                    <th
+                      scope="row"
+                      style={{
+                        position: 'sticky',
+                        left: 0,
+                        zIndex: 2,
+                        background: 'var(--card, #fff)',
+                        textAlign: 'left',
+                        padding: '0.5rem 0.65rem',
+                        whiteSpace: 'nowrap',
+                        borderBottom: '1px solid var(--border)'
+                      }}
+                    >
+                      {team.code}
+                    </th>
+
+                    {dates.map((date) => {
+                      const key = cellKey(team.id, date)
+                      return (
+                        <td
+                          key={date}
+                          style={{
+                            padding: '0.2rem',
+                            textAlign: 'center',
+                            borderBottom: '1px solid var(--border)'
+                          }}
+                        >
+                          <input
+                            aria-label={`${team.code} count for ${date}`}
+                            type="number"
+                            min="0"
+                            step="1"
+                            inputMode="numeric"
+                            disabled={!canEdit}
+                            value={dailyCounts[key] ?? ''}
+                            placeholder="0"
+                            onChange={(e) => updateDailyInput(team.id, date, e.target.value)}
+                            onBlur={() => void saveDaily(team.id, date)}
+                            style={{
+                              width: '56px',
+                              minWidth: '56px',
+                              padding: '0.45rem 0.2rem',
+                              textAlign: 'center',
+                              border: '1px solid var(--border)',
+                              borderRadius: '0.35rem',
+                              background: 'var(--input-bg, transparent)',
+                              color: 'inherit'
+                            }}
+                          />
+                          {saving === key && (
+                            <span aria-label="Saving" style={{ display: 'block', fontSize: '0.65rem' }}>Saving</span>
+                          )}
+                        </td>
+                      )
+                    })}
+
+                    {(['wid', 'mid'] as const).map((field) => {
+                      const key = `${team.id}|${field}`
+                      return (
+                        <td
+                          key={field}
+                          style={{
+                            padding: '0.2rem',
+                            textAlign: 'center',
+                            borderBottom: '1px solid var(--border)'
+                          }}
+                        >
+                          <input
+                            aria-label={`${team.code} ${field.toUpperCase()} monthly total`}
+                            type="number"
+                            min="0"
+                            step="1"
+                            inputMode="numeric"
+                            disabled={!canEdit}
+                            value={monthlyTotals[team.id]?.[field] ?? ''}
+                            placeholder="0"
+                            onChange={(e) => updateTotalInput(team.id, field, e.target.value)}
+                            onBlur={() => void saveMonthly(team.id, field)}
+                            style={{
+                              width: '72px',
+                              minWidth: '72px',
+                              padding: '0.45rem 0.2rem',
+                              textAlign: 'center',
+                              border: '1px solid var(--border)',
+                              borderRadius: '0.35rem',
+                              background: 'var(--input-bg, transparent)',
+                              color: 'inherit'
+                            }}
+                          />
+                          {saving === key && (
+                            <span aria-label="Saving" style={{ display: 'block', fontSize: '0.65rem' }}>Saving</span>
+                          )}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+
+                <tr>
+                  <th
+                    scope="row"
+                    style={{
+                      position: 'sticky',
+                      left: 0,
+                      zIndex: 2,
+                      background: 'var(--card, #fff)',
+                      textAlign: 'left',
+                      padding: '0.65rem',
+                      borderTop: '2px solid var(--border)'
+                    }}
+                  >
+                    Department total
+                  </th>
+
+                  {dates.map((date) => (
+                    <td
+                      key={date}
+                      style={{
+                        textAlign: 'center',
+                        padding: '0.65rem 0.35rem',
+                        fontWeight: 700,
+                        borderTop: '2px solid var(--border)'
+                      }}
+                    >
+                      {activeTeams.reduce(
+                        (sum, team) => sum + Number(dailyCounts[cellKey(team.id, date)] || 0),
+                        0
+                      ).toLocaleString()}
+                    </td>
+                  ))}
+
+                  <td style={{ textAlign: 'center', padding: '0.65rem', fontWeight: 700, borderTop: '2px solid var(--border)' }}>
+                    {departmentWid.toLocaleString()}
+                  </td>
+                  <td style={{ textAlign: 'center', padding: '0.65rem', fontWeight: 700, borderTop: '2px solid var(--border)' }}>
+                    {departmentMid.toLocaleString()}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <p className="muted" style={{ fontSize: '0.8rem', marginBottom: 0, marginTop: '0.75rem' }}>
+          Blank daily cells are treated as zero in totals and exports. WID and MID are separately entered monthly totals; they are not automatically calculated from daily counts.
+        </p>
       </div>
     </section>
   )
