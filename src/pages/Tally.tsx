@@ -45,6 +45,7 @@ const getCurrentMonth = () => {
 const getMonthDates = (month: string) => {
   const [year, monthNumber] = month.split('-').map(Number)
   const days = new Date(year, monthNumber, 0).getDate()
+
   return Array.from({ length: days }, (_, index) =>
     `${month}-${String(index + 1).padStart(2, '0')}`
   )
@@ -54,6 +55,7 @@ const dailyKey = (teamId: string, date: string) => `${teamId}|${date}`
 
 export default function Tally() {
   const { profile } = useAuth()
+
   const canEdit =
     profile?.active === true &&
     (profile.role === 'owner' || profile.role === 'editor')
@@ -88,9 +90,11 @@ export default function Tally() {
     try {
       const [departmentResult, teamResult] = await Promise.all([
         supabase.from('installation_departments')
-          .select('id,code,name,active').order('code'),
+          .select('id,code,name,active')
+          .order('code'),
         supabase.from('installation_teams')
-          .select('id,department_id,code,name,active').order('code')
+          .select('id,department_id,code,name,active')
+          .order('code')
       ])
 
       if (departmentResult.error) throw departmentResult.error
@@ -122,7 +126,7 @@ export default function Tally() {
         .filter(team => team.active && team.department_id === selectedDepartment.id)
         .map(team => team.id)
 
-      if (!teamIds.length) {
+      if (teamIds.length === 0) {
         setDailyCounts({})
         setMonthlyTotals({})
         return
@@ -150,7 +154,10 @@ export default function Tally() {
 
       const nextTotals: Record<string, MonthlyTotal> = {}
       ;((totalsResult.data ?? []) as MonthlyRecord[]).forEach(row => {
-        nextTotals[row.team_id] = { wid: String(row.wid), mid: String(row.mid) }
+        nextTotals[row.team_id] = {
+          wid: String(row.wid),
+          mid: String(row.mid)
+        }
       })
 
       setDailyCounts(nextDaily)
@@ -169,16 +176,24 @@ export default function Tally() {
   function changeMonth(offset: number) {
     const [year, monthNumber] = month.split('-').map(Number)
     const next = new Date(year, monthNumber - 1 + offset, 1)
-    setMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`)
+
+    setMonth(
+      `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`
+    )
   }
 
   function updateDaily(teamId: string, date: string, value: string) {
     if (value !== '' && (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)))) return
-    setDailyCounts(current => ({ ...current, [dailyKey(teamId, date)]: value }))
+
+    setDailyCounts(current => ({
+      ...current,
+      [dailyKey(teamId, date)]: value
+    }))
   }
 
   function updateMonthly(teamId: string, field: 'wid' | 'mid', value: string) {
     if (value !== '' && (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)))) return
+
     setMonthlyTotals(current => ({
       ...current,
       [teamId]: {
@@ -191,6 +206,7 @@ export default function Tally() {
 
   async function saveDaily(teamId: string, date: string) {
     if (!canEdit) return
+
     const key = dailyKey(teamId, date)
     const count = (dailyCounts[key] ?? '') === '' ? 0 : Number(dailyCounts[key])
 
@@ -215,7 +231,11 @@ export default function Tally() {
         }, { onConflict: 'team_id,work_date' })
 
       if (saveError) throw saveError
-      setDailyCounts(current => ({ ...current, [key]: String(count) }))
+
+      setDailyCounts(current => ({
+        ...current,
+        [key]: String(count)
+      }))
       setMessage(`Saved day ${Number(date.slice(8))}.`)
     } catch (err) {
       setError(err instanceof Error ? err.message : `Could not save ${date}.`)
@@ -226,6 +246,7 @@ export default function Tally() {
 
   async function saveMonthly(teamId: string, field: 'wid' | 'mid') {
     if (!canEdit) return
+
     const current = monthlyTotals[teamId] ?? { wid: '', mid: '' }
     const raw = current[field]
     const count = raw === '' ? 0 : Number(raw)
@@ -253,6 +274,7 @@ export default function Tally() {
         }, { onConflict: 'team_id,month_start' })
 
       if (saveError) throw saveError
+
       setMonthlyTotals(previous => ({
         ...previous,
         [teamId]: { ...current, [field]: String(count) }
@@ -266,39 +288,43 @@ export default function Tally() {
   }
 
   const departmentWid = activeTeams.reduce(
-    (sum, team) => sum + Number(monthlyTotals[team.id]?.wid || 0), 0
+    (sum, team) => sum + Number(monthlyTotals[team.id]?.wid || 0),
+    0
   )
+
   const departmentMid = activeTeams.reduce(
-    (sum, team) => sum + Number(monthlyTotals[team.id]?.mid || 0), 0
+    (sum, team) => sum + Number(monthlyTotals[team.id]?.mid || 0),
+    0
   )
 
   function exportCsv() {
-    const escapeCsv = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`
+    const escapeCsv = (value: string | number) =>
+      `"${String(value).replace(/"/g, '""')}"`
+
     const rows: (string | number)[][] = [
       ['Team', ...dates.map(date => Number(date.slice(8))), 'WID', 'MID']
     ]
 
-    activeTeams.forEach(team => rows.push([
-      team.code,
-      ...dates.map(date => Number(dailyCounts[dailyKey(team.id, date)] || 0)),
-      Number(monthlyTotals[team.id]?.wid || 0),
-      Number(monthlyTotals[team.id]?.mid || 0)
-    ]))
-
-    rows.push([
-      'Department total',
-      ...dates.map(date => activeTeams.reduce(
-        (sum, team) => sum + Number(dailyCounts[dailyKey(team.id, date)] || 0), 0
-      )),
-      departmentWid,
-      departmentMid
-    ])
+    activeTeams.forEach(team => {
+      rows.push([
+        team.code,
+        ...dates.map(date =>
+          Number(dailyCounts[dailyKey(team.id, date)] || 0)
+        ),
+        Number(monthlyTotals[team.id]?.wid || 0),
+        Number(monthlyTotals[team.id]?.mid || 0)
+      ])
+    })
 
     const csv = rows.map(row => row.map(escapeCsv).join(',')).join('\r\n')
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
+    const url = URL.createObjectURL(
+      new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    )
+
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download = `installation-tally-${month}-${departments.find(item => item.id === departmentId)?.code ?? 'department'}.csv`
+    anchor.download =
+      `installation-tally-${month}-${departments.find(item => item.id === departmentId)?.code ?? 'department'}.csv`
     anchor.click()
     URL.revokeObjectURL(url)
   }
@@ -306,38 +332,17 @@ export default function Tally() {
   const cellInputStyle: CSSProperties = {
     width: '100%',
     minWidth: 0,
+    minHeight: '42px',
     boxSizing: 'border-box',
-    padding: '0.35rem 0.15rem',
+    padding: '0.45rem 0.3rem',
     textAlign: 'center',
     border: '1px solid transparent',
-    borderRadius: '4px',
+    borderRadius: '7px',
     background: 'transparent',
     color: 'inherit',
-    fontSize: '0.82rem',
+    fontSize: '0.95rem',
+    fontWeight: 500,
     outlineOffset: '-1px'
-  }
-
-  const stickyTeamStyle: CSSProperties = {
-    position: 'sticky',
-    left: 0,
-    zIndex: 2,
-    background: 'var(--card, #fff)',
-    textAlign: 'left',
-    padding: '0.55rem 0.65rem',
-    whiteSpace: 'nowrap',
-    borderBottom: '1px solid var(--border)'
-  }
-
-  const stickyHeaderStyle: CSSProperties = {
-    position: 'sticky',
-    top: 0,
-    zIndex: 1,
-    background: 'var(--card, #fff)',
-    padding: '0.55rem 0.2rem',
-    textAlign: 'center',
-    whiteSpace: 'nowrap',
-    borderBottom: '1px solid var(--border)',
-    fontWeight: 700
   }
 
   function handleCellKeyDown(
@@ -345,19 +350,23 @@ export default function Tally() {
     teamIndex: number,
     dateIndex: number
   ) {
-    if (event.key !== 'Enter' && event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+    if (!['Enter', 'ArrowDown', 'ArrowUp'].includes(event.key)) return
+
     event.preventDefault()
+
     const nextTeamIndex = event.key === 'ArrowUp'
       ? Math.max(0, teamIndex - 1)
-      : event.key === 'ArrowDown' || event.key === 'Enter'
-        ? Math.min(activeTeams.length - 1, teamIndex + 1)
-        : teamIndex
+      : Math.min(activeTeams.length - 1, teamIndex + 1)
 
     const nextTeam = activeTeams[nextTeamIndex]
     const nextDate = dates[dateIndex]
+
+    if (!nextTeam) return
+
     const nextInput = document.querySelector<HTMLInputElement>(
       `[data-tally-key="${dailyKey(nextTeam.id, nextDate)}"]`
     )
+
     nextInput?.focus()
     nextInput?.select()
   }
@@ -365,61 +374,186 @@ export default function Tally() {
   return (
     <section className="tally-page">
       <style>{`
+        .tally-page {
+          --tally-accent: var(--accent, #956b25);
+          --tally-border: var(--border, #e8dcc6);
+          --tally-card: var(--card, #fffdf8);
+          --tally-soft: var(--surface, #f7f1e6);
+        }
+
+        .tally-page .tally-toolbar {
+          display: grid;
+          grid-template-columns: minmax(220px, 1fr) minmax(260px, 1fr);
+          gap: 1rem;
+          align-items: end;
+        }
+
         .tally-page .tally-scroll {
           overflow: auto;
           max-width: 100%;
-          max-height: 70vh;
-          border: 1px solid var(--border);
-          border-radius: 10px;
+          max-height: 72vh;
+          border: 1px solid var(--tally-border);
+          border-radius: 14px;
+          background: var(--tally-card);
           scrollbar-gutter: stable;
         }
+
         .tally-page .tally-table {
           border-collapse: separate;
           border-spacing: 0;
           width: max-content;
           min-width: 100%;
-          font-size: 0.82rem;
+          font-size: 0.95rem;
         }
+
+        .tally-page .tally-table th,
         .tally-page .tally-table td {
-          padding: 2px 3px;
-          border-bottom: 1px solid var(--border);
-          min-width: 42px;
+          border-bottom: 1px solid var(--tally-border);
+          border-right: 1px solid rgba(140, 110, 65, 0.07);
         }
-        .tally-page .tally-table input:hover {
-          background: var(--surface-hover, rgba(150,110,45,.08)) !important;
-          border-color: var(--border) !important;
+
+        .tally-page .tally-table td {
+          min-width: 66px;
+          padding: 5px;
+          text-align: center;
         }
-        .tally-page .tally-table input:focus {
-          background: var(--card, #fff) !important;
-          border-color: var(--accent, #946b24) !important;
-          outline: 2px solid var(--accent, #946b24);
-        }
+
         .tally-page .tally-table thead th {
           position: sticky;
           top: 0;
-          z-index: 1;
-          background: var(--card, #fff);
+          z-index: 3;
+          height: 48px;
+          padding: 0.75rem 0.5rem;
+          background: var(--tally-soft);
+          color: var(--tally-accent);
+          text-align: center;
+          font-weight: 700;
+          white-space: nowrap;
         }
+
         .tally-page .tally-table thead th:first-child {
           left: 0;
-          z-index: 4;
+          z-index: 5;
+          min-width: 160px;
+          text-align: left;
         }
+
+        .tally-page .tally-table thead th:nth-last-child(-n+2) {
+          min-width: 94px;
+          background: rgba(149, 107, 37, 0.12);
+        }
+
         .tally-page .tally-table tbody th:first-child {
           position: sticky;
           left: 0;
           z-index: 2;
-        }
-        .tally-page .tally-table .total-row td,
-        .tally-page .tally-table .total-row th {
-          border-top: 2px solid var(--border);
+          min-width: 160px;
+          padding: 0.65rem 0.9rem;
+          background: var(--tally-card);
+          color: var(--tally-accent);
+          text-align: left;
+          white-space: nowrap;
           font-weight: 700;
-          background: var(--surface, var(--card, #fff));
         }
-        .tally-page .tally-table .total-row th:first-child {
-          z-index: 3;
+
+        .tally-page .tally-table tbody tr:nth-child(even) td {
+          background: rgba(149, 107, 37, 0.035);
         }
-        @media (max-width: 700px) {
-          .tally-page .tally-scroll { max-height: 65vh; }
+
+        .tally-page .tally-table tbody tr:hover td {
+          background: rgba(149, 107, 37, 0.075);
+        }
+
+        .tally-page .tally-table tbody tr:hover th:first-child {
+          background: var(--tally-soft);
+        }
+
+        .tally-page .tally-table input {
+          transition: background 120ms ease, border-color 120ms ease;
+        }
+
+        .tally-page .tally-table input:hover {
+          background: var(--tally-soft) !important;
+          border-color: var(--tally-border) !important;
+        }
+
+        .tally-page .tally-table input:focus {
+          background: var(--tally-card) !important;
+          border-color: var(--tally-accent) !important;
+          outline: 2px solid var(--tally-accent);
+        }
+
+        .tally-page .tally-table input:disabled {
+          opacity: 1;
+          cursor: default;
+        }
+
+        .tally-page .tally-table td:nth-last-child(-n+2) {
+          background: rgba(149, 107, 37, 0.045);
+        }
+
+        .tally-page .tally-table td:nth-last-child(-n+2) input {
+          font-weight: 700;
+          color: var(--tally-accent);
+        }
+
+        .tally-page .tally-summary {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 1rem;
+          margin-bottom: 1rem;
+        }
+
+        .tally-page .tally-summary-card {
+          border: 1px solid var(--tally-border);
+          border-radius: 15px;
+          padding: 1.1rem 1.25rem;
+          background: var(--tally-card);
+          box-shadow: 0 5px 20px rgba(70, 48, 15, 0.035);
+        }
+
+        .tally-page .tally-summary-number {
+          margin-top: 0.35rem;
+          font-size: 1.8rem;
+          font-weight: 750;
+          line-height: 1.2;
+          color: var(--tally-accent);
+          font-variant-numeric: tabular-nums;
+        }
+
+        .tally-page .tally-month-title {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1rem;
+          flex-wrap: wrap;
+          margin-bottom: 1rem;
+        }
+
+        @media (max-width: 760px) {
+          .tally-page .tally-toolbar {
+            grid-template-columns: 1fr;
+          }
+
+          .tally-page .tally-summary {
+            grid-template-columns: 1fr 1fr;
+          }
+
+          .tally-page .tally-summary-card:last-child {
+            grid-column: 1 / -1;
+          }
+
+          .tally-page .tally-scroll {
+            max-height: 68vh;
+          }
+
+          .tally-page .tally-table {
+            font-size: 0.9rem;
+          }
+
+          .tally-page .tally-table td {
+            min-width: 62px;
+          }
         }
       `}</style>
 
@@ -427,11 +561,16 @@ export default function Tally() {
         <div>
           <h1>Installation Tally</h1>
           <p className="muted" style={{ margin: 0 }}>
-            Monthly team board · daily counts, WID and MID
+            Monthly installation performance by team
           </p>
         </div>
-        <button type="button" className="btn" onClick={exportCsv}
-          disabled={loading || activeTeams.length === 0}>
+
+        <button
+          type="button"
+          className="btn"
+          onClick={exportCsv}
+          disabled={loading || activeTeams.length === 0}
+        >
           Export CSV
         </button>
       </div>
@@ -440,15 +579,20 @@ export default function Tally() {
       {message && <div className="notice">{message}</div>}
 
       <div className="card" style={{ marginBottom: '1rem' }}>
-        <div className="grid" style={{
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '0.75rem'
-        }}>
+        <div className="tally-toolbar">
           <label>
             Department
-            <select value={departmentId} onChange={event => setDepartmentId(event.target.value)}>
-              {departments.filter(department => department.active)
-                .sort((a, b) => a.code === 'SLI' ? -1 : b.code === 'SLI' ? 1 : a.code.localeCompare(b.code))
+            <select
+              value={departmentId}
+              onChange={event => setDepartmentId(event.target.value)}
+            >
+              {departments
+                .filter(department => department.active)
+                .sort((a, b) =>
+                  a.code === 'SLI' ? -1 :
+                  b.code === 'SLI' ? 1 :
+                  a.code.localeCompare(b.code)
+                )
                 .map(department => (
                   <option key={department.id} value={department.id}>
                     {department.code} — {department.name}
@@ -458,160 +602,200 @@ export default function Tally() {
           </label>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '0.35rem' }}>Month</label>
+            <label style={{ display: 'block', marginBottom: '0.4rem' }}>
+              Reporting month
+            </label>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <button type="button" className="btn" aria-label="Previous month"
-                onClick={() => changeMonth(-1)}>←</button>
-              <input type="month" value={month}
-                onChange={event => event.target.value && setMonth(event.target.value)}
-                style={{ flex: 1, minWidth: 0 }} />
-              <button type="button" className="btn" aria-label="Next month"
-                onClick={() => changeMonth(1)}>→</button>
+              <button
+                type="button"
+                className="btn"
+                aria-label="Previous month"
+                onClick={() => changeMonth(-1)}
+              >
+                ←
+              </button>
+
+              <input
+                type="month"
+                value={month}
+                onChange={event => {
+                  if (event.target.value) setMonth(event.target.value)
+                }}
+                style={{ flex: 1, minWidth: 0 }}
+              />
+
+              <button
+                type="button"
+                className="btn"
+                aria-label="Next month"
+                onClick={() => changeMonth(1)}
+              >
+                →
+              </button>
             </div>
           </div>
         </div>
-        <p className="muted" style={{ marginBottom: 0, fontSize: '0.85rem' }}>
+
+        <p className="muted" style={{ marginBottom: 0, marginTop: '1rem', fontSize: '0.88rem' }}>
           {canEdit
-            ? 'Click a number to edit it. Press Enter or the up/down arrows to move between team rows. Changes save when you leave a cell.'
+            ? 'Select a daily value to edit it. Changes save when you leave the cell. Use Enter or the up/down arrows to move between teams.'
             : 'Read-only view. Contact an owner or editor to update counts.'}
         </p>
       </div>
 
-      <div className="grid metrics" style={{ marginBottom: '1rem' }}>
-        <div className="card">
+      <div className="tally-summary">
+        <div className="tally-summary-card">
           <div className="muted">Department WID</div>
-          <div className="metric-value">{departmentWid.toLocaleString()}</div>
+          <div className="tally-summary-number">
+            {departmentWid.toLocaleString()}
+          </div>
+          <div className="muted" style={{ fontSize: '0.8rem' }}>
+            Total across active teams
+          </div>
         </div>
-        <div className="card">
+
+        <div className="tally-summary-card">
           <div className="muted">Department MID</div>
-          <div className="metric-value">{departmentMid.toLocaleString()}</div>
+          <div className="tally-summary-number">
+            {departmentMid.toLocaleString()}
+          </div>
+          <div className="muted" style={{ fontSize: '0.8rem' }}>
+            Total across active teams
+          </div>
         </div>
-        <div className="card">
+
+        <div className="tally-summary-card">
           <div className="muted">Active teams</div>
-          <div className="metric-value">{activeTeams.length}</div>
+          <div className="tally-summary-number">
+            {activeTeams.length}
+          </div>
+          <div className="muted" style={{ fontSize: '0.8rem' }}>
+            In the selected department
+          </div>
         </div>
       </div>
 
       <div className="card">
-        <div className="row between" style={{
-          gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem'
-        }}>
-          <h2 style={{ margin: 0 }}>
-            {departments.find(item => item.id === departmentId)?.code ?? 'Department'} — {month}
-          </h2>
+        <div className="tally-month-title">
+          <div>
+            <h2 style={{ margin: 0 }}>
+              {departments.find(item => item.id === departmentId)?.code ?? 'Department'}
+              {' — '}
+              {new Date(`${month}-01T12:00:00`).toLocaleDateString('en-US', {
+                month: 'long',
+                year: 'numeric'
+              })}
+            </h2>
+            <p className="muted" style={{ margin: '0.35rem 0 0' }}>
+              Daily counts by team
+            </p>
+          </div>
+
           <span className="muted" style={{ fontSize: '0.85rem' }}>
-            {dates.length} days · scroll within the table
+            {dates.length} days · scroll horizontally
           </span>
         </div>
 
-        {loading ? <p className="muted">Loading monthly board…</p> :
-          activeTeams.length === 0 ? (
-            <div className="empty">No active teams in this department. Add teams in Team Settings first.</div>
-          ) : (
-            <div className="tally-scroll">
-              <table className="tally-table">
-                <thead>
-                  <tr>
-                    <th style={{
-                      ...stickyHeaderStyle,
-                      left: 0,
-                      zIndex: 4,
-                      minWidth: '130px',
-                      textAlign: 'left'
-                    }}>Team</th>
-                    {dates.map(date => (
-                      <th key={date} style={{ ...stickyHeaderStyle, minWidth: '42px' }}>
-                        {Number(date.slice(8))}
-                      </th>
-                    ))}
-                    {(['wid', 'mid'] as const).map(field => (
-                      <th key={field} style={{ ...stickyHeaderStyle, minWidth: '66px' }}>
-                        {field.toUpperCase()}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeTeams.map((team, teamIndex) => (
-                    <tr key={team.id}>
-                      <th scope="row" style={{ ...stickyTeamStyle, minWidth: '130px' }}>
-                        {team.code}
-                      </th>
-                      {dates.map((date, dateIndex) => {
-                        const key = dailyKey(team.id, date)
-                        return (
-                          <td key={date} style={{ textAlign: 'center' }}>
-                            <input
-                              className="tally-cell"
-                              data-tally-key={key}
-                              aria-label={`${team.code} count for ${date}`}
-                              title={`${team.code} · ${date}`}
-                              type="number"
-                              min="0"
-                              step="1"
-                              inputMode="numeric"
-                              disabled={!canEdit}
-                              value={dailyCounts[key] ?? ''}
-                              placeholder="0"
-                              onChange={event => updateDaily(team.id, date, event.target.value)}
-                              onBlur={() => void saveDaily(team.id, date)}
-                              onKeyDown={event => handleCellKeyDown(event, teamIndex, dateIndex)}
-                              style={cellInputStyle}
-                            />
-                            {saving === key && <span style={{ fontSize: '0.6rem' }}>…</span>}
-                          </td>
-                        )
-                      })}
-                      {(['wid', 'mid'] as const).map(field => {
-                        const key = `${team.id}|${field}`
-                        return (
-                          <td key={field} style={{ textAlign: 'center' }}>
-                            <input
-                              className="tally-cell"
-                              aria-label={`${team.code} ${field.toUpperCase()} total`}
-                              title={`${team.code} ${field.toUpperCase()}`}
-                              type="number"
-                              min="0"
-                              step="1"
-                              inputMode="numeric"
-                              disabled={!canEdit}
-                              value={monthlyTotals[team.id]?.[field] ?? ''}
-                              placeholder="0"
-                              onChange={event => updateMonthly(team.id, field, event.target.value)}
-                              onBlur={() => void saveMonthly(team.id, field)}
-                              style={cellInputStyle}
-                            />
-                            {saving === key && <span style={{ fontSize: '0.6rem' }}>…</span>}
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  ))}
-                  <tr className="total-row">
-                    <th scope="row" style={{ ...stickyTeamStyle, minWidth: '130px' }}>
-                      Department total
-                    </th>
-                    {dates.map(date => (
-                      <td key={date} style={{ textAlign: 'center', padding: '0.55rem 0.2rem' }}>
-                        {activeTeams.reduce(
-                          (sum, team) => sum + Number(dailyCounts[dailyKey(team.id, date)] || 0), 0
-                        ).toLocaleString()}
-                      </td>
-                    ))}
-                    <td style={{ textAlign: 'center', padding: '0.55rem 0.2rem' }}>
-                      {departmentWid.toLocaleString()}
-                    </td>
-                    <td style={{ textAlign: 'center', padding: '0.55rem 0.2rem' }}>
-                      {departmentMid.toLocaleString()}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
+        {loading ? (
+          <p className="muted">Loading monthly board…</p>
+        ) : activeTeams.length === 0 ? (
+          <div className="empty">
+            No active teams in this department. Add teams in Team Settings first.
+          </div>
+        ) : (
+          <div className="tally-scroll">
+            <table className="tally-table">
+              <thead>
+                <tr>
+                  <th>Team</th>
 
-        <p className="muted" style={{ fontSize: '0.8rem', marginBottom: 0, marginTop: '0.75rem' }}>
-          Blank daily cells count as zero in totals and exports. WID and MID are separately entered monthly totals.
+                  {dates.map(date => (
+                    <th key={date}>
+                      {Number(date.slice(8))}
+                    </th>
+                  ))}
+
+                  <th>WID</th>
+                  <th>MID</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {activeTeams.map((team, teamIndex) => (
+                  <tr key={team.id}>
+                    <th scope="row">{team.code}</th>
+
+                    {dates.map((date, dateIndex) => {
+                      const key = dailyKey(team.id, date)
+
+                      return (
+                        <td key={date}>
+                          <input
+                            className="tally-cell"
+                            data-tally-key={key}
+                            aria-label={`${team.code} count for ${date}`}
+                            title={`${team.code} · ${date}`}
+                            type="number"
+                            min="0"
+                            step="1"
+                            inputMode="numeric"
+                            disabled={!canEdit}
+                            value={dailyCounts[key] ?? ''}
+                            placeholder="0"
+                            onChange={event =>
+                              updateDaily(team.id, date, event.target.value)
+                            }
+                            onBlur={() => void saveDaily(team.id, date)}
+                            onKeyDown={event =>
+                              handleCellKeyDown(event, teamIndex, dateIndex)
+                            }
+                            style={cellInputStyle}
+                          />
+                          {saving === key && (
+                            <span style={{ fontSize: '0.7rem' }}>Saving…</span>
+                          )}
+                        </td>
+                      )
+                    })}
+
+                    {(['wid', 'mid'] as const).map(field => {
+                      const key = `${team.id}|${field}`
+
+                      return (
+                        <td key={field}>
+                          <input
+                            className="tally-cell"
+                            aria-label={`${team.code} ${field.toUpperCase()} total`}
+                            title={`${team.code} ${field.toUpperCase()}`}
+                            type="number"
+                            min="0"
+                            step="1"
+                            inputMode="numeric"
+                            disabled={!canEdit}
+                            value={monthlyTotals[team.id]?.[field] ?? ''}
+                            placeholder="0"
+                            onChange={event =>
+                              updateMonthly(team.id, field, event.target.value)
+                            }
+                            onBlur={() => void saveMonthly(team.id, field)}
+                            style={cellInputStyle}
+                          />
+                          {saving === key && (
+                            <span style={{ fontSize: '0.7rem' }}>Saving…</span>
+                          )}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <p className="muted" style={{ fontSize: '0.83rem', marginBottom: 0, marginTop: '1rem' }}>
+          WID and MID totals above are calculated from the team-level WID and MID entries.
+          Daily counts are recorded separately. Blank daily cells are treated as zero in exports.
         </p>
       </div>
     </section>
