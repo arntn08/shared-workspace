@@ -11,6 +11,7 @@ import Settings from '../pages/Settings'
 import MySchedule from '../pages/MySchedule'
 import FileViewer from '../pages/FileViewer'
 import Tally from '../pages/Tally'
+import TeamSettings from '../pages/TeamSettings'
 
 const ownerLinks: [string, string, string][] = [
   ['/', 'Overview', 'home'],
@@ -20,6 +21,7 @@ const ownerLinks: [string, string, string][] = [
   ['/people', 'People', 'people'],
   ['/design', 'Design', 'design'],
   ['/activity', 'Activity', 'activity'],
+  ['/teams', 'Team Settings', 'settings'],
   ['/settings', 'Settings', 'settings']
 ]
 
@@ -28,6 +30,7 @@ const editorLinks: [string, string, string][] = [
   ['/files', 'Files', 'files'],
   ['/tally', 'Tally', 'tally'],
   ['/schedule', 'Schedule', 'schedule'],
+  ['/teams', 'Team Settings', 'settings'],
   ['/settings', 'Settings', 'settings']
 ]
 
@@ -66,6 +69,7 @@ export default function OwnerLayout() {
           <Route path="/tally" element={<Tally />} />
           <Route path="/schedule" element={<MySchedule />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/teams" element={<TeamSettings />} />
           {isOwner && <Route path="/people" element={<People />} />}
           {isOwner && <Route path="/design" element={<DashboardDesign />} />}
           {isOwner && <Route path="/activity" element={<Activity />} />}
