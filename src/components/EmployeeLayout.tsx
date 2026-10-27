@@ -1,3 +1,4 @@
+
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { useSettings } from '../lib/settings'
@@ -14,14 +15,13 @@ import Settings from '../pages/Settings'
 import Tally from '../pages/Tally'
 import './tabs.css'
 
-// [path, short label (phones), full label (desktop), icon]
 const tabs: [string, string, string, string][] = [
   ['/', 'Home', 'Home', 'home'],
   ['/tally', 'Tally', 'Installation Tally', 'tally'],
-  ['/files', 'Files', 'Files', 'files'],
-  ['/schedule', 'Schedule', 'Schedule', 'schedule'],
+  ['/files', 'Files', 'Files & resources', 'files'],
+  ['/schedule', 'Schedule', 'My schedule', 'schedule'],
   ['/notifications', 'Alerts', 'Notifications', 'bell'],
-  ['/profile', 'Profile', 'Profile', 'user']
+  ['/profile', 'Profile', 'My ID card', 'user']
 ]
 
 function TabBar({ title }: { title: string }) {
@@ -29,15 +29,26 @@ function TabBar({ title }: { title: string }) {
   const { profile } = useAuth()
   const local = useLocalUpdates(profile?.id)
   const unread = serverUnread + local.unread
+
   return (
-    <nav className="tabbar" aria-label="Main">
-      <div className="rail-brand">{title}</div>
+    <nav className="tabbar" aria-label="Employee navigation">
+      <div className="rail-brand">
+        <span className="emp-brand-mark">A</span>
+        <span>{title || 'AHBA Workspace'}</span>
+      </div>
+
       {tabs.map(([to, short, full, icon]) => (
-        <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'active' : '')} aria-label={full}>
+        <NavLink
+          key={to}
+          to={to}
+          end={to === '/'}
+          aria-label={full}
+          className={({ isActive }) => `emp-tab${isActive ? ' active' : ''}`}
+        >
           <span className="ico">
             <Icon name={icon} />
             {to === '/notifications' && unread > 0 && (
-              <b className="dot-badge" aria-label={`${unread} unread`}>{unread > 99 ? '99+' : unread}</b>
+              <b className="dot-badge">{unread > 99 ? '99+' : unread}</b>
             )}
           </span>
           <span className="lbl lbl-short">{short}</span>
@@ -50,23 +61,30 @@ function TabBar({ title }: { title: string }) {
 
 export default function EmployeeLayout() {
   const { profile } = useAuth()
-  const [s] = useSettings()
+  const [settings] = useSettings()
+
   return (
     <NotifProvider>
       <div className="emp-app">
-        <TabBar title={s.title} />
-        <div className="emp-main">
+        <TabBar title={settings.title} />
+
+        <main className="emp-main">
           <header className="emp-top">
-            <strong>{s.title}</strong>
-            <div className="row" style={{ gap: '0.4rem' }}>
+            <div className="emp-top-copy">
+              <span className="emp-eyebrow">AHBA DEVELOPMENT</span>
+              <strong>{settings.title || 'Shared Workspace'}</strong>
+            </div>
+            <div className="emp-top-actions">
+              <span className="emp-online"><i /> Workspace</span>
               <ThemeButton />
               <Avatar name={profile?.full_name} email={profile?.email} />
             </div>
           </header>
+
           <Routes>
-            <Route path="/" element={<EmployeeHome settings={s} />} />
+            <Route path="/" element={<EmployeeHome settings={settings} />} />
             <Route path="/tally" element={<Tally />} />
-            <Route path="/files" element={<EmployeeFiles settings={s} />} />
+            <Route path="/files" element={<EmployeeFiles settings={settings} />} />
             <Route path="/file/:id" element={<FileViewer />} />
             <Route path="/schedule" element={<MySchedule />} />
             <Route path="/notifications" element={<Notifications />} />
@@ -74,7 +92,12 @@ export default function EmployeeLayout() {
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </div>
+
+          <footer className="emp-footer">
+            <span>AHBA Development</span>
+            <span>Shared Workspace · Employee Portal</span>
+          </footer>
+        </main>
       </div>
     </NotifProvider>
   )
