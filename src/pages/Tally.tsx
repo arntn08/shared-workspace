@@ -31,25 +31,30 @@ type MonthlyRecord = {
   mid: number
 }
 
-const currentMonth = () => {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+type MonthlyTotal = {
+  wid: string
+  mid: string
 }
 
-const monthDates = (month: string) => {
+const getCurrentMonth = () => {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
+const getMonthDates = (month: string) => {
   const [year, monthNumber] = month.split('-').map(Number)
-  const count = new Date(year, monthNumber, 0).getDate()
-  return Array.from({ length: count }, (_, i) => {
-    const day = String(i + 1).padStart(2, '0')
-    return `${month}-${day}`
+  const days = new Date(year, monthNumber, 0).getDate()
+
+  return Array.from({ length: days }, (_, index) => {
+    return `${month}-${String(index + 1).padStart(2, '0')}`
   })
 }
 
-const cellKey = (teamId: string, date: string) => `${teamId}|${date}`
-const totalKey = (teamId: string) => teamId
+const dailyKey = (teamId: string, date: string) => `${teamId}|${date}`
 
 export default function Tally() {
   const { profile } = useAuth()
+
   const canEdit =
     profile?.active === true &&
     (profile.role === 'owner' || profile.role === 'editor')
@@ -57,147 +62,153 @@ export default function Tally() {
   const [departments, setDepartments] = useState<Department[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [departmentId, setDepartmentId] = useState('')
-  const [month, setMonth] = useState(currentMonth)
+  const [month, setMonth] = useState(getCurrentMonth)
   const [dailyCounts, setDailyCounts] = useState<Record<string, string>>({})
-  const [monthlyTotals, setMonthlyTotals] = useState<
-    Record<string, { wid: string; mid: string }>
-  >({})
+  const [monthlyTotals, setMonthlyTotals] = useState<Record<string, MonthlyTotal>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
 
-  const dates = useMemo(() => monthDates(month), [month])
+  const dates = useMemo(() => getMonthDates(month), [month])
   const monthStart = `${month}-01`
+  const monthEnd = dates[dates.length - 1]
 
   const activeTeams = useMemo(
-    () => teams.filter((team) => team.active && team.department_id === departmentId)
-      .sort((a, b) => a.code.localeCompare(b.code)),
+    () =>
+      teams
+        .filter((team) => team.active && team.department_id === departmentId)
+        .sort((a, b) => a.code.localeCompare(b.code)),
     [teams, departmentId]
   )
 
-  const load = useCallback(async () => {
+  const loadBoard = useCallback(async () => {
     setLoading(true)
     setError('')
     setMessage('')
 
-    const [departmentResult, teamResult] = await Promise.all([
-      supabase
-        .from('installation_departments')
-        .select('id,code,name,active')
-        .order('code'),
-      supabase
-        .from('installation_teams')
-        .select('id,department_id,code,name,active')
-        .order('code')
-    ])
+    try {
+      const [departmentResult, teamResult] = await Promise.all([
+        supabase
+          .from('installation_departments')
+          .select('id,code,name,active')
+          .order('code'),
+        supabase
+          .from('installation_teams')
+          .select('id,department_id,code,name,active')
+          .order('code')
+      ])
 
-    if (departmentResult.error || teamResult.error) {
-      setError(
-        departmentResult.error?.message ||
-        teamResult.error?.message ||
-        'Could not load departments and teams.'
-      )
-      setLoading(false)
-      return
-    }
+      if (departmentResult.error) throw departmentResult.error
+      if (teamResult.error) throw teamResult.error
 
-    const departmentData = (departmentResult.data ?? []) as Department[]
-    const teamData = (teamResult.data ?? []) as Team[]
+      const departmentRows = (departmentResult.data ?? []) as Department[]
+      const teamRows = (teamResult.data ?? []) as Team[]
 
-    setDepartments(departmentData)
-    setTeams(teamData)
+      setDepartments(departmentRows)
+      setTeams(teamRows)
 
-    const chosenDepartment =
-    departmentData.find((d) => d.id === departmentId && d.active) ??
-    departmentData.find((d) => d.code === 'SLI' && d.active) ??
-    departmentData.find((d) => d.active)
-    
-    if (!chosenDepartment) {
-      setDailyCounts({})
-      setMonthlyTotals({})
-      setLoading(false)
-      return
-    }
+      const selectedDepartment =
+        departmentRows.find((item) => item.id === departmentId && item.active) ??
+        departmentRows.find((item) => item.code === 'SLI' && item.active) ??
+        departmentRows.find((item) => item.active)
 
-    if (chosenDepartment.id !== departmentId) {
-      setDepartmentId(chosenDepartment.id)
-    }
-
-    const teamIds = teamData
-      .filter((t) => t.active && t.department_id === chosenDepartment.id)
-      .map((t) => t.id)
-
-    if (teamIds.length === 0) {
-      setDailyCounts({})
-      setMonthlyTotals({})
-      setLoading(false)
-      return
-    }
-
-    const endDate = dates[dates.length - 1]
-
-    const [dailyResult, totalsResult] = await Promise.all([
-      supabase
-        .from('installation_daily_counts')
-        .select('team_id,work_date,daily_count')
-        .in('team_id', teamIds)
-        .gte('work_date', monthStart)
-        .lte('work_date', endDate),
-      supabase
-        .from('installation_monthly_totals')
-        .select('team_id,month_start,wid,mid')
-        .in('team_id', teamIds)
-        .eq('month_start', monthStart)
-    ])
-
-    if (dailyResult.error || totalsResult.error) {
-      setError(
-        dailyResult.error?.message ||
-        totalsResult.error?.message ||
-        'Could not load the monthly board.'
-      )
-      setLoading(false)
-      return
-    }
-
-    const nextDaily: Record<string, string> = {}
-    for (const row of (dailyResult.data ?? []) as DailyRecord[]) {
-      nextDaily[cellKey(row.team_id, row.work_date)] = String(row.daily_count)
-    }
-
-    const nextTotals: Record<string, { wid: string; mid: string }> = {}
-    for (const row of (totalsResult.data ?? []) as MonthlyRecord[]) {
-      nextTotals[totalKey(row.team_id)] = {
-        wid: String(row.wid),
-        mid: String(row.mid)
+      if (!selectedDepartment) {
+        setDepartmentId('')
+        setDailyCounts({})
+        setMonthlyTotals({})
+        return
       }
-    }
 
-    setDailyCounts(nextDaily)
-    setMonthlyTotals(nextTotals)
-    setLoading(false)
-  }, [departmentId, month, monthStart, dates])
+      if (selectedDepartment.id !== departmentId) {
+        setDepartmentId(selectedDepartment.id)
+      }
+
+      const selectedTeamIds = teamRows
+        .filter(
+          (team) =>
+            team.active && team.department_id === selectedDepartment.id
+        )
+        .map((team) => team.id)
+
+      if (selectedTeamIds.length === 0) {
+        setDailyCounts({})
+        setMonthlyTotals({})
+        return
+      }
+
+      const [dailyResult, totalsResult] = await Promise.all([
+        supabase
+          .from('installation_daily_counts')
+          .select('team_id,work_date,daily_count')
+          .in('team_id', selectedTeamIds)
+          .gte('work_date', monthStart)
+          .lte('work_date', monthEnd),
+        supabase
+          .from('installation_monthly_totals')
+          .select('team_id,month_start,wid,mid')
+          .in('team_id', selectedTeamIds)
+          .eq('month_start', monthStart)
+      ])
+
+      if (dailyResult.error) throw dailyResult.error
+      if (totalsResult.error) throw totalsResult.error
+
+      const nextDaily: Record<string, string> = {}
+      ;((dailyResult.data ?? []) as DailyRecord[]).forEach((row) => {
+        nextDaily[dailyKey(row.team_id, row.work_date)] = String(row.daily_count)
+      })
+
+      const nextTotals: Record<string, MonthlyTotal> = {}
+      ;((totalsResult.data ?? []) as MonthlyRecord[]).forEach((row) => {
+        nextTotals[row.team_id] = {
+          wid: String(row.wid),
+          mid: String(row.mid)
+        }
+      })
+
+      setDailyCounts(nextDaily)
+      setMonthlyTotals(nextTotals)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load the tally board.')
+    } finally {
+      setLoading(false)
+    }
+  }, [departmentId, monthStart, monthEnd])
 
   useEffect(() => {
-    void load()
-  }, [load])
+    void loadBoard()
+  }, [loadBoard])
 
-  function updateDailyInput(teamId: string, date: string, value: string) {
-    if (value !== '' && (!/^\d+$/.test(value) || Number(value) < 0)) return
+  function changeMonth(offset: number) {
+    const [year, monthNumber] = month.split('-').map(Number)
+    const next = new Date(year, monthNumber - 1 + offset, 1)
+    setMonth(
+      `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`
+    )
+  }
+
+  function updateDaily(teamId: string, date: string, value: string) {
+    if (value !== '' && (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)))) {
+      return
+    }
+
     setDailyCounts((current) => ({
       ...current,
-      [cellKey(teamId, date)]: value
+      [dailyKey(teamId, date)]: value
     }))
   }
 
-  function updateTotalInput(teamId: string, field: 'wid' | 'mid', value: string) {
-    if (value !== '' && (!/^\d+$/.test(value) || Number(value) < 0)) return
+  function updateMonthly(teamId: string, field: 'wid' | 'mid', value: string) {
+    if (value !== '' && (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)))) {
+      return
+    }
+
     setMonthlyTotals((current) => ({
       ...current,
       [teamId]: {
-        wid: current[teamId]?.wid ?? '0',
-        mid: current[teamId]?.mid ?? '0',
+        wid: current[teamId]?.wid ?? '',
+        mid: current[teamId]?.mid ?? '',
         [field]: value
       }
     }))
@@ -206,11 +217,11 @@ export default function Tally() {
   async function saveDaily(teamId: string, date: string) {
     if (!canEdit) return
 
-    const key = cellKey(teamId, date)
-    const rawValue = dailyCounts[key] ?? ''
-    const value = rawValue === '' ? 0 : Number(rawValue)
+    const key = dailyKey(teamId, date)
+    const raw = dailyCounts[key] ?? ''
+    const count = raw === '' ? 0 : Number(raw)
 
-    if (!Number.isSafeInteger(value) || value < 0) {
+    if (!Number.isSafeInteger(count) || count < 0) {
       setError('Daily counts must be whole numbers of zero or more.')
       return
     }
@@ -219,119 +230,153 @@ export default function Tally() {
     setError('')
     setMessage('')
 
-    const { error: saveError } = await supabase
-      .from('installation_daily_counts')
-      .upsert(
-        {
-          team_id: teamId,
-          work_date: date,
-          daily_count: value,
-          updated_at: new Date().toISOString(),
-          updated_by: profile?.id
-        },
-        { onConflict: 'team_id,work_date' }
-      )
+    try {
+      const { error: saveError } = await supabase
+        .from('installation_daily_counts')
+        .upsert(
+          {
+            team_id: teamId,
+            work_date: date,
+            daily_count: count,
+            updated_at: new Date().toISOString(),
+            updated_by: profile?.id
+          },
+          { onConflict: 'team_id,work_date' }
+        )
 
-    setSaving(null)
+      if (saveError) throw saveError
 
-    if (saveError) {
-      setError(`Could not save ${date}: ${saveError.message}`)
-      return
+      setDailyCounts((current) => ({ ...current, [key]: String(count) }))
+      setMessage(`Saved day ${Number(date.slice(8))}.`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Could not save ${date}.`)
+    } finally {
+      setSaving(null)
     }
-
-    setDailyCounts((current) => ({ ...current, [key]: String(value) }))
-    setMessage(`Saved ${date}.`)
   }
 
   async function saveMonthly(teamId: string, field: 'wid' | 'mid') {
     if (!canEdit) return
 
-    const key = totalKey(teamId)
-    const current = monthlyTotals[key] ?? { wid: '0', mid: '0' }
-    const rawValue = current[field]
-    const value = rawValue === '' ? 0 : Number(rawValue)
+    const current = monthlyTotals[teamId] ?? { wid: '', mid: '' }
+    const raw = current[field]
+    const count = raw === '' ? 0 : Number(raw)
+    const savingKey = `${teamId}|${field}`
 
-    if (!Number.isSafeInteger(value) || value < 0) {
+    if (!Number.isSafeInteger(count) || count < 0) {
       setError('WID and MID must be whole numbers of zero or more.')
       return
     }
 
-    const savingKey = `${teamId}|${field}`
     setSaving(savingKey)
     setError('')
     setMessage('')
 
-    const { error: saveError } = await supabase
-      .from('installation_monthly_totals')
-      .upsert(
-        {
-          team_id: teamId,
-          month_start: monthStart,
-          wid: field === 'wid' ? value : Number(current.wid || 0),
-          mid: field === 'mid' ? value : Number(current.mid || 0),
-          updated_at: new Date().toISOString(),
-          updated_by: profile?.id
-        },
-        { onConflict: 'team_id,month_start' }
-      )
+    try {
+      const { error: saveError } = await supabase
+        .from('installation_monthly_totals')
+        .upsert(
+          {
+            team_id: teamId,
+            month_start: monthStart,
+            wid: field === 'wid' ? count : Number(current.wid || 0),
+            mid: field === 'mid' ? count : Number(current.mid || 0),
+            updated_at: new Date().toISOString(),
+            updated_by: profile?.id
+          },
+          { onConflict: 'team_id,month_start' }
+        )
 
-    setSaving(null)
+      if (saveError) throw saveError
 
-    if (saveError) {
-      setError(`Could not save ${field.toUpperCase()}: ${saveError.message}`)
-      return
+      setMonthlyTotals((previous) => ({
+        ...previous,
+        [teamId]: { ...current, [field]: String(count) }
+      }))
+
+      setMessage(`${field.toUpperCase()} saved.`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Could not save ${field}.`)
+    } finally {
+      setSaving(null)
     }
-
-    setMonthlyTotals((existing) => ({
-      ...existing,
-      [key]: { ...current, [field]: String(value) }
-    }))
-    setMessage(`${field.toUpperCase()} total saved.`)
   }
 
   const departmentWid = activeTeams.reduce(
     (sum, team) => sum + Number(monthlyTotals[team.id]?.wid || 0),
     0
   )
+
   const departmentMid = activeTeams.reduce(
     (sum, team) => sum + Number(monthlyTotals[team.id]?.mid || 0),
     0
   )
 
   function exportCsv() {
-    const csvCell = (value: string | number) =>
+    const escapeCsv = (value: string | number) =>
       `"${String(value).replace(/"/g, '""')}"`
 
-    const rows = [
-      ['Team', ...dates.map((date) => String(Number(date.slice(8)))), 'WID', 'MID'],
-      ...activeTeams.map((team) => [
-        team.code,
-        ...dates.map((date) => Number(dailyCounts[cellKey(team.id, date)] || 0)),
-        Number(monthlyTotals[team.id]?.wid || 0),
-        Number(monthlyTotals[team.id]?.mid || 0)
-      ]),
-      [
-        'Department total',
-        ...dates.map((date) =>
-          activeTeams.reduce(
-            (sum, team) => sum + Number(dailyCounts[cellKey(team.id, date)] || 0),
-            0
-          )
-        ),
-        departmentWid,
-        departmentMid
-      ]
+    const rows: (string | number)[][] = [
+      ['Team', ...dates.map((date) => Number(date.slice(8))), 'WID', 'MID']
     ]
 
-    const csv = rows.map((row) => row.map(csvCell).join(',')).join('\r\n')
+    activeTeams.forEach((team) => {
+      rows.push([
+        team.code,
+        ...dates.map((date) =>
+          Number(dailyCounts[dailyKey(team.id, date)] || 0)
+        ),
+        Number(monthlyTotals[team.id]?.wid || 0),
+        Number(monthlyTotals[team.id]?.mid || 0)
+      ])
+    })
+
+    rows.push([
+      'Department total',
+      ...dates.map((date) =>
+        activeTeams.reduce(
+          (sum, team) =>
+            sum + Number(dailyCounts[dailyKey(team.id, date)] || 0),
+          0
+        )
+      ),
+      departmentWid,
+      departmentMid
+    ])
+
+    const csv = rows.map((row) => row.map(escapeCsv).join(',')).join('\r\n')
     const url = URL.createObjectURL(
       new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     )
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download = `installation-tally-${month}-${departments.find((d) => d.id === departmentId)?.code ?? 'department'}.csv`
+    anchor.download = `installation-tally-${month}-${
+      departments.find((item) => item.id === departmentId)?.code ?? 'department'
+    }.csv`
     anchor.click()
     URL.revokeObjectURL(url)
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: '56px',
+    minWidth: '56px',
+    padding: '0.45rem 0.2rem',
+    textAlign: 'center',
+    border: '1px solid var(--border)',
+    borderRadius: '0.35rem',
+    background: 'var(--input-bg, transparent)',
+    color: 'inherit'
+  }
+
+  const stickyTeamStyle: React.CSSProperties = {
+    position: 'sticky',
+    left: 0,
+    zIndex: 2,
+    background: 'var(--card, #fff)',
+    textAlign: 'left',
+    padding: '0.5rem 0.65rem',
+    whiteSpace: 'nowrap',
+    borderBottom: '1px solid var(--border)'
   }
 
   return (
@@ -343,7 +388,13 @@ export default function Tally() {
             Monthly team board · daily counts, WID and MID
           </p>
         </div>
-        <button className="btn" onClick={exportCsv} disabled={loading || activeTeams.length === 0}>
+
+        <button
+          type="button"
+          className="btn"
+          onClick={exportCsv}
+          disabled={loading || activeTeams.length === 0}
+        >
           Export CSV
         </button>
       </div>
@@ -363,75 +414,83 @@ export default function Tally() {
             Department
             <select
               value={departmentId}
-              onChange={(e) => setDepartmentId(e.target.value)}
+              onChange={(event) => setDepartmentId(event.target.value)}
             >
-              {departments.filter((d) => d.active).map((department) => (
-                <option key={department.id} value={department.id}>
-                  {department.code} — {department.name}
-                </option>
-              ))}
+              {departments
+                .filter((department) => department.active)
+                .sort((a, b) => {
+                  if (a.code === 'SLI') return -1
+                  if (b.code === 'SLI') return 1
+                  return a.code.localeCompare(b.code)
+                })
+                .map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.code} — {department.name}
+                  </option>
+                ))}
             </select>
           </label>
 
           <label>
             Month
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-  <button
-    type="button"
-    className="btn"
-    aria-label="Previous month"
-    onClick={() => {
-      const [year, monthNumber] = month.split('-').map(Number)
-      const previous = new Date(year, monthNumber - 2, 1)
-      setMonth(
-        `${previous.getFullYear()}-${String(previous.getMonth() + 1).padStart(2, '0')}`
-      )
-    }}
-  >
-    ←
-  </button>
+            <div
+              style={{
+                display: 'flex',
+                gap: '0.5rem',
+                alignItems: 'center'
+              }}
+            >
+              <button
+                type="button"
+                className="btn"
+                aria-label="Previous month"
+                onClick={() => changeMonth(-1)}
+              >
+                ←
+              </button>
 
-  <input
-      type="month"
-      value={month}
-      onChange={(e) => {
-        if (e.target.value) setMonth(e.target.value)
-      }}
-      style={{ flex: 1 }}
-    />
+              <input
+                type="month"
+                value={month}
+                onChange={(event) => {
+                  if (event.target.value) setMonth(event.target.value)
+                }}
+                style={{ flex: 1, minWidth: 0 }}
+              />
 
-    <button
-      type="button"
-      className="btn"
-      aria-label="Next month"
-      onClick={() => {
-        const [year, monthNumber] = month.split('-').map(Number)
-        const next = new Date(year, monthNumber, 1)
-          setMonth(
-          `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`
-          )
-        }}
-        >
-          →
-        </button>
-      div>
-
-        <div className="muted" style={{ marginTop: '0.75rem', fontSize: '0.85rem' }}>
-          {canEdit
-            ? 'Enter a daily count and move out of the cell to save. WID/MID are monthly totals entered separately.'
-            : 'Read-only view. Contact an owner or editor to change counts.'}
+              <button
+                type="button"
+                className="btn"
+                aria-label="Next month"
+                onClick={() => changeMonth(1)}
+              >
+                →
+              </button>
+            </div>
+          </label>
         </div>
+
+        <p className="muted" style={{ marginBottom: 0, fontSize: '0.85rem' }}>
+          {canEdit
+            ? 'Edit a daily cell, then click outside it to save. WID and MID are entered separately for each month.'
+            : 'Read-only view. Contact an owner or editor to update counts.'}
+        </p>
       </div>
 
-      <div className="grid metrics" style={{ marginBottom: '1rem' }}>
+      <div
+        className="grid metrics"
+        style={{ marginBottom: '1rem' }}
+      >
         <div className="card">
           <div className="muted">Department WID</div>
           <div className="metric-value">{departmentWid.toLocaleString()}</div>
         </div>
+
         <div className="card">
           <div className="muted">Department MID</div>
           <div className="metric-value">{departmentMid.toLocaleString()}</div>
         </div>
+
         <div className="card">
           <div className="muted">Active teams</div>
           <div className="metric-value">{activeTeams.length}</div>
@@ -439,10 +498,20 @@ export default function Tally() {
       </div>
 
       <div className="card">
-        <div className="row between" style={{ gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+        <div
+          className="row between"
+          style={{
+            gap: '0.75rem',
+            flexWrap: 'wrap',
+            marginBottom: '0.75rem'
+          }}
+        >
           <h2 style={{ margin: 0 }}>
-            {departments.find((d) => d.id === departmentId)?.code ?? 'Department'} — {month}
+            {departments.find((item) => item.id === departmentId)?.code ??
+              'Department'}{' '}
+            — {month}
           </h2>
+
           <span className="muted" style={{ fontSize: '0.85rem' }}>
             {dates.length} days · scroll horizontally
           </span>
@@ -476,13 +545,9 @@ export default function Tally() {
                 <tr>
                   <th
                     style={{
-                      position: 'sticky',
-                      left: 0,
+                      ...stickyTeamStyle,
                       zIndex: 3,
-                      background: 'var(--card, #fff)',
                       minWidth: '150px',
-                      textAlign: 'left',
-                      padding: '0.65rem',
                       borderBottom: '2px solid var(--border)'
                     }}
                   >
@@ -525,24 +590,13 @@ export default function Tally() {
               <tbody>
                 {activeTeams.map((team) => (
                   <tr key={team.id}>
-                    <th
-                      scope="row"
-                      style={{
-                        position: 'sticky',
-                        left: 0,
-                        zIndex: 2,
-                        background: 'var(--card, #fff)',
-                        textAlign: 'left',
-                        padding: '0.5rem 0.65rem',
-                        whiteSpace: 'nowrap',
-                        borderBottom: '1px solid var(--border)'
-                      }}
-                    >
+                    <th scope="row" style={stickyTeamStyle}>
                       {team.code}
                     </th>
 
                     {dates.map((date) => {
-                      const key = cellKey(team.id, date)
+                      const key = dailyKey(team.id, date)
+
                       return (
                         <td
                           key={date}
@@ -561,21 +615,19 @@ export default function Tally() {
                             disabled={!canEdit}
                             value={dailyCounts[key] ?? ''}
                             placeholder="0"
-                            onChange={(e) => updateDailyInput(team.id, date, e.target.value)}
+                            onChange={(event) =>
+                              updateDaily(team.id, date, event.target.value)
+                            }
                             onBlur={() => void saveDaily(team.id, date)}
-                            style={{
-                              width: '56px',
-                              minWidth: '56px',
-                              padding: '0.45rem 0.2rem',
-                              textAlign: 'center',
-                              border: '1px solid var(--border)',
-                              borderRadius: '0.35rem',
-                              background: 'var(--input-bg, transparent)',
-                              color: 'inherit'
-                            }}
+                            style={inputStyle}
                           />
+
                           {saving === key && (
-                            <span aria-label="Saving" style={{ display: 'block', fontSize: '0.65rem' }}>Saving</span>
+                            <span
+                              style={{ display: 'block', fontSize: '0.65rem' }}
+                            >
+                              Saving…
+                            </span>
                           )}
                         </td>
                       )
@@ -583,6 +635,7 @@ export default function Tally() {
 
                     {(['wid', 'mid'] as const).map((field) => {
                       const key = `${team.id}|${field}`
+
                       return (
                         <td
                           key={field}
@@ -593,7 +646,7 @@ export default function Tally() {
                           }}
                         >
                           <input
-                            aria-label={`${team.code} ${field.toUpperCase()} monthly total`}
+                            aria-label={`${team.code} ${field.toUpperCase()} total`}
                             type="number"
                             min="0"
                             step="1"
@@ -601,21 +654,19 @@ export default function Tally() {
                             disabled={!canEdit}
                             value={monthlyTotals[team.id]?.[field] ?? ''}
                             placeholder="0"
-                            onChange={(e) => updateTotalInput(team.id, field, e.target.value)}
+                            onChange={(event) =>
+                              updateMonthly(team.id, field, event.target.value)
+                            }
                             onBlur={() => void saveMonthly(team.id, field)}
-                            style={{
-                              width: '72px',
-                              minWidth: '72px',
-                              padding: '0.45rem 0.2rem',
-                              textAlign: 'center',
-                              border: '1px solid var(--border)',
-                              borderRadius: '0.35rem',
-                              background: 'var(--input-bg, transparent)',
-                              color: 'inherit'
-                            }}
+                            style={{ ...inputStyle, width: '72px', minWidth: '72px' }}
                           />
+
                           {saving === key && (
-                            <span aria-label="Saving" style={{ display: 'block', fontSize: '0.65rem' }}>Saving</span>
+                            <span
+                              style={{ display: 'block', fontSize: '0.65rem' }}
+                            >
+                              Saving…
+                            </span>
                           )}
                         </td>
                       )
@@ -627,13 +678,9 @@ export default function Tally() {
                   <th
                     scope="row"
                     style={{
-                      position: 'sticky',
-                      left: 0,
-                      zIndex: 2,
-                      background: 'var(--card, #fff)',
-                      textAlign: 'left',
-                      padding: '0.65rem',
-                      borderTop: '2px solid var(--border)'
+                      ...stickyTeamStyle,
+                      borderTop: '2px solid var(--border)',
+                      fontWeight: 700
                     }}
                   >
                     Department total
@@ -649,17 +696,36 @@ export default function Tally() {
                         borderTop: '2px solid var(--border)'
                       }}
                     >
-                      {activeTeams.reduce(
-                        (sum, team) => sum + Number(dailyCounts[cellKey(team.id, date)] || 0),
-                        0
-                      ).toLocaleString()}
+                      {activeTeams
+                        .reduce(
+                          (sum, team) =>
+                            sum +
+                            Number(dailyCounts[dailyKey(team.id, date)] || 0),
+                          0
+                        )
+                        .toLocaleString()}
                     </td>
                   ))}
 
-                  <td style={{ textAlign: 'center', padding: '0.65rem', fontWeight: 700, borderTop: '2px solid var(--border)' }}>
+                  <td
+                    style={{
+                      textAlign: 'center',
+                      padding: '0.65rem',
+                      fontWeight: 700,
+                      borderTop: '2px solid var(--border)'
+                    }}
+                  >
                     {departmentWid.toLocaleString()}
                   </td>
-                  <td style={{ textAlign: 'center', padding: '0.65rem', fontWeight: 700, borderTop: '2px solid var(--border)' }}>
+
+                  <td
+                    style={{
+                      textAlign: 'center',
+                      padding: '0.65rem',
+                      fontWeight: 700,
+                      borderTop: '2px solid var(--border)'
+                    }}
+                  >
                     {departmentMid.toLocaleString()}
                   </td>
                 </tr>
@@ -668,8 +734,12 @@ export default function Tally() {
           </div>
         )}
 
-        <p className="muted" style={{ fontSize: '0.8rem', marginBottom: 0, marginTop: '0.75rem' }}>
-          Blank daily cells are treated as zero in totals and exports. WID and MID are separately entered monthly totals; they are not automatically calculated from daily counts.
+        <p
+          className="muted"
+          style={{ fontSize: '0.8rem', marginBottom: 0, marginTop: '0.75rem' }}
+        >
+          Blank daily cells count as zero in totals and exports. WID and MID are
+          separately entered monthly totals.
         </p>
       </div>
     </section>
