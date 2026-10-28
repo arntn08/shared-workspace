@@ -1,5 +1,5 @@
-
-import { NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { useSettings } from '../lib/settings'
 import { NotifProvider, useNotifs } from '../lib/notifications'
@@ -13,103 +13,222 @@ import Profile from '../pages/Profile'
 import Notifications from '../pages/Notifications'
 import Settings from '../pages/Settings'
 import Tally from '../pages/Tally'
-import './tabs.css'
 
-const tabs: [string, string, string, string][] = [
-  ['/', 'Home', 'Home', 'home'],
-  ['/tally', 'Tally', 'Installation Tally', 'tally'],
-  ['/files', 'Files', 'Files & resources', 'files'],
-  ['/schedule', 'Schedule', 'My schedule', 'schedule'],
-  ['/notifications', 'Alerts', 'Notifications', 'bell'],
-  ['/profile', 'Profile', 'My ID card', 'user']
+const employeeLinks: [string, string, string, string][] = [
+  ['/', 'Home', 'home', 'Workspace'],
+  ['/files', 'Files & resources', 'files', 'Workspace'],
+  ['/tally', 'Installation Tally', 'tally', 'Operations'],
+  ['/schedule', 'Schedule', 'schedule', 'Operations'],
+  ['/notifications', 'Notifications', 'bell', 'Operations'],
+  ['/profile', 'My profile', 'user', 'Account'],
+  ['/settings', 'Settings', 'settings', 'Account']
 ]
 
-function TabBar({ title }: { title: string }) {
-  const { unread: serverUnread } = useNotifs()
-  const { profile, signOut } = useAuth()
-  const navigate = useNavigate()
-  const local = useLocalUpdates(profile?.id)
-  const unread = serverUnread + local.unread
+function SidebarClock() {
+  const [now, setNow] = useState(() => new Date())
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  const day = new Intl.DateTimeFormat('en-PH', {
+    timeZone: 'Asia/Manila',
+    weekday: 'long'
+  }).format(now)
+  const date = new Intl.DateTimeFormat('en-PH', {
+    timeZone: 'Asia/Manila',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }).format(now)
+  const time = new Intl.DateTimeFormat('en-PH', {
+    timeZone: 'Asia/Manila',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  }).format(now)
 
   return (
-    <nav className="tabbar" aria-label="Employee navigation">
-      <div className="rail-brand">
-        <span className="emp-brand-mark">A</span>
-        <span>{title || 'AHBA Workspace'}</span>
-      </div>
+    <section className="ops-sidebar-clock" aria-label="Current date and time">
+      <div className="ops-clock-top"><span className="ops-clock-live-dot" /> PHILIPPINE TIME</div>
+      <strong>{time}</strong>
+      <span className="ops-clock-day">{day}</span>
+      <span className="ops-clock-date">{date}</span>
+    </section>
+  )
+}
 
-      {tabs.map(([to, short, full, icon]) => (
-        <NavLink
-          key={to}
-          to={to}
-          end={to === '/'}
-          aria-label={full}
-          className={({ isActive }) => `emp-tab${isActive ? ' active' : ''}`}
-        >
-          <span className="ico">
-            <Icon name={icon} />
-            {to === '/notifications' && unread > 0 && (
-              <b className="dot-badge">{unread > 99 ? '99+' : unread}</b>
-            )}
-          </span>
-          <span className="lbl lbl-short">{short}</span>
-          <span className="lbl lbl-full">{full}</span>
-        </NavLink>
-      ))}
+function EmployeeSidebar({ title, currentPage, mobileOpen, setMobileOpen }: {
+  title: string
+  currentPage: string
+  mobileOpen: boolean
+  setMobileOpen: (open: boolean) => void
+}) {
+  const { profile, signOut } = useAuth()
+  const [settings] = useSettings()
+  const navigate = useNavigate()
+  const { unread: serverUnread } = useNotifs()
+  const local = useLocalUpdates(profile?.id)
+  const unread = serverUnread + local.unread
+  const groups = ['Workspace', 'Operations', 'Account']
 
+  return (
+    <>
       <button
+        className="ops-mobile-toggle"
         type="button"
-        className="emp-tab emp-tab-logout"
-        onClick={async () => { await signOut(); navigate('/', { replace: true }) }}
-        aria-label="Log out"
-        title="Log out"
+        aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+        aria-expanded={mobileOpen}
+        onClick={() => setMobileOpen(!mobileOpen)}
       >
-        <span className="ico"><Icon name="out" /></span>
-        <span className="lbl lbl-short">Logout</span>
-        <span className="lbl lbl-full">Log out</span>
+        <span className="ops-toggle-lines">{mobileOpen ? '×' : '☰'}</span>
+        <span>{title || 'AHBA Workspace'}</span>
       </button>
-    </nav>
+
+      {mobileOpen && (
+        <button
+          className="ops-mobile-scrim"
+          aria-label="Close navigation"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      <aside className={`ops-sidebar${mobileOpen ? ' is-open' : ''}`}>
+        <div className="ops-brand">
+          <div className="ops-brand-mark">A</div>
+          <div className="ops-brand-copy">
+            <strong>AHBA</strong>
+            <span>{settings.title || 'Development Workspace'}</span>
+          </div>
+          <button
+            className="ops-sidebar-close"
+            type="button"
+            aria-label="Close navigation"
+            onClick={() => setMobileOpen(false)}
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="ops-workspace-label">WORKSPACE</div>
+        <SidebarClock />
+
+        <nav className="ops-nav" aria-label="Employee navigation">
+          {groups.map(group => {
+            const groupLinks = employeeLinks.filter(item => item[3] === group)
+            if (!groupLinks.length) return null
+
+            return (
+              <div className="ops-nav-group" key={group}>
+                <div className="ops-nav-heading">{group}</div>
+                {groupLinks.map(([to, label, icon]) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={to === '/'}
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) => `ops-nav-link${isActive ? ' active' : ''}`}
+                  >
+                    <span className="ops-nav-icon"><Icon name={icon} /></span>
+                    <span className="ops-nav-label">{label}</span>
+                    {to === '/tally' && <span className="ops-nav-tag">LIVE</span>}
+                    {to === '/notifications' && unread > 0 && (
+                      <span className="ops-nav-tag">{unread > 99 ? '99+' : unread} NEW</span>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            )
+          })}
+        </nav>
+
+        <div className="ops-sidebar-bottom">
+          <div className="ops-help-card">
+            <span className="ops-help-icon">✦</span>
+            <div>
+              <strong>Workspace access</strong>
+              <span>Employee permissions</span>
+            </div>
+          </div>
+
+          <div className="ops-profile">
+            <Avatar name={profile?.full_name} email={profile?.email} />
+            <div className="ops-profile-copy">
+              <strong>{profile?.full_name || profile?.email || 'Account'}</strong>
+              <span>Employee</span>
+            </div>
+            <ThemeButton />
+            <button
+              className="ops-icon-button"
+              type="button"
+              onClick={async () => { await signOut(); navigate('/', { replace: true }) }}
+              title="Sign out"
+              aria-label="Sign out"
+            >
+              <Icon name="out" />
+            </button>
+          </div>
+        </div>
+      </aside>
+    </>
   )
 }
 
 export default function EmployeeLayout() {
   const { profile } = useAuth()
   const [settings] = useSettings()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const location = useLocation()
+
+  const currentPage =
+    employeeLinks.find(([to]) =>
+      to === '/' ? location.pathname === '/' : location.pathname.startsWith(to)
+    )?.[1] ?? 'Workspace'
 
   return (
     <NotifProvider>
-      <div className="emp-app">
-        <TabBar title={settings.title} />
+      <div className="ops-shell employee-ops-shell">
+        <EmployeeSidebar
+          title={settings.title}
+          currentPage={currentPage}
+          mobileOpen={mobileOpen}
+          setMobileOpen={setMobileOpen}
+        />
 
-        <main className="emp-main">
-          <header className="emp-top">
-            <div className="emp-top-copy">
-              <span className="emp-eyebrow">AHBA DEVELOPMENT</span>
-              <strong>{settings.title || 'Shared Workspace'}</strong>
+        <main className="ops-main">
+          <header className="ops-topbar">
+            <div className="ops-breadcrumb">
+              <span>AHBA WORKSPACE</span>
+              <span className="ops-breadcrumb-divider">/</span>
+              <strong>{currentPage}</strong>
             </div>
-            <div className="emp-top-actions">
-              <span className="emp-online"><i /> Workspace</span>
-              <ThemeButton />
-              <Avatar name={profile?.full_name} email={profile?.email} />
+            <div className="ops-topbar-right">
+              <span className="ops-status-dot" />
+              <span className="ops-status-label">Workspace connected</span>
+              <span className="ops-role-pill">Employee</span>
             </div>
           </header>
 
-          <Routes>
-            <Route path="/" element={<EmployeeHome settings={settings} />} />
-            <Route path="/tally" element={<Tally />} />
-            <Route path="/files" element={<EmployeeFiles settings={settings} />} />
-            <Route path="/file/:id" element={<FileViewer />} />
-            <Route path="/schedule" element={<MySchedule />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <div className="ops-page employee-ops-page">
+            <Routes>
+              <Route path="/" element={<EmployeeHome settings={settings} />} />
+              <Route path="/tally" element={<Tally />} />
+              <Route path="/files" element={<EmployeeFiles settings={settings} />} />
+              <Route path="/file/:id" element={<FileViewer />} />
+              <Route path="/schedule" element={<MySchedule />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
 
-          <footer className="emp-footer">
-            <span>AHBA Development</span>
-            <span>Shared Workspace · Employee Portal</span>
-          </footer>
+            <footer className="emp-footer">
+              <span>AHBA Development</span>
+              <span>Shared Workspace · Employee Portal</span>
+            </footer>
+          </div>
         </main>
       </div>
     </NotifProvider>
