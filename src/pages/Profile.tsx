@@ -166,35 +166,6 @@ export default function Profile() {
               <span className={`id-status${profile.active ? ' on' : ''}`}>{profile.active ? 'Active' : 'Inactive'}</span>
             </div>
             <div className="id-body">
-              <div className="id-avatar">
-                <i className="ring r3" />
-                <i className="ring r2" />
-                <i className="ring r1" />
-                {photo ? <img src={photo} alt={`${name}`} /> : (
-                  <span className="profile-silhouette" aria-label={`Default profile icon for ${name}`}>
-                    <svg viewBox="0 0 160 190" role="img" aria-hidden="true">
-                      <defs>
-                        <linearGradient id="profileGlass" x1="0" y1="0" x2="1" y2="1">
-                          <stop offset="0%" stopColor="#ffffff" />
-                          <stop offset="100%" stopColor="#e8edf4" />
-                        </linearGradient>
-                        <linearGradient id="profileBlue" x1="0" y1="0" x2="1" y2="1">
-                          <stop offset="0%" stopColor="#a9b9ff" />
-                          <stop offset="100%" stopColor="#596fd4" />
-                        </linearGradient>
-                      </defs>
-                      <rect x="3" y="3" width="154" height="184" rx="22" fill="url(#profileGlass)" />
-                      <circle cx="80" cy="21" r="6" fill="#20242d" />
-                      <circle cx="80" cy="60" r="24" fill="#7f8ac0" opacity=".2" />
-                      <circle cx="80" cy="57" r="22" fill="url(#profileBlue)" />
-                      <path d="M38 119c2-25 20-39 42-39s40 14 42 39v5H38z" fill="url(#profileBlue)" />
-                      <rect x="46" y="135" width="68" height="12" rx="6" fill="url(#profileBlue)" />
-                      <rect x="25" y="154" width="110" height="11" rx="6" fill="url(#profileBlue)" />
-                      <rect x="25" y="171" width="70" height="9" rx="5" fill="url(#profileBlue)" />
-                    </svg>
-                  </span>
-                )}
-              </div>
               <div className="id-main">
                 <h1>{name}</h1>
                 <div className="id-role">{ROLE_LABEL[profile.role] ?? profile.role}</div>
