@@ -60,9 +60,8 @@ function SidebarClock() {
   )
 }
 
-function EmployeeSidebar({ title, currentPage, mobileOpen, setMobileOpen }: {
+function EmployeeSidebar({ title, mobileOpen, setMobileOpen }: {
   title: string
-  currentPage: string
   mobileOpen: boolean
   setMobileOpen: (open: boolean) => void
 }) {
@@ -177,7 +176,6 @@ function EmployeeSidebar({ title, currentPage, mobileOpen, setMobileOpen }: {
 }
 
 export default function EmployeeLayout() {
-  const { profile } = useAuth()
   const [settings] = useSettings()
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
@@ -192,7 +190,6 @@ export default function EmployeeLayout() {
       <div className="ops-shell employee-ops-shell">
         <EmployeeSidebar
           title={settings.title}
-          currentPage={currentPage}
           mobileOpen={mobileOpen}
           setMobileOpen={setMobileOpen}
         />
