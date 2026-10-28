@@ -196,11 +196,18 @@ export default function Profile() {
           </div>
         </div>
       </div>
-      {codes.length === 0 && mobs.length === 0 && (
-        <p className="muted profile-actions" style={{ fontSize: '0.82rem' }}>
-          Team code and JO MOB appear here once your name on this account matches the roster.
-        </p>
-      )}
+      <div className="card profile-details">
+        <h2>Employee details</h2>
+        <dl className="profile-detail-grid">
+          <div><dt>Full name</dt><dd>{name}</dd></div>
+          <div><dt>Role</dt><dd>{ROLE_LABEL[profile.role] || 'Employee'}</dd></div>
+          <div><dt>Team code</dt><dd>{codes.join(', ') || 'Not matched yet'}</dd></div>
+          <div><dt>JO MOB</dt><dd>{mobs.join(', ') || '—'}</dd></div>
+          <div><dt>Email</dt><dd>{profile.email || '—'}</dd></div>
+          <div><dt>Member since</dt><dd>{since}</dd></div>
+          <div><dt>Account reference</dt><dd>{ref}</dd></div>
+        </dl>
+      </div>
 
       <div className="card profile-actions">
         <h2>Your card</h2>
