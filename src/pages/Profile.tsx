@@ -170,16 +170,16 @@ export default function Profile() {
                       <defs>
                         <linearGradient id="profileGlass" x1="0" y1="0" x2="1" y2="1">
                           <stop offset="0%" stopColor="#ffffff" />
-                          <stop offset="100%" stopColor="#e8edf4" />
+                          <stop offset="100%" stopColor="#e8eee6" />
                         </linearGradient>
                         <linearGradient id="profileBlue" x1="0" y1="0" x2="1" y2="1">
-                          <stop offset="0%" stopColor="#a9b9ff" />
-                          <stop offset="100%" stopColor="#596fd4" />
+                          <stop offset="0%" stopColor="#8dc99b" />
+                          <stop offset="100%" stopColor="#176b3c" />
                         </linearGradient>
                       </defs>
                       <rect x="3" y="3" width="154" height="184" rx="22" fill="url(#profileGlass)" />
                       <circle cx="80" cy="21" r="6" fill="#20242d" />
-                      <circle cx="80" cy="60" r="24" fill="#7f8ac0" opacity=".2" />
+                      <circle cx="80" cy="60" r="24" fill="#b8954d" opacity=".2" />
                       <circle cx="80" cy="57" r="22" fill="url(#profileBlue)" />
                       <path d="M38 119c2-25 20-39 42-39s40 14 42 39v5H38z" fill="url(#profileBlue)" />
                       <rect x="46" y="135" width="68" height="12" rx="6" fill="url(#profileBlue)" />
