@@ -1089,6 +1089,7 @@ export default function Tally() {
       )}
 
       {tallyView === 'wtd-mtd' && (
+      <>
       <div className="tally-summary">
         <div className="tally-summary-card">
           <div className="muted">Department WTD</div>
@@ -1256,6 +1257,7 @@ export default function Tally() {
           calculated per team from daily counts; no separate WID/MID entry is needed.
         </p>
       </div>
+      </>
       )}
     </section>
   )
