@@ -3,7 +3,7 @@
 .idscene {
   perspective: 1400px;
   width: 100%;
-  max-width: 720px;
+  max-width: 420px;
   margin: 1.5rem auto 1.75rem;
 }
 
@@ -22,11 +22,13 @@
   isolation: isolate;
   overflow: hidden;
   padding: 0;
-  border: 1px solid #d6c39d;
-  border-radius: 22px;
-  background: #fffdf8;
-  color: #29251e;
-  box-shadow: 0 24px 55px rgba(78, 57, 22, 0.16), 0 3px 8px rgba(78, 57, 22, 0.08);
+  max-width: 390px;
+  margin: 0 auto;
+  border: 1px solid #c8ceda;
+  border-radius: 28px;
+  background: linear-gradient(145deg, #f8faff 0%, #dce2ed 48%, #f7f8fc 100%);
+  color: #292d3b;
+  box-shadow: 12px 18px 0 -8px #aab2c2, 0 28px 55px rgba(31, 41, 64, 0.24), inset 2px 2px 5px rgba(255,255,255,.95), inset -3px -4px 8px rgba(90,103,130,.2);
   transform-style: preserve-3d;
   transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
   transition: transform 0.15s ease-out, box-shadow 0.2s ease;
@@ -36,17 +38,18 @@
   content: "";
   display: block;
   height: 9px;
-  background: linear-gradient(90deg, #806027, #d9bd7e 48%, #9b7637);
+  height: 8px;
+  background: linear-gradient(90deg, #7e8dc5, #c9d3ff 48%, #7382bd);
 }
 
 .idcard::after {
   content: "";
   position: absolute;
   z-index: -1;
-  width: 310px;
-  height: 310px;
-  right: -130px;
-  top: 65px;
+  width: 250px;
+  height: 250px;
+  right: -115px;
+  top: 100px;
   border: 1px solid rgba(158, 119, 48, 0.15);
   border-radius: 50%;
   box-shadow: 0 0 0 22px rgba(158, 119, 48, 0.035),
@@ -68,15 +71,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 20px 24px 15px;
-  border-bottom: 1px solid #eee5d5;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid rgba(126,140,177,.25);
 }
 
 .id-org {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #332a1d;
+  color: #34394c;
   font-size: 0.9rem;
   font-weight: 800;
   letter-spacing: 0.09em;
@@ -92,7 +95,7 @@
   flex: none;
   border-radius: 10px;
   color: #fff9ec;
-  background: linear-gradient(145deg, #b28a43, #765522);
+  background: linear-gradient(145deg, #aabaff, #5269bd);
   font-family: Georgia, serif;
   font-size: 1.2rem;
   box-shadow: 0 4px 10px rgba(100, 70, 20, .2);
@@ -102,8 +105,8 @@
   flex: none;
   padding: 6px 10px;
   border-radius: 999px;
-  background: #f2eee5;
-  color: #746c5e;
+  background: #e8edf8;
+  color: #66708b;
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -118,21 +121,24 @@
 .id-body {
   display: flex;
   align-items: center;
-  gap: 22px;
-  padding: 24px;
+  flex-direction: column;
+  text-align: center;
+  gap: 15px;
+  padding: 24px 24px 20px;
   transform-style: preserve-3d;
 }
 
 .id-avatar {
   position: relative;
-  width: 124px;
+  width: 148px;
   height: 148px;
   flex: none;
   overflow: hidden;
-  border: 4px solid #fff;
-  border-radius: 12px;
-  background: #e8dfcc;
-  box-shadow: 0 0 0 1px #d9c7a5, 0 9px 22px rgba(66, 47, 20, .16);
+  border: 5px solid #f8faff;
+  border-radius: 50%;
+  background: #e8edf8;
+  box-shadow: 0 0 0 1px #b9c2d8, 0 10px 25px rgba(66, 77, 112, .25), inset 0 2px 4px #fff;
+  margin: 0 auto;
   transform: translateZ(18px);
 }
 
@@ -143,7 +149,7 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  border-radius: 8px;
+  border-radius: 50%;
   object-fit: cover;
   display: grid;
   place-items: center;
@@ -153,7 +159,7 @@
   font-weight: 800;
 }
 
-.id-avatar .profile-silhouette { padding: 5px; box-sizing: border-box; background: #f1f4fa; }
+ .id-avatar .profile-silhouette { padding: 5px; box-sizing: border-box; background: #f1f4fa; }
 .id-avatar .profile-silhouette svg { display: block; width: 100%; height: 100%; }
 
 .id-avatar .ring {
@@ -166,16 +172,16 @@
 
 .id-main h1 {
   margin: 0 0 7px;
-  color: #29251e;
+  color: #2e3448;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1.35rem, 3.5vw, 2rem);
+  font-size: clamp(1.25rem, 3.5vw, 1.75rem);
   line-height: 1.15;
   overflow-wrap: anywhere;
 }
 
 .id-role {
   margin-bottom: 12px;
-  color: #78613a;
+  color: #6676b1;
   font-size: 0.86rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -187,8 +193,8 @@
   margin: 0 4px 4px 0;
   border: 1px solid #e6d7b9;
   border-radius: 7px;
-  background: #f8f0df;
-  color: #765522;
+  background: #e9edff;
+  color: #4e60a7;
   font-size: 0.72rem;
   font-weight: 700;
 }
@@ -199,13 +205,13 @@
   gap: 0;
   margin: 0;
   padding: 0 24px;
-  border-top: 1px solid #eee5d5;
+  border-top: 1px solid rgba(126,140,177,.25);
 }
 
 .id-grid > div {
   min-width: 0;
   padding: 14px 10px 14px 0;
-  border-bottom: 1px solid #f0e8db;
+  border-bottom: 1px solid rgba(126,140,177,.2);
 }
 
 .id-grid > div:nth-child(odd) {
@@ -214,12 +220,12 @@
 
 .id-grid > div:nth-child(even) {
   padding-left: 18px;
-  border-left: 1px solid #eee5d5;
+  border-left: 1px solid rgba(126,140,177,.25);
 }
 
 .id-grid dt {
   margin-bottom: 5px;
-  color: #95856b;
+  color: #7b86a5;
   font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -228,7 +234,7 @@
 
 .id-grid dd {
   margin: 0;
-  color: #342e24;
+  color: #30364a;
   font-size: 0.88rem;
   font-weight: 650;
   overflow-wrap: anywhere;
@@ -240,7 +246,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 14px 24px 17px;
-  color: #8a7b63;
+  color: #7b86a5;
   font-size: 0.68rem;
   letter-spacing: 0.04em;
 }
@@ -273,8 +279,8 @@
   .idcard { border-radius: 17px; }
   .id-head { padding: 16px 15px 12px; }
   .id-org { font-size: 0.72rem; letter-spacing: 0.04em; }
-  .id-body { gap: 14px; padding: 18px 15px; }
-  .id-avatar { width: 92px; height: 112px; }
+  .id-body { gap: 14px; padding: 20px 15px; }
+  .id-avatar { width: 132px; height: 132px; }
   .id-main h1 { font-size: 1.25rem; }
   .id-grid { padding: 0 15px; }
   .id-grid > div { padding-top: 12px; padding-bottom: 12px; }
@@ -285,8 +291,8 @@
 }
 
 @media (max-width: 350px) {
-  .id-body { align-items: flex-start; gap: 10px; }
-  .id-avatar { width: 76px; height: 94px; }
+  .id-body { align-items: center; gap: 10px; }
+  .id-avatar { width: 112px; height: 112px; }
   .id-main h1 { font-size: 1.1rem; }
   .id-org { font-size: 0.65rem; }
 }
