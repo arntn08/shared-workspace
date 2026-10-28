@@ -177,7 +177,7 @@ export default function People() {
   )
 
   return (
-    <>
+    <div className="people-page">
       <div className="page-head">
         <div>
           <h1>People</h1>
@@ -333,7 +333,7 @@ export default function People() {
           )}
         </div>
       ))}
-      {shown.length === 0 && <p className="muted">Nobody here yet.</p>}
-    </>
+      {shown.length === 0 && <p className="muted people-empty">Nobody here yet.</p>}
+    </div>
   )
 }
