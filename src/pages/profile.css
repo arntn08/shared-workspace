@@ -116,6 +116,46 @@
   font-size: 1.1rem;
 }
 
+.profile-details {
+  max-width: 720px;
+  margin: 1.5rem auto 1rem;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+.profile-details h2 {
+  margin-top: 0;
+}
+.profile-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+.profile-detail-grid > div {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  min-width: 0;
+}
+.profile-detail-grid > div:nth-child(even) {
+  border-left: 1px solid var(--border);
+}
+.profile-detail-grid dt {
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.profile-detail-grid dd {
+  margin: 0;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 520px) {
+  .profile-detail-grid { grid-template-columns: 1fr; }
+  .profile-detail-grid > div:nth-child(even) { border-left: 0; }
+}
+
 .profile-actions {
   max-width: 720px;
   margin: 0 auto 1rem;
