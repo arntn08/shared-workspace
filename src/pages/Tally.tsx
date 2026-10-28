@@ -698,10 +698,21 @@ export default function Tally() {
           color: var(--text, #30291e);
         }
 
+        .tally-page .tally-control-layout {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr);
+          gap: 1rem;
+          align-items: end;
+        }
+        .tally-page .tally-view-tabs {
+          display: flex;
+          gap: .5rem;
+          flex-wrap: wrap;
+        }
         .tally-page .tally-toolbar {
           display: grid;
-          grid-template-columns: minmax(220px, 1fr) minmax(260px, 1fr);
-          gap: 1rem;
+          grid-template-columns: minmax(180px, 1fr) minmax(240px, 1fr);
+          gap: .75rem;
           align-items: end;
         }
 
@@ -908,8 +919,12 @@ export default function Tally() {
         }
 
         @media (max-width: 760px) {
-          .tally-page .tally-toolbar {
+          .tally-page .tally-control-layout {
             grid-template-columns: 1fr;
+            gap: .75rem;
+          }
+          .tally-page .tally-toolbar {
+            grid-template-columns: 1fr 1fr;
           }
 
           .tally-page .tally-summary,
@@ -1064,79 +1079,77 @@ export default function Tally() {
         </div>
       )}
 
-      <div className="card" style={{ marginBottom: '1rem' }}>
-        <div role="tablist" aria-label="Installation tally views" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tallyView === 'wtd-mtd'}
-            className={tallyView === 'wtd-mtd' ? 'btn primary' : 'btn'}
-            onClick={() => setTallyView('wtd-mtd')}
-          >
-            WTD / MTD
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tallyView === 'total-loads'}
-            className={tallyView === 'total-loads' ? 'btn primary' : 'btn'}
-            onClick={() => setTallyView('total-loads')}
-          >
-            Total Loads
-          </button>
-        </div>
-      </div>
-
-      {tallyView === 'wtd-mtd' && (
-      <div className="card" style={{ marginBottom: '1rem' }}>
-        <div className="tally-toolbar">
-          <label>
-            Department
-            <select
-              value={departmentId}
-              onChange={event => setDepartmentId(event.target.value)}
+      <div className="card tally-control-panel" style={{ marginBottom: '1rem' }}>
+        <div className="tally-control-layout">
+          <div role="tablist" aria-label="Installation tally views" className="tally-view-tabs">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tallyView === 'wtd-mtd'}
+              className={tallyView === 'wtd-mtd' ? 'btn primary' : 'btn'}
+              onClick={() => setTallyView('wtd-mtd')}
             >
-              {departments
-                .filter(department => department.active)
-                .sort((a, b) =>
-                  a.code === 'SLI'
-                    ? -1
-                    : b.code === 'SLI'
-                      ? 1
-                      : a.code.localeCompare(b.code)
-                )
-                .map(department => (
-                  <option key={department.id} value={department.id}>
-                    {department.code} — {department.name}
-                  </option>
-                ))}
-            </select>
-          </label>
+              WTD / MTD
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tallyView === 'total-loads'}
+              className={tallyView === 'total-loads' ? 'btn primary' : 'btn'}
+              onClick={() => setTallyView('total-loads')}
+            >
+              Total Loads
+            </button>
+          </div>
 
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.4rem' }}>
-              Reporting week
+          <div className="tally-toolbar">
+            <label>
+              Department
+              <select
+                value={departmentId}
+                onChange={event => setDepartmentId(event.target.value)}
+              >
+                {departments
+                  .filter(department => department.active)
+                  .sort((a, b) =>
+                    a.code === 'SLI'
+                      ? -1
+                      : b.code === 'SLI'
+                        ? 1
+                        : a.code.localeCompare(b.code)
+                  )
+                  .map(department => (
+                    <option key={department.id} value={department.id}>
+                      {department.code} — {department.name}
+                    </option>
+                  ))}
+              </select>
             </label>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <button type="button" className="btn" aria-label="Previous week" onClick={() => changeWeek(-1)}>←</button>
-              <div style={{ flex: 1, minWidth: 0, textAlign: 'center', fontWeight: 700 }}>
-                {new Date(`${weekStart}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                {' — '}
-                {new Date(`${weekEnd}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.4rem' }}>
+                Reporting week
+              </label>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button type="button" className="btn" aria-label="Previous week" onClick={() => changeWeek(-1)}>←</button>
+                <div style={{ flex: 1, minWidth: 0, textAlign: 'center', fontWeight: 700 }}>
+                  {new Date(`${weekStart}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {' — '}
+                  {new Date(`${weekEnd}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </div>
+                <button type="button" className="btn" aria-label="Next week" onClick={() => changeWeek(1)}>→</button>
               </div>
-              <button type="button" className="btn" aria-label="Next week" onClick={() => changeWeek(1)}>→</button>
             </div>
           </div>
         </div>
-
-        <p className="tally-note">
-          {canEdit
-            ? 'Enter a daily count and leave the field to save. Weekly dates are shown; WTD and MTD update automatically from saved daily counts.'
-            : 'Read-only view. Contact an owner or editor to update counts.'}
-        </p>
+        {tallyView === 'wtd-mtd' && (
+          <p className="tally-note">
+            {canEdit
+              ? 'Enter a daily count and leave the field to save. Weekly dates are shown; WTD and MTD update automatically from saved daily counts.'
+              : 'Read-only view. Contact an owner or editor to update counts.'}
+          </p>
+        )}
       </div>
-
-      )}
 
       {tallyView === 'total-loads' && (
       <div className="card" style={{ marginBottom: '1rem' }}>
