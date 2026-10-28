@@ -958,14 +958,14 @@ export default function Tally() {
 
       <div className="tally-summary tally-live-summary" aria-live="polite">
         <div className="tally-summary-card tally-live-card">
-          <span className="muted">Completed installed · ${month}</span>
-          <div className="tally-summary-number">${completedInstalled.toLocaleString()}</div>
+          <span className="muted">Completed installed · {month}</span>
+          <div className="tally-summary-number">{completedInstalled.toLocaleString()}</div>
           <small className="muted">Unique imported work orders marked COMPLETED</small>
         </div>
         <div className="tally-summary-card tally-live-card">
           <span className="muted">Days remaining in month</span>
-          <div className="tally-summary-number">${daysRemaining}</div>
-          <small className="muted"> ${month === getCurrentMonth() ? 'Until month-end' : 'Based on selected month'} </small>
+          <div className="tally-summary-number">{daysRemaining}</div>
+          <small className="muted">{month === getCurrentMonth() ? 'Until month-end' : 'Based on selected month'}</small>
         </div>
       </div>
 
