@@ -1202,8 +1202,8 @@ export default function Tally() {
 
       {tallyView === 'wtd-mtd' && (
       <>
-      <div className="tally-summary">
-        <div className="tally-summary-card">
+      <div className="tally-summary tally-department-summary">
+        <div className="tally-summary-card tally-department-summary-card">
           <div className="muted">Department WTD</div>
           <div className="tally-summary-number">
             {departmentWTD.toLocaleString()}
@@ -1213,7 +1213,7 @@ export default function Tally() {
           </div>
         </div>
 
-        <div className="tally-summary-card">
+        <div className="tally-summary-card tally-department-summary-card">
           <div className="muted">Department MTD</div>
           <div className="tally-summary-number">
             {departmentMTD.toLocaleString()}
@@ -1223,7 +1223,7 @@ export default function Tally() {
           </div>
         </div>
 
-        <div className="tally-summary-card">
+        <div className="tally-summary-card tally-department-summary-card">
           <div className="muted">Active teams</div>
           <div className="tally-summary-number">
             {activeTeams.length}
