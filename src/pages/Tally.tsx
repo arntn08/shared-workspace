@@ -296,7 +296,7 @@ export default function Tally() {
   }
 
   function getMTD(teamId: string) {
-    return dates
+    return monthDates
       .filter(date => date >= monthStart && date <= reportDate)
       .reduce((sum, date) => sum + getCount(teamId, date), 0)
   }
@@ -760,7 +760,12 @@ export default function Tally() {
                 <tr>
                   <th>Team</th>
                   {dates.map(date => (
-                    <th key={date}>{Number(date.slice(8))}</th>
+                    <th key={date}>
+                      <span style={{ display: 'block', fontSize: '0.75rem', opacity: 0.8 }}>
+                        {new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}
+                      </span>
+                      {Number(date.slice(8))}
+                    </th>
                   ))}
                   <th title="Week-to-Date">WTD</th>
                   <th title="Month-to-Date">MTD</th>
