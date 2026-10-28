@@ -26,65 +26,59 @@ function png(size, pixel) {
   for (let y = 0; y < size; y++) {
     raw[o++] = 0
     for (let x = 0; x < size; x++) {
-      const p = pixel(x / size, y / size)
-      raw[o++] = p[0]
-      raw[o++] = p[1]
-      raw[o++] = p[2]
-      raw[o++] = p[3]
+      const p = pixel((x + .5) / size, (y + .5) / size)
+      raw[o++] = p[0]; raw[o++] = p[1]; raw[o++] = p[2]; raw[o++] = p[3]
     }
   }
   const ihdr = Buffer.alloc(13)
-  ihdr.writeUInt32BE(size, 0)
-  ihdr.writeUInt32BE(size, 4)
-  ihdr[8] = 8
-  ihdr[9] = 6
+  ihdr.writeUInt32BE(size, 0); ihdr.writeUInt32BE(size, 4)
+  ihdr[8] = 8; ihdr[9] = 6
   return Buffer.concat([
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-    chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(raw)),
-    chunk('IEND', Buffer.alloc(0))
+    chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))
   ])
 }
-
-const mix = (a, b, t) => a + (b - a) * t
-const teal = [169, 214, 214]
-const lime = [214, 242, 107]
-
-function icon(u, v) {
-  const dx = u - 0.5
-  const dy = (v - 0.52) * 1.5
-  const d = Math.sqrt(dx * dx + dy * dy)
-  let r = 11 + 14 * (1 - v)
-  let g = 13 + 18 * (1 - v)
-  let b = 16 + 22 * (1 - v)
-  if (d < 0.36 && d > 0.07) {
-    const f = (d * 16) % 1
-    if (f < 0.16) {
-      const t = 1 - d / 0.36
-      r = mix(r, mix(teal[0], lime[0], t), 0.9)
-      g = mix(g, mix(teal[1], lime[1], t), 0.9)
-      b = mix(b, mix(teal[2], lime[2], t), 0.9)
-    }
-  }
-  if (d < 0.075) {
-    r = lime[0]
-    g = lime[1]
-    b = lime[2]
-  } else if (d < 0.14) {
-    const t = (1 - (d - 0.075) / 0.065) * 0.35
-    r = mix(r, lime[0], t)
-    g = mix(g, lime[1], t)
-    b = mix(b, lime[2], t)
-  }
-  return [Math.round(r), Math.round(g), Math.round(b), 255]
+const insideRoundRect = (x, y, l, t, r, b, rad) => {
+  const cx = Math.max(l + rad, Math.min(x, r - rad))
+  const cy = Math.max(t + rad, Math.min(y, b - rad))
+  return (x-cx)**2 + (y-cy)**2 <= rad**2
 }
-
+const polygon = (x, y, pts) => {
+  let inside = false
+  for (let i=0,j=pts.length-1;i<pts.length;j=i++) {
+    const [xi,yi]=pts[i], [xj,yj]=pts[j]
+    if (((yi>y)!==(yj>y)) && x < (xj-xi)*(y-yi)/(yj-yi)+xi) inside=!inside
+  }
+  return inside
+}
+function icon(x, y) {
+  const bg = [19, 86, 53, 255]
+  const greenLight = [42, 133, 79, 255]
+  const white = [255, 255, 249, 255]
+  const gold = [211, 177, 93, 255]
+  if (!insideRoundRect(x,y,.04,.04,.96,.96,.19)) return [0,0,0,0]
+  let color = bg
+  if (insideRoundRect(x,y,.07,.07,.93,.93,.16)) color = greenLight
+  // restrained double-line corporate shield
+  const shield = [[.5,.19],[.76,.29],[.73,.59],[.5,.79],[.27,.59],[.24,.29]]
+  const shieldInner = [[.5,.235],[.715,.315],[.69,.565],[.5,.735],[.31,.565],[.285,.315]]
+  if (polygon(x,y,shield)) color = gold
+  if (polygon(x,y,shieldInner)) color = white
+  // geometric A monogram, deliberately bold and legible at small sizes
+  const outerA = polygon(x,y,[[.5,.31],[.69,.63],[.62,.63],[.57,.54],[.43,.54],[.38,.63],[.31,.63]])
+  const cutout = polygon(x,y,[[.5,.405],[.545,.49],[.455,.49]])
+  if (outerA && !cutout) color = bg
+  // subtle baseline for a polished identity mark
+  if (x>.39 && x<.61 && y>.665 && y<.69) color = gold
+  return color
+}
 try {
   mkdirSync('public', { recursive: true })
   writeFileSync('public/icon-192.png', png(192, icon))
   writeFileSync('public/icon-512.png', png(512, icon))
   writeFileSync('public/apple-touch-icon.png', png(180, icon))
-  console.log('Icons created')
+  console.log('Formal corporate icons created')
 } catch (e) {
-  console.log('Icon generation skipped:', e && e.message)
+  console.error('Icon generation failed:', e && e.message)
+  process.exitCode = 1
 }
