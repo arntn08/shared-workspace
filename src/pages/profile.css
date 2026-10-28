@@ -9,7 +9,7 @@
 
 .id-sway {
   transform-style: preserve-3d;
-  animation: idSway 9s ease-in-out infinite;
+  animation: none;
 }
 
 @keyframes idSway {
