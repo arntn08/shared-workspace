@@ -71,7 +71,7 @@
   margin: 12px auto 0;
   padding: 8px;
   display: grid;
-  grid-template-columns: minmax(180px, 1.5fr) repeat(6, minmax(0, 1fr));
+  grid-template-columns: minmax(180px, 1.5fr) repeat(7, minmax(0, 1fr));
   align-items: stretch;
   gap: 5px;
   border: 1px solid var(--border);
@@ -113,7 +113,8 @@
   box-shadow: 0 4px 12px rgba(120,85,30,.18);
 }
 
-.tabbar a {
+.tabbar a,
+.tabbar button.emp-tab {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -132,7 +133,8 @@
   transition: background .18s ease, color .18s ease, transform .18s ease;
 }
 
-.tabbar a:hover {
+.tabbar a:hover,
+.tabbar button.emp-tab:hover {
   color: var(--text);
   background: var(--surface-2);
 }
@@ -150,6 +152,22 @@
 }
 
 .tabbar .ico svg { width: 19px; height: 19px; }
+
+.tabbar button.emp-tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.tabbar button.emp-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.tabbar button.emp-tab-logout { color: var(--muted); }
+.tabbar button.emp-tab-logout:hover { color: var(--danger); background: var(--surface-2); }
 .tabbar .lbl { display: block; max-width: 100%; white-space: nowrap; }
 .tabbar .lbl-short { display: none; }
 .tabbar .lbl-full { display: block; }
@@ -455,7 +473,7 @@
 /* Tablet and phone layouts */
 @media (max-width: 900px) {
   .tabbar {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     width: calc(100% - 24px);
   }
 
@@ -524,12 +542,12 @@
 
 @media (max-width: 350px) {
   .tabbar { left: 5px; right: 5px; }
-  .tabbar a { font-size: 0.58rem; }
+  .tabbar a, .tabbar button.emp-tab { font-size: 0.58rem; }
   .tabbar .ico svg { width: 17px; height: 17px; }
   .emp-main { padding-left: 0.6rem; padding-right: 0.6rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tabbar a, .qa, .file-item { transition: none; }
+  .tabbar a, .tabbar button.emp-tab, .qa, .file-item { transition: none; }
   .qa:hover, .file-item:hover { transform: none; }
 }
