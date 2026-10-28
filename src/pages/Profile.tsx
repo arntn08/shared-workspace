@@ -161,7 +161,11 @@ export default function Profile() {
         <div className="id-sway">
           <div className="idcard" ref={card} onPointerMove={move} onPointerLeave={leave} onPointerCancel={leave}>
             <div className="id-sheen" />
-            <div className="id-orgbar"><span className="id-brand">A</span><strong>AHBA DEVELOPMENT</strong><span className="id-status">ACTIVE</span></div>
+            <div className="id-orgbar">
+              <span className="id-brand">A</span>
+              <strong>AHBA DEVELOPMENT</strong>
+              <span className="id-status">ACTIVE</span>
+            </div>
             <div className="portrait-card">
               <div className="id-avatar">
                 {photo ? <img src={photo} alt={`${name} profile photo`} /> : (
@@ -172,7 +176,7 @@ export default function Profile() {
                           <stop offset="0%" stopColor="#ffffff" />
                           <stop offset="100%" stopColor="#e8eee6" />
                         </linearGradient>
-                        <linearGradient id="profileBlue" x1="0" y1="0" x2="1" y2="1">
+                        <linearGradient id="profileGreen" x1="0" y1="0" x2="1" y2="1">
                           <stop offset="0%" stopColor="#8dc99b" />
                           <stop offset="100%" stopColor="#176b3c" />
                         </linearGradient>
@@ -180,35 +184,40 @@ export default function Profile() {
                       <rect x="3" y="3" width="154" height="184" rx="22" fill="url(#profileGlass)" />
                       <circle cx="80" cy="21" r="6" fill="#20242d" />
                       <circle cx="80" cy="60" r="24" fill="#b8954d" opacity=".2" />
-                      <circle cx="80" cy="57" r="22" fill="url(#profileBlue)" />
-                      <path d="M38 119c2-25 20-39 42-39s40 14 42 39v5H38z" fill="url(#profileBlue)" />
-                      <rect x="46" y="135" width="68" height="12" rx="6" fill="url(#profileBlue)" />
-                      <rect x="25" y="154" width="110" height="11" rx="6" fill="url(#profileBlue)" />
-                      <rect x="25" y="171" width="70" height="9" rx="5" fill="url(#profileBlue)" />
+                      <circle cx="80" cy="57" r="22" fill="url(#profileGreen)" />
+                      <path d="M38 119c2-25 20-39 42-39s40 14 42 39v5H38z" fill="url(#profileGreen)" />
+                      <rect x="46" y="135" width="68" height="12" rx="6" fill="#b8954d" />
+                      <rect x="25" y="154" width="110" height="11" rx="6" fill="url(#profileGreen)" />
+                      <rect x="25" y="171" width="70" height="9" rx="5" fill="#b8954d" />
                     </svg>
                   </span>
                 )}
               </div>
             </div>
-          <div className="portrait-name">
-            <span>Name</span>
-            <strong>{name}</strong>
+            <div className="portrait-name">
+              <span>Name</span>
+              <strong>{name}</strong>
+            </div>
+            <div className="profile-details">
+              <h2>Employee details</h2>
+              <dl className="profile-detail-grid">
+                <div><dt>Full name</dt><dd>{name}</dd></div>
+                <div><dt>Role</dt><dd>{ROLE_LABEL[profile.role] || 'Employee'}</dd></div>
+                <div><dt>Team code</dt><dd>{codes.join(', ') || 'Not matched yet'}</dd></div>
+                <div><dt>JO MOB</dt><dd>{mobs.join(', ') || '—'}</dd></div>
+                <div><dt>Email</dt><dd>{profile.email || '—'}</dd></div>
+                <div><dt>Member since</dt><dd>{since}</dd></div>
+                <div><dt>Account reference</dt><dd>{ref}</dd></div>
+              </dl>
+            </div>
+            <div className="id-footer">
+              <span>Account ref {ref}</span>
+              <strong>SHARED WORKSPACE</strong>
+            </div>
           </div>
-                <div className="profile-details">
-        <h2>Employee details</h2>
-        <dl className="profile-detail-grid">
-          <div><dt>Full name</dt><dd>{name}</dd></div>
-          <div><dt>Role</dt><dd>{ROLE_LABEL[profile.role] || 'Employee'}</dd></div>
-          <div><dt>Team code</dt><dd>{codes.join(', ') || 'Not matched yet'}</dd></div>
-          <div><dt>JO MOB</dt><dd>{mobs.join(', ') || '—'}</dd></div>
-          <div><dt>Email</dt><dd>{profile.email || '—'}</dd></div>
-          <div><dt>Member since</dt><dd>{since}</dd></div>
-          <div><dt>Account reference</dt><dd>{ref}</dd></div>
-        </dl>
-      </div>
-          <div className="id-footer"><span>Account ref {ref}</span><strong>SHARED WORKSPACE</strong></div>
         </div>
       </div>
+
       <div className="card profile-actions">
         <h2>Your card</h2>
         <div className="row">
