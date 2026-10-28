@@ -26,7 +26,7 @@ const tabs: [string, string, string, string][] = [
 
 function TabBar({ title }: { title: string }) {
   const { unread: serverUnread } = useNotifs()
-  const { profile } = useAuth()
+  const { profile, signOut } = useAuth()
   const local = useLocalUpdates(profile?.id)
   const unread = serverUnread + local.unread
 
@@ -55,6 +55,18 @@ function TabBar({ title }: { title: string }) {
           <span className="lbl lbl-full">{full}</span>
         </NavLink>
       ))}
+
+      <button
+        type="button"
+        className="emp-tab emp-tab-logout"
+        onClick={() => void signOut()}
+        aria-label="Log out"
+        title="Log out"
+      >
+        <span className="ico"><Icon name="out" /></span>
+        <span className="lbl lbl-short">Logout</span>
+        <span className="lbl lbl-full">Log out</span>
+      </button>
     </nav>
   )
 }
