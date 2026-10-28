@@ -590,3 +590,164 @@
   .tabbar .ico svg { width: 17px; height: 17px; }
   .emp-top-copy strong { max-width: 180px; }
 }
+
+
+/* Employee portal layout refresh: real desktop rail, intentional mobile dock. */
+.emp-app {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  align-items: start;
+  min-height: 100dvh;
+  width: 100%;
+  overflow-x: clip;
+  background: var(--bg);
+}
+.emp-main {
+  grid-column: 2;
+  width: 100%;
+  max-width: 1360px;
+  padding: 26px clamp(20px, 3vw, 42px) 32px;
+}
+.tabbar {
+  grid-column: 1;
+  grid-row: 1;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 248px;
+  height: 100dvh;
+  margin: 0;
+  padding: 22px 13px 16px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  box-shadow: none;
+  backdrop-filter: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.tabbar .rail-brand {
+  display: flex;
+  min-height: 64px;
+  padding: 0 8px 18px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.tabbar .rail-brand > span:last-child {
+  display: block;
+  min-width: 0;
+  font-size: 13px;
+}
+.tabbar a,
+.tabbar button.emp-tab {
+  flex: none;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 0 12px;
+  border-radius: 12px;
+  text-align: left;
+  font-size: 13px;
+}
+.tabbar a.active {
+  color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.tabbar .ico svg { width: 19px; height: 19px; }
+.tabbar .lbl { display: block; max-width: 100%; white-space: normal; }
+.tabbar .lbl-short { display: none; }
+.tabbar .lbl-full { display: block; overflow-wrap: anywhere; }
+.tabbar .emp-tab-logout { margin-top: auto; }
+.emp-top {
+  padding: 0 0 18px;
+  margin: 0 0 24px;
+  border-bottom: 1px solid var(--border);
+}
+.emp-dashboard { max-width: 1120px; margin: 0 auto; }
+.emp-welcome { min-height: 170px; margin-bottom: 26px; }
+.emp-section { margin: 26px 0; }
+.emp-section-heading { margin-bottom: 14px; }
+@media (max-width: 980px) and (min-width: 701px) {
+  .emp-app { grid-template-columns: 210px minmax(0,1fr); }
+  .tabbar { width: 210px; padding-inline: 10px; }
+  .emp-main { padding: 20px 18px 28px; }
+  .tabbar .rail-brand { padding-inline: 5px; }
+  .tabbar a, .tabbar button.emp-tab { gap: 9px; padding-inline: 9px; font-size: 12px; }
+}
+@media (max-width: 700px) {
+  .emp-app { display: block; min-height: 100dvh; }
+  .emp-main {
+    width: 100%;
+    max-width: none;
+    padding: 12px 15px calc(88px + env(safe-area-inset-bottom));
+  }
+  .tabbar {
+    position: fixed;
+    inset: auto 10px calc(8px + env(safe-area-inset-bottom));
+    z-index: 80;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0,1fr));
+    align-items: stretch;
+    gap: 2px;
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 19px;
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    box-shadow: 0 12px 38px rgba(20,25,20,.18);
+    backdrop-filter: blur(22px);
+    overflow: visible;
+  }
+  .tabbar .rail-brand { display: none; }
+  .tabbar a,
+  .tabbar button.emp-tab {
+    min-width: 0;
+    min-height: 48px;
+    padding: 4px 1px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    border-radius: 12px;
+    font-size: 9px;
+    text-align: center;
+  }
+  .tabbar .lbl-short { display: block; white-space: nowrap; }
+  .tabbar .lbl-full { display: none; }
+  .tabbar .ico svg { width: 19px; height: 19px; }
+  .tabbar .emp-tab-logout { margin-top: 0; }
+  .tabbar a.active { box-shadow: none; }
+  .emp-top { margin: 0 0 18px; padding-bottom: 13px; }
+  .emp-top-copy { display: none; }
+  .emp-top-actions { margin-left: auto; }
+  .emp-welcome { padding: 21px; min-height: 0; border-radius: 20px; }
+  .welcome-copy h1 { font-size: clamp(25px, 7vw, 34px); }
+  .emp-section { margin: 23px 0; }
+  .quick-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px; }
+  .qa { min-height: 84px; padding: 12px; border-radius: 15px; }
+  .emp-footer { margin-top: 26px; }
+}
+@media (max-width: 390px) {
+  .emp-main { padding-inline: 11px; }
+  .tabbar { inset-inline: 5px; padding: 4px; gap: 1px; }
+  .tabbar a, .tabbar button.emp-tab { font-size: 8px; }
+  .tabbar .ico svg { width: 17px; height: 17px; }
+  .emp-welcome { padding: 17px; }
+  .welcome-copy h1 { font-size: 25px; }
+  .qa { grid-template-columns: 30px minmax(0,1fr); column-gap: 8px; padding: 9px; }
+  .qa-icon { width: 30px; height: 30px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tabbar, .qa, .file-item { transition: none; }
+}
