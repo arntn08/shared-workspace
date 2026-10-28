@@ -26,7 +26,8 @@ const tabs: [string, string, string, string][] = [
 
 function TabBar({ title }: { title: string }) {
   const { unread: serverUnread } = useNotifs()
-  const { profile, signOut } = useAuth()\n  const navigate = useNavigate()
+  const { profile, signOut } = useAuth()
+  const navigate = useNavigate()
   const local = useLocalUpdates(profile?.id)
   const unread = serverUnread + local.unread
 
