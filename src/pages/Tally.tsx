@@ -314,7 +314,7 @@ export default function Tally() {
 
 
   function normalizeHeader(value: unknown) {
-    return String(value ?? '').trim().toUpperCase().replace(/\\s+/g, ' ')
+    return String(value ?? '').trim().toUpperCase().replace(/\s+/g, ' ')
   }
 
   function parseExcelDate(value: unknown): string | null {
@@ -331,7 +331,7 @@ export default function Tally() {
 
     const raw = String(value ?? '').trim()
     if (!raw) return null
-    const iso = raw.match(/^(\\d{4})[-/](\\d{1,2})[-/](\\d{1,2})/)
+    const iso = raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/)
     if (iso) return `${iso[1]}-${iso[2].padStart(2, '0')}-${iso[3].padStart(2, '0')}`
 
     const parsed = new Date(raw)
@@ -364,7 +364,7 @@ export default function Tally() {
       if (missing.length) throw new Error(`Missing required Excel column(s): ${missing.join(', ')}.`)
 
       const normalizeTeamCode = (value: unknown) =>
-        String(value ?? '').trim().toUpperCase().replace(/\\s+/g, '').replace(/[–—]/g, '-')
+        String(value ?? '').trim().toUpperCase().replace(/\s+/g, '').replace(/[–—]/g, '-')
       const teamByCode = new Map<string, Team>()
       const teamAliases = new Map<string, Team[]>()
       const addAlias = (alias: string, team: Team) => {
@@ -397,12 +397,10 @@ export default function Tally() {
         })
 
         const status = String(normalized.STATUS ?? '').trim().toUpperCase()
-        if (status !== 'COMPLETED') {
-          ignoredRows += 1
-          continue
-        }
+        const isCompleted = status === 'COMPLETED'
+        if (isCompleted) completedRows += 1
+        else ignoredRows += 1
 
-        completedRows += 1
         const workOrder = String(normalized['WO ID'] ?? '').trim().toUpperCase()
         const date = parseExcelDate(normalized.DATE)
         const teamCode = String(normalized['TEAM ASSIGNED'] ?? '').trim().toUpperCase()
@@ -413,7 +411,7 @@ export default function Tally() {
         }
         if (workOrder) seenWorkOrders.add(workOrder)
 
-        if (!date || !/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) {
+        if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
           ignoredRows += 1
           continue
         }
@@ -430,6 +428,10 @@ export default function Tally() {
         }
 
         const key = `${team.id}|${date}`
+        if (!isCompleted) {
+          if (workOrder) workOrders.push({ wo_id: workOrder, work_date: date, team_id: team.id, department_id: team.department_id, team_assigned_raw: teamCode, status: status.includes('CANCEL') ? 'CANCELED' : status.includes('INCOMPLETE') || status.includes('IN COMPLE') ? 'INCOMPLETE' : 'OTHER', team_remarks: String(normalized['TEAM REMARKS'] ?? ''), source_file: file.name, raw_row: Object.fromEntries(Object.entries(record).map(([key, value]) => [key, value instanceof Date ? value.toISOString() : value])) })
+          continue
+        }
         const normalizedStatus = status.includes('CANCEL')
           ? 'CANCELED'
           : status.includes('INCOMPLETE') || status.includes('IN COMPLE')
@@ -507,7 +509,6 @@ export default function Tally() {
         .upsert(payload, { onConflict: 'team_id,work_date' })
       if (importError) throw importError
 
-      setMessage(`Imported ${importPreview.rows.reduce((sum, row) => sum + row.count, 0).toLocaleString()} completed installations across ${importPreview.rows.length} team/date groups. Other statuses were ignored. Counts for those exact team/date pairs were replaced with the Excel totals.`)
       setMessage(`Processed ${importPreview.workOrders.length.toLocaleString()} work-order rows and updated completed tally groups. Existing WO IDs are skipped; status totals refreshed.`)
       setImportPreview(null)
       await loadBoard()
