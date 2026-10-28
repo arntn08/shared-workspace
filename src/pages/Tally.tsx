@@ -35,12 +35,14 @@ type ImportPreviewRow = {
 }
 
 type ImportPreview = {
+  // Individual rows are retained for status breakdown and duplicate protection.
   fileName: string
   rows: ImportPreviewRow[]
   completedRows: number
   ignoredRows: number
   duplicateRows: number
   unmatched: Array<{ teamCode: string; count: number }>
+  workOrders: Array<{ wo_id: string; work_date: string; team_id: string; department_id: string; team_assigned_raw: string; status: 'COMPLETED' | 'INCOMPLETE' | 'CANCELED' | 'OTHER'; team_remarks: string; source_file: string; raw_row: Record<string, unknown> }>
 }
 
 const getCurrentMonth = () => {
@@ -101,6 +103,8 @@ export default function Tally() {
   const [message, setMessage] = useState('')
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null)
   const [importing, setImporting] = useState(false)
+  const [importedLoads, setImportedLoads] = useState<Array<{work_date:string; team_id:string|null; department_id:string|null; status:string; wo_id:string}>>([])
+  const [loadBreakdownError, setLoadBreakdownError] = useState('')
 
   const monthDates = useMemo(() => getMonthDates(month), [month])
   const monthStart = `${month}-01`
@@ -206,6 +210,23 @@ export default function Tally() {
       })
 
       setDailyCounts(nextDaily)
+      const loadResult = await supabase
+        .from('installation_imported_work_orders')
+        .select('work_date,team_id,department_id,status,wo_id')
+        .gte('work_date', monthStart)
+        .lte('work_date', monthEnd)
+      if (loadResult.error) {
+        setImportedLoads([])
+        setLoadBreakdownError(
+          loadResult.error.code === '42P01' || loadResult.error.code === 'PGRST205'
+            ? 'The imported-work-orders table is not available yet. Run the supplied Supabase SQL, then refresh.'
+            : `Could not load imported status totals: ${loadResult.error.message}`
+        )
+      } else {
+        setImportedLoads((loadResult.data ?? []) as Array<{work_date:string; team_id:string|null; department_id:string|null; status:string; wo_id:string}>)
+        setLoadBreakdownError('')
+      }
+
     } catch (err) {
       setError(
         err instanceof Error
@@ -215,7 +236,7 @@ export default function Tally() {
     } finally {
       setLoading(false)
     }
-  }, [departmentId, month, monthEnd, weekStart, weekEnd])
+  }, [departmentId, month, monthEnd, monthStart, weekStart, weekEnd])
 
   useEffect(() => {
     void loadBoard()
@@ -362,6 +383,7 @@ export default function Tally() {
         addAlias(code.replace(/^(AHBA_|A8_|AHBA-|A8-)/, ''), team)
       })
       const grouped = new Map<string, ImportPreviewRow>()
+      const workOrders: ImportPreview['workOrders'] = []
       const seenWorkOrders = new Set<string>()
       const unmatchedCounts = new Map<string, number>()
       let completedRows = 0
@@ -408,6 +430,27 @@ export default function Tally() {
         }
 
         const key = `${team.id}|${date}`
+        const normalizedStatus = status.includes('CANCEL')
+          ? 'CANCELED'
+          : status.includes('INCOMPLETE') || status.includes('IN COMPLE')
+            ? 'INCOMPLETE'
+            : status === 'COMPLETED'
+              ? 'COMPLETED'
+              : 'OTHER'
+        if (workOrder) {
+          workOrders.push({
+            wo_id: workOrder,
+            work_date: date,
+            team_id: team.id,
+            department_id: team.department_id,
+            team_assigned_raw: teamCode,
+            status: normalizedStatus,
+            team_remarks: String(normalized['TEAM REMARKS'] ?? ''),
+            source_file: file.name,
+            raw_row: Object.fromEntries(Object.entries(record).map(([key, value]) => [key, value instanceof Date ? value.toISOString() : value]))
+          })
+        }
+
         const existing = grouped.get(key)
         if (existing) existing.count += 1
         else grouped.set(key, { date, teamCode: team.code, teamName: team.name, teamId: team.id, count: 1 })
@@ -428,7 +471,8 @@ export default function Tally() {
         completedRows,
         ignoredRows,
         duplicateRows,
-        unmatched: [...unmatchedCounts.entries()].map(([teamCode, count]) => ({ teamCode, count }))
+        unmatched: [...unmatchedCounts.entries()].map(([teamCode, count]) => ({ teamCode, count })),
+        workOrders
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not read this Excel file.')
@@ -441,6 +485,16 @@ export default function Tally() {
     setError('')
     setMessage('')
     try {
+      if (importPreview.workOrders.length) {
+        const { error: recordsError } = await supabase
+          .from('installation_imported_work_orders')
+          .upsert(importPreview.workOrders.map(row => ({
+            ...row,
+            imported_by: profile?.id ?? null
+          })), { onConflict: 'wo_id', ignoreDuplicates: true })
+        if (recordsError) throw recordsError
+      }
+
       const payload = importPreview.rows.map(row => ({
         team_id: row.teamId,
         work_date: row.date,
@@ -454,6 +508,7 @@ export default function Tally() {
       if (importError) throw importError
 
       setMessage(`Imported ${importPreview.rows.reduce((sum, row) => sum + row.count, 0).toLocaleString()} completed installations across ${importPreview.rows.length} team/date groups. Other statuses were ignored. Counts for those exact team/date pairs were replaced with the Excel totals.`)
+      setMessage(`Processed ${importPreview.workOrders.length.toLocaleString()} work-order rows and updated completed tally groups. Existing WO IDs are skipped; status totals refreshed.`)
       setImportPreview(null)
       await loadBoard()
     } catch (err) {
@@ -954,6 +1009,53 @@ export default function Tally() {
             ? 'Enter a daily count and leave the field to save. Weekly dates are shown; WTD and MTD update automatically from saved daily counts.'
             : 'Read-only view. Contact an owner or editor to update counts.'}
         </p>
+      </div>
+
+      <div className="card" style={{ marginBottom: '1rem' }}>
+        <div className="tally-month-title">
+          <div>
+            <h2 style={{ margin: 0 }}>Imported load status</h2>
+            <p className="muted" style={{ margin: '0.35rem 0 0' }}>Excel work orders by status · {month}</p>
+          </div>
+          <span className="muted" style={{ fontSize: '0.85rem' }}>Duplicates excluded by WO ID</span>
+        </div>
+        {loadBreakdownError && <div className="notice error">{loadBreakdownError}</div>}
+        <div className="tally-summary" style={{ marginBottom: '1rem' }}>
+          {([
+            ['Total load', ['COMPLETED','INCOMPLETE','CANCELED','OTHER']],
+            ['Completed', ['COMPLETED']],
+            ['Incomplete', ['INCOMPLETE']],
+            ['Canceled', ['CANCELED']]
+          ] as Array<[string,string[]]>).map(([label,statuses]) => {
+            const count = importedLoads.filter(row =>
+              row.department_id === departmentId && statuses.includes(String(row.status).toUpperCase())
+            ).length
+            return <div className="tally-summary-card" key={label}>
+              <div className="muted">{label}</div>
+              <div className="tally-summary-number">{count.toLocaleString()}</div>
+              <div className="muted" style={{ fontSize: '0.8rem' }}>Selected department · this month</div>
+            </div>
+          })}
+        </div>
+        <div className="tally-scroll" style={{ maxHeight: '320px' }}>
+          <table className="tally-table">
+            <thead><tr><th>Team</th><th>Total load</th><th>Completed</th><th>Incomplete</th><th>Canceled</th></tr></thead>
+            <tbody>
+              {activeTeams.map(team => {
+                const rows = importedLoads.filter(row => row.team_id === team.id)
+                const countStatus = (status: string) => rows.filter(row => String(row.status).toUpperCase() === status).length
+                return <tr key={team.id}>
+                  <th scope="row">{team.code}</th>
+                  <td><strong>{rows.length.toLocaleString()}</strong></td>
+                  <td>{countStatus('COMPLETED').toLocaleString()}</td>
+                  <td>{countStatus('INCOMPLETE').toLocaleString()}</td>
+                  <td>{countStatus('CANCELED').toLocaleString()}</td>
+                </tr>
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="tally-note">These status totals are separate from the manual WTD/MTD daily-count board. They update after a successful import and when the board reloads.</p>
       </div>
 
       <div className="tally-summary">
