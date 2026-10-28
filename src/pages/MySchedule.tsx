@@ -24,12 +24,12 @@ function isHeading(cells: string[]) {
 
 
 function scheduleDateValue(label: string): string | null {
-  const text = label.trim().toUpperCase().replace(/\\s+/g, ' ')
-  const match = text.match(/^(?:([A-Z]+)\\s+)?([A-Z]{3,9})\\s+(\\d{1,2})(?:,?\\s+(\\d{4}))?$/)
+  const text = label.trim().toUpperCase().replace(/\s+/g, ' ')
+  const match = text.match(/^([A-Z]{3,9})\s+(\d{1,2})(?:,?\s+(\d{4}))?$/)
   if (!match) return null
-  const monthText = match[2] || match[1]
-  const dayText = match[3]
-  const yearText = match[4]
+  const monthText = match[1]
+  const dayText = match[2]
+  const yearText = match[3]
   const months: Record<string, number> = { JAN:0, JANUARY:0, FEB:1, FEBRUARY:1, MAR:2, MARCH:2, APR:3, APRIL:3, MAY:4, JUN:5, JUNE:5, JUL:6, JULY:6, AUG:7, AUGUST:7, SEP:8, SEPT:8, SEPTEMBER:8, OCT:9, OCTOBER:9, NOV:10, NOVEMBER:10, DEC:11, DECEMBER:11 }
   const month = months[monthText]
   if (month === undefined) return null
@@ -171,11 +171,12 @@ export default function MySchedule() {
       const iso = scheduleDateValue(hit.section)
       if (iso) unique.set(iso, hit.section)
     }
+    const tomorrow = tomorrowLocalIso()
     return [...unique.entries()].sort(([a], [b]) => {
-      const tomorrow = tomorrowLocalIso()
-      const da = a >= tomorrow ? a : `9999-${a}`
-      const db = b >= tomorrow ? b : `9999-${b}`
-      return da.localeCompare(db)
+      const aFuture = a >= tomorrow
+      const bFuture = b >= tomorrow
+      if (aFuture !== bFuture) return aFuture ? -1 : 1
+      return aFuture ? a.localeCompare(b) : b.localeCompare(a)
     })
   }, [hits])
   useEffect(() => {
