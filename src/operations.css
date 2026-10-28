@@ -1579,3 +1579,53 @@ body {
  .people-add-team-row { align-items:stretch; flex-direction:column; }
 }
 @media(prefers-reduced-motion:reduce) { .people-modal-backdrop,.people-modal { animation:none; } .people-action-button { transition:none; } }
+
+
+/* Live Philippine clock in the workspace sidebar */
+.ops-sidebar-clock {
+  display: grid;
+  gap: 5px;
+  margin: 14px 4px 19px;
+  padding: 15px 14px;
+  border: 1px solid var(--ops-border);
+  border-radius: 15px;
+  background:
+    radial-gradient(220px 90px at 100% 0%, color-mix(in srgb, var(--ops-accent) 13%, transparent), transparent 75%),
+    var(--ops-panel-soft);
+  font-variant-numeric: tabular-nums;
+}
+.ops-clock-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ops-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.05px;
+}
+.ops-clock-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4ca878;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #4ca878 15%, transparent);
+}
+.ops-sidebar-clock > strong {
+  margin-top: 3px;
+  color: var(--ops-text);
+  font-size: clamp(21px, 1.7vw, 25px);
+  font-weight: 750;
+  letter-spacing: -.7px;
+}
+.ops-clock-day {
+  color: var(--ops-text);
+  font-size: 12px;
+  font-weight: 750;
+}
+.ops-clock-date {
+  color: var(--ops-muted);
+  font-size: 10px;
+}
+@media (max-width: 760px) {
+  .ops-sidebar-clock { margin-top: 12px; margin-bottom: 15px; }
+}
