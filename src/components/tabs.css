@@ -827,3 +827,38 @@
   .employee-ops-page .row:has(> select, > input) { display: grid; grid-template-columns: minmax(0,1fr); }
   .employee-ops-page .row:has(> select, > input) > * { width: 100%; }
 }
+
+
+/* Notification permission panel */
+.notification-permission-card {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 17px;
+  margin: 0 0 20px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  border-radius: 18px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--accent-soft) 65%, var(--surface)), var(--surface));
+}
+.notification-permission-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 1.35rem;
+}
+.notification-permission-copy { min-width: 0; }
+.notification-permission-copy strong { display: block; font-size: .94rem; }
+.notification-permission-copy p { margin: 4px 0 0; color: var(--muted); font-size: .82rem; line-height: 1.5; }
+.notification-permission-copy small { display: block; margin-top: 7px; color: var(--muted); font-size: .75rem; line-height: 1.45; }
+.notification-permission-button { white-space: nowrap; min-height: 42px; }
+.notification-permission-button:disabled { opacity: .65; cursor: default; }
+@media (max-width: 620px) {
+  .notification-permission-card { grid-template-columns: 40px minmax(0,1fr); gap: 11px; padding: 14px; }
+  .notification-permission-icon { width: 40px; height: 40px; }
+  .notification-permission-button { grid-column: 1 / -1; width: 100%; }
+}
