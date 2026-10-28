@@ -38,6 +38,8 @@ export default function People() {
   const [results, setResults] = useState<Result[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [newTeam, setNewTeam] = useState('')
+  const [activeModal, setActiveModal] = useState<'add' | 'bulk' | 'teams' | null>(null)
+  const [search, setSearch] = useState('')
 
   async function load() {
     const [p, t] = await Promise.all([
@@ -172,9 +174,11 @@ export default function People() {
     load()
   }
 
-  const shown = list.filter((p) =>
-    filter === 'all' ? true : filter === 'none' ? (p.teams ?? []).length === 0 : (p.teams ?? []).includes(filter)
-  )
+  const shown = list.filter((p) => {
+    const matchesTeam = filter === 'all' ? true : filter === 'none' ? (p.teams ?? []).length === 0 : (p.teams ?? []).includes(filter)
+    const q = search.trim().toLowerCase()
+    return matchesTeam && (!q || `${p.full_name ?? ''} ${p.email ?? ''} ${p.role ?? ''} ${(p.teams ?? []).join(' ')}`.toLowerCase().includes(q))
+  })
 
   return (
     <div className="people-page">
@@ -211,66 +215,27 @@ export default function People() {
         </div>
       )}
 
-      <form className="card" onSubmit={addOne}>
-        <h2>Add a person</h2>
-        <div className="form-grid">
-          <div>
-            <label htmlFor="n">Name</label>
-            <input id="n" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div>
-            <label htmlFor="e">Email</label>
-            <input id="e" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          </div>
-          <div>
-            <label htmlFor="p">Temporary password (blank = generate one)</label>
-            <input id="p" autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} />
-          </div>
+      <div className="people-toolbar">
+        <div><span className="ops-eyebrow">DIRECTORY</span><h2>Workspace people</h2><p className="muted">{list.length} accounts · Manage roles, teams and access.</p></div>
+        <div className="people-toolbar-actions">
+          <button type="button" className="people-action-button" onClick={() => setActiveModal('add')}><span className="people-action-icon">＋</span><span><strong>Add person</strong><small>Create one account</small></span></button>
+          <button type="button" className="people-action-button" onClick={() => setActiveModal('bulk')}><span className="people-action-icon">↥</span><span><strong>Bulk add</strong><small>Import multiple people</small></span></button>
+          <button type="button" className="people-action-button" onClick={() => setActiveModal('teams')}><span className="people-action-icon">◇</span><span><strong>Teams</strong><small>Organize your workspace</small></span></button>
         </div>
-        <label>Teams</label>
-        <div className="row">
-          {teamNames.map((n) => (
-            <label key={n} style={row}>
-              <input
-                type="checkbox"
-                style={box}
-                checked={picked.includes(n)}
-                onChange={() => setPicked(picked.includes(n) ? picked.filter((x) => x !== n) : [...picked, n])}
-              />
-              {n}
-            </label>
-          ))}
-        </div>
-        <button className="primary" style={{ marginTop: '1rem' }} disabled={busy}>{busy ? 'Working…' : 'Create account'}</button>
-      </form>
-
-      <form className="card" onSubmit={addBulk}>
-        <h2>Bulk add</h2>
-        <p className="muted">
-          One person per line: email, name, teams (separate teams with ;), password (optional). A short team name like "cielo" or "nap" works if it matches only one team. If the email already has an account, only the teams are added.
-        </p>
-        <textarea
-          rows={6}
-          value={bulk}
-          onChange={(e) => setBulk(e.target.value)}
-          placeholder={'ahba.alvin@gmail.com, Ahba Alvin, Cielo; QA\nsomeone@gmail.com, Some One, NAP Audit Team'}
-        />
-        <button className="primary" style={{ marginTop: '1rem' }} disabled={busy}>{busy ? 'Working…' : 'Create all'}</button>
-      </form>
-
-      <form className="card" onSubmit={addTeam}>
-        <h2>Teams</h2>
-        <div className="row">
-          {teamNames.map((n) => (
-            <span key={n} className="badge">{n}</span>
-          ))}
-        </div>
-        <div className="row" style={{ marginTop: '0.75rem' }}>
-          <input placeholder="New team name" value={newTeam} onChange={(e) => setNewTeam(e.target.value)} style={{ flex: 1, minWidth: 180 }} />
-          <button className="small">Add team</button>
-        </div>
-      </form>
-
+      </div>
+      {activeModal && <div className="people-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setActiveModal(null) }}>
+        <section className="people-modal" role="dialog" aria-modal="true" aria-labelledby="people-modal-title">
+          <div className="people-modal-heading"><div><span className="ops-eyebrow">{activeModal === 'add' ? 'NEW ACCOUNT' : activeModal === 'bulk' ? 'QUICK IMPORT' : 'TEAM MANAGEMENT'}</span><h2 id="people-modal-title">{activeModal === 'add' ? 'Add a person' : activeModal === 'bulk' ? 'Bulk add people' : 'Manage teams'}</h2><p>{activeModal === 'add' ? 'Create an account and assign team access.' : activeModal === 'bulk' ? 'Add several accounts using a simple list.' : 'Organize people into teams.'}</p></div><button type="button" className="people-modal-close" disabled={busy} onClick={() => setActiveModal(null)} aria-label="Close">×</button></div>
+          {activeModal === 'add' && <form onSubmit={addOne} className="people-modal-form">
+            <div className="form-grid"><div><label htmlFor="n">Name</label><input id="n" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" /></div><div><label htmlFor="e">Email</label><input id="e" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" required /></div><div className="people-field-full"><label htmlFor="p">Temporary password (optional)</label><input id="p" autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Leave blank to generate" /></div></div>
+            <label>Assign teams</label><div className="people-team-picker">{teamNames.map((n) => <label key={n} className="people-team-option"><input type="checkbox" checked={picked.includes(n)} onChange={() => setPicked(picked.includes(n) ? picked.filter((x) => x !== n) : [...picked, n])} />{n}</label>)}</div>
+            <div className="people-modal-footer"><button type="button" className="small" onClick={() => setActiveModal(null)}>Cancel</button><button className="primary" disabled={busy}>{busy ? 'Working…' : 'Create account'}</button></div>
+          </form>}
+          {activeModal === 'bulk' && <form onSubmit={addBulk} className="people-modal-form"><div className="people-import-hint"><strong>One person per line</strong><span>Email, name, teams separated by ;, password (optional)</span><code>name@company.com, Juan Dela Cruz, QA; OMT</code></div><label htmlFor="people-bulk">People to add</label><textarea id="people-bulk" rows={7} value={bulk} onChange={(e) => setBulk(e.target.value)} placeholder={'ahba.alvin@gmail.com, Ahba Alvin, Cielo; QA\nsomeone@gmail.com, Some One, NAP Audit Team'} /><p className="muted">Existing accounts will have teams updated instead of creating a duplicate.</p><div className="people-modal-footer"><button type="button" className="small" onClick={() => setActiveModal(null)}>Cancel</button><button className="primary" disabled={busy}>{busy ? 'Processing…' : 'Create accounts'}</button></div></form>}
+          {activeModal === 'teams' && <form onSubmit={addTeam} className="people-modal-form"><p className="muted">{teamNames.length} teams in your workspace</p><div className="people-team-list">{teamNames.map((n) => <span className="badge" key={n}>{n}</span>)}</div><label htmlFor="new-team-name">Create a team</label><div className="people-add-team-row"><input id="new-team-name" placeholder="New team name" value={newTeam} onChange={(e) => setNewTeam(e.target.value)} required /><button className="primary">Add team</button></div><div className="people-modal-footer"><button type="button" className="small" onClick={() => setActiveModal(null)}>Done</button></div></form>}
+        </section>
+      </div>}
+      <div className="people-directory-heading"><div><h2>People directory</h2><p className="muted">Search and filter accounts.</p></div><input className="people-search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, email or team…" aria-label="Search people" /></div>
       <div className="chips">
         <button className={`chip${filter === 'all' ? ' on' : ''}`} onClick={() => setFilter('all')}>All ({list.length})</button>
         {teamNames.map((n) => (
