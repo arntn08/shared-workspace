@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useNotifs } from '../lib/notifications'
 import { useAuth } from '../lib/auth'
@@ -21,6 +21,40 @@ export default function Notifications() {
   const { profile } = useAuth()
   const local = useLocalUpdates(profile?.id)
   const [filter, setFilter] = useState<Filter>('all')
+  const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>(() =>
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported'
+  )
+  const [permissionMessage, setPermissionMessage] = useState('')
+
+  useEffect(() => {
+    if ('Notification' in window) setPermission(Notification.permission)
+  }, [])
+
+  async function enableNotifications() {
+    setPermissionMessage('')
+    if (!('Notification' in window)) {
+      setPermission('unsupported')
+      setPermissionMessage('This browser does not support notifications. Try installing the workspace PWA or use a supported browser.')
+      return
+    }
+    try {
+      const result = await Notification.requestPermission()
+      setPermission(result)
+      if (result === 'granted') {
+        setPermissionMessage('This device allows browser notifications. Background push alerts still require push delivery to be configured.')
+        new Notification('Shared Workspace notifications enabled', {
+          body: 'This is a test alert. You can close it and return to your workspace.',
+          icon: '/shared-workspace/icon-192.png'
+        })
+      } else if (result === 'denied') {
+        setPermissionMessage('Notifications are blocked by your browser. Open the site permissions in your browser settings and allow notifications.')
+      } else {
+        setPermissionMessage('Permission was not granted. You can try again when ready.')
+      }
+    } catch {
+      setPermissionMessage('Could not enable notifications on this device. Check browser permissions and try again.')
+    }
+  }
   const today = todayIso()
 
   const shown = items.filter((n) => (filter === 'unread' ? !n.read_at : filter === 'todo' ? !n.done_at : true))
@@ -36,6 +70,24 @@ export default function Notifications() {
           <button className="small" onClick={() => markRead(items.filter((n) => !n.read_at).map((n) => n.id))}>Mark all read</button>
         )}
       </div>
+
+      <section className="notification-permission-card">
+        <div className="notification-permission-icon" aria-hidden="true">♧</div>
+        <div className="notification-permission-copy">
+          <strong>Device notifications</strong>
+          <p>{permission === 'granted'
+            ? 'Browser permission is enabled on this device.'
+            : permission === 'denied'
+              ? 'Notifications are blocked in your browser settings.'
+              : permission === 'unsupported'
+                ? 'This browser does not support notification permissions.'
+                : 'Turn on notifications so this device can show workspace alerts.'}</p>
+          {permissionMessage && <small>{permissionMessage}</small>}
+        </div>
+        <button className="primary notification-permission-button" onClick={enableNotifications} disabled={permission === 'unsupported' || permission === 'granted'}>
+          {permission === 'granted' ? 'Enabled' : permission === 'denied' ? 'How to allow' : 'Enable notifications'}
+        </button>
+      </section>
 
       {local.list.length > 0 && (
         <>
