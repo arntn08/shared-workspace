@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, KeyboardEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import * as XLSX from 'xlsx'
 
 type Department = {
   id: string
@@ -23,6 +24,23 @@ type DailyRecord = {
   team_id: string
   work_date: string
   daily_count: number
+}
+
+type ImportPreviewRow = {
+  date: string
+  teamCode: string
+  teamName: string
+  teamId: string
+  count: number
+}
+
+type ImportPreview = {
+  fileName: string
+  rows: ImportPreviewRow[]
+  completedRows: number
+  ignoredRows: number
+  duplicateRows: number
+  unmatched: Array<{ teamCode: string; count: number }>
 }
 
 const getCurrentMonth = () => {
@@ -81,6 +99,8 @@ export default function Tally() {
   const [saving, setSaving] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null)
+  const [importing, setImporting] = useState(false)
 
   const monthDates = useMemo(() => getMonthDates(month), [month])
   const monthStart = `${month}-01`
@@ -268,6 +288,149 @@ export default function Tally() {
       )
     } finally {
       setSaving(null)
+    }
+  }
+
+
+  function normalizeHeader(value: unknown) {
+    return String(value ?? '').trim().toUpperCase().replace(/\\s+/g, ' ')
+  }
+
+  function parseExcelDate(value: unknown): string | null {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return formatDate(value)
+    }
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      const parsed = XLSX.SSF.parse_date_code(value)
+      if (parsed) {
+        return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`
+      }
+    }
+
+    const raw = String(value ?? '').trim()
+    if (!raw) return null
+    const iso = raw.match(/^(\\d{4})[-/](\\d{1,2})[-/](\\d{1,2})/)
+    if (iso) return `${iso[1]}-${iso[2].padStart(2, '0')}-${iso[3].padStart(2, '0')}`
+
+    const parsed = new Date(raw)
+    if (!Number.isNaN(parsed.getTime())) return formatDate(parsed)
+    return null
+  }
+
+  async function previewExcel(file: File | undefined) {
+    setError('')
+    setMessage('')
+    setImportPreview(null)
+    if (!file) return
+    if (!canEdit) {
+      setError('Only owners and editors can import completed installations.')
+      return
+    }
+
+    try {
+      const bytes = await file.arrayBuffer()
+      const workbook = XLSX.read(bytes, { type: 'array', cellDates: true })
+      const sheetName = workbook.SheetNames.find(name => /load history/i.test(name)) ?? workbook.SheetNames[0]
+      if (!sheetName) throw new Error('The Excel workbook has no worksheets.')
+      const sheet = workbook.Sheets[sheetName]
+      const records = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '', raw: true })
+      if (!records.length) throw new Error('The selected worksheet contains no data rows.')
+
+      const headers = Object.keys(records[0]).map(normalizeHeader)
+      const required = ['DATE', 'STATUS', 'TEAM ASSIGNED', 'WO ID']
+      const missing = required.filter(header => !headers.includes(header))
+      if (missing.length) throw new Error(`Missing required Excel column(s): ${missing.join(', ')}.`)
+
+      const teamByCode = new Map(
+        teams.map(team => [team.code.trim().toUpperCase(), team])
+      )
+      const grouped = new Map<string, ImportPreviewRow>()
+      const seenWorkOrders = new Set<string>()
+      const unmatchedCounts = new Map<string, number>()
+      let completedRows = 0
+      let ignoredRows = 0
+      let duplicateRows = 0
+
+      for (const record of records) {
+        const normalized: Record<string, unknown> = {}
+        Object.entries(record).forEach(([key, value]) => {
+          normalized[normalizeHeader(key)] = value
+        })
+
+        const status = String(normalized.STATUS ?? '').trim().toUpperCase()
+        if (status !== 'COMPLETED') {
+          ignoredRows += 1
+          continue
+        }
+
+        completedRows += 1
+        const workOrder = String(normalized['WO ID'] ?? '').trim().toUpperCase()
+        const date = parseExcelDate(normalized.DATE)
+        const teamCode = String(normalized['TEAM ASSIGNED'] ?? '').trim().toUpperCase()
+
+        if (workOrder && seenWorkOrders.has(workOrder)) {
+          duplicateRows += 1
+          continue
+        }
+        if (workOrder) seenWorkOrders.add(workOrder)
+
+        if (!date || !/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) {
+          ignoredRows += 1
+          continue
+        }
+        const team = teamByCode.get(teamCode)
+        if (!team) {
+          unmatchedCounts.set(teamCode || '(blank team)', (unmatchedCounts.get(teamCode || '(blank team)') ?? 0) + 1)
+          continue
+        }
+
+        const key = `${team.id}|${date}`
+        const existing = grouped.get(key)
+        if (existing) existing.count += 1
+        else grouped.set(key, { date, teamCode: team.code, teamName: team.name, teamId: team.id, count: 1 })
+      }
+
+      const rows = [...grouped.values()].sort((a, b) => a.date.localeCompare(b.date) || a.teamCode.localeCompare(b.teamCode))
+      if (!rows.length) throw new Error('No completed rows could be matched to an active team and valid installation date.')
+      setImportPreview({
+        fileName: file.name,
+        rows,
+        completedRows,
+        ignoredRows,
+        duplicateRows,
+        unmatched: [...unmatchedCounts.entries()].map(([teamCode, count]) => ({ teamCode, count }))
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not read this Excel file.')
+    }
+  }
+
+  async function importCompletedCounts() {
+    if (!canEdit || !importPreview || importing) return
+    setImporting(true)
+    setError('')
+    setMessage('')
+    try {
+      const payload = importPreview.rows.map(row => ({
+        team_id: row.teamId,
+        work_date: row.date,
+        daily_count: row.count,
+        updated_at: new Date().toISOString(),
+        updated_by: profile?.id
+      }))
+      const { error: importError } = await supabase
+        .from('installation_daily_counts')
+        .upsert(payload, { onConflict: 'team_id,work_date' })
+      if (importError) throw importError
+
+      setMessage(`Imported ${importPreview.rows.reduce((sum, row) => sum + row.count, 0).toLocaleString()} completed installations across ${importPreview.rows.length} team/date groups. Other statuses were ignored. Counts for those exact team/date pairs were replaced with the Excel totals.`)
+      setImportPreview(null)
+      await loadBoard()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not import completed installations.')
+    } finally {
+      setImporting(false)
     }
   }
 
@@ -618,18 +781,89 @@ export default function Tally() {
           </p>
         </div>
 
-        <button
-          type="button"
-          className="btn"
-          onClick={exportCsv}
-          disabled={loading || activeTeams.length === 0}
-        >
-          Export CSV
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {canEdit && (
+            <label className="btn" style={{ cursor: importing ? 'wait' : 'pointer' }}>
+              {importing ? 'Importing…' : 'Import Excel'}
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                disabled={importing || loading}
+                onChange={event => {
+                  void previewExcel(event.target.files?.[0])
+                  event.currentTarget.value = ''
+                }}
+                style={{ display: 'none' }}
+              />
+            </label>
+          )}
+          <button
+            type="button"
+            className="btn"
+            onClick={exportCsv}
+            disabled={loading || activeTeams.length === 0}
+          >
+            Export CSV
+          </button>
+        </div>
       </div>
 
       {error && <div className="notice error">{error}</div>}
       {message && <div className="notice">{message}</div>}
+
+      {importPreview && (
+        <div className="card" style={{ marginBottom: '1rem', border: '1px solid var(--tally-border)' }}>
+          <div className="tally-month-title">
+            <div>
+              <h2 style={{ margin: 0 }}>Import preview</h2>
+              <p className="muted" style={{ margin: '0.35rem 0 0' }}>{importPreview.fileName}</p>
+            </div>
+            <button type="button" className="btn" onClick={() => setImportPreview(null)} disabled={importing}>Cancel</button>
+          </div>
+          <div className="tally-summary">
+            <div className="tally-summary-card">
+              <div className="muted">Completed rows</div>
+              <div className="tally-summary-number">{importPreview.completedRows.toLocaleString()}</div>
+            </div>
+            <div className="tally-summary-card">
+              <div className="muted">Counts to import</div>
+              <div className="tally-summary-number">{importPreview.rows.reduce((sum, row) => sum + row.count, 0).toLocaleString()}</div>
+            </div>
+            <div className="tally-summary-card">
+              <div className="muted">Duplicate WO IDs</div>
+              <div className="tally-summary-number">{importPreview.duplicateRows.toLocaleString()}</div>
+            </div>
+          </div>
+          <p className="tally-note">
+            Only rows whose STATUS is exactly COMPLETED are counted. All other statuses are ignored.
+            Import replaces the saved daily count for each team/date listed below; team/date pairs not in this file stay unchanged.
+          </p>
+          {importPreview.unmatched.length > 0 && (
+            <div className="notice error" style={{ marginBottom: '1rem' }}>
+              Some completed rows were not matched to a configured team and will not be imported:
+              <ul>{importPreview.unmatched.map(item => <li key={item.teamCode}>{item.teamCode}: {item.count}</li>)}</ul>
+            </div>
+          )}
+          <div className="tally-scroll" style={{ maxHeight: '320px' }}>
+            <table className="tally-table">
+              <thead><tr><th>Installation date</th><th>Team code</th><th>Team name</th><th>Completed count</th></tr></thead>
+              <tbody>
+                {importPreview.rows.map(row => (
+                  <tr key={`${row.teamId}|${row.date}`}>
+                    <td>{row.date}</td><td>{row.teamCode}</td><td>{row.teamName}</td><td><strong>{row.count}</strong></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem', gap: '0.5rem' }}>
+            <button type="button" className="btn" onClick={() => setImportPreview(null)} disabled={importing}>Cancel</button>
+            <button type="button" className="btn primary" onClick={() => void importCompletedCounts()} disabled={importing || importPreview.rows.length === 0}>
+              {importing ? 'Importing…' : 'Confirm import'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="card" style={{ marginBottom: '1rem' }}>
         <div className="tally-toolbar">
