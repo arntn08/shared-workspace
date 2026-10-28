@@ -811,6 +811,20 @@ export default function Tally() {
       {error && <div className="notice error">{error}</div>}
       {message && <div className="notice">{message}</div>}
 
+      {importPreview && <div className="card" style={{ marginBottom: '1rem' }}>
+        <div className="tally-month-title"><div><h2 style={{margin:0}}>Completed-only import preview</h2><p className="muted">{importPreview.fileName}</p></div><button type="button" className="btn" onClick={() => setImportPreview(null)} disabled={importing}>Cancel</button></div>
+        <div className="tally-summary">
+          <div className="tally-summary-card"><div className="muted">Completed rows</div><div className="tally-summary-number">{importPreview.completedRows.toLocaleString()}</div></div>
+          <div className="tally-summary-card"><div className="muted">Matched counts</div><div className="tally-summary-number">{importPreview.rows.reduce((sum,row)=>sum+row.count,0).toLocaleString()}</div></div>
+          <div className="tally-summary-card"><div className="muted">Duplicate WO IDs</div><div className="tally-summary-number">{importPreview.duplicateRows.toLocaleString()}</div></div>
+        </div>
+        <p className="tally-note">Only STATUS = COMPLETED is counted; every other status is ignored. Confirming replaces saved counts only for the team/date pairs listed here. Other dates and teams remain unchanged.</p>
+        {importPreview.unmatched.length > 0 && <div className="notice error">Completed rows not matched to a configured team (excluded): {importPreview.unmatched.map(x=>`${x.teamCode}: ${x.count}`).join(', ')}</div>}
+        <div className="tally-scroll" style={{maxHeight:'320px'}}><table className="tally-table"><thead><tr><th>Date</th><th>Team code</th><th>Team name</th><th>Completed</th></tr></thead><tbody>{importPreview.rows.map(row=><tr key={row.teamId+'|'+row.date}><td>{row.date}</td><td>{row.teamCode}</td><td>{row.teamName}</td><td><strong>{row.count}</strong></td></tr>)}</tbody></table></div>
+        <div style={{display:'flex',justifyContent:'flex-end',marginTop:'1rem',gap:'0.5rem'}}><button type="button" className="btn" onClick={()=>setImportPreview(null)} disabled={importing}>Cancel</button><button type="button" className="btn primary" onClick={()=>void importCompletedCounts()} disabled={importing}>{importing?'Importing…':'Confirm import'}</button></div>
+      </div>}
+
+
       {importPreview && (
         <div className="card" style={{ marginBottom: '1rem', border: '1px solid var(--tally-border)' }}>
           <div className="tally-month-title">
