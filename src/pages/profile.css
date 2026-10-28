@@ -135,7 +135,7 @@
   .idcard {
     display:grid;
     grid-template-columns:minmax(220px, 38%) minmax(0,1fr);
-    grid-template-rows:auto auto auto 1fr auto;
+    grid-template-rows:auto auto 1fr auto auto auto;
   }
   .idcard::before { grid-column:1 / -1; }
   .id-orgbar { grid-column:1 / -1; }
@@ -143,7 +143,7 @@
   .id-avatar { max-width:none; height:290px; }
   .portrait-name { grid-column:1; grid-row:5; align-self:start; padding:4px 16px 18px; }
   .profile-details { grid-column:2; grid-row:3 / span 2; padding:24px 22px; }
-  .id-footer { grid-column:1 / -1; }
+  .id-footer { grid-column:1 / -1; grid-row:6; }
 }
 @media (max-width:520px) {
   .idscene { max-width:100%; margin:1rem auto 1.25rem; padding:0 2px; box-sizing:border-box; }
