@@ -137,7 +137,8 @@
 }
 
 .id-avatar img,
-.id-avatar .initials {
+.id-avatar .initials,
+.id-avatar .profile-silhouette {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -151,6 +152,9 @@
   font-size: 2rem;
   font-weight: 800;
 }
+
+.id-avatar .profile-silhouette { padding: 5px; box-sizing: border-box; background: #f1f4fa; }
+.id-avatar .profile-silhouette svg { display: block; width: 100%; height: 100%; }
 
 .id-avatar .ring {
   display: none;
