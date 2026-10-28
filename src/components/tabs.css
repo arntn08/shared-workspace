@@ -751,3 +751,79 @@
 @media (prefers-reduced-motion: reduce) {
   .tabbar, .qa, .file-item { transition: none; }
 }
+
+
+/* Schedule readability refresh */
+.schedule-page, .schedule-results, .schedule-controls { min-width: 0; }
+.employee-ops-page .sheet-card {
+  margin: 0 0 14px !important;
+  padding: clamp(16px, 2.2vw, 24px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 8px 26px rgba(18, 28, 22, .045);
+}
+.employee-ops-page .sheet-card-title {
+  margin: 5px 0 16px;
+  font-size: clamp(1.05rem, 2.4vw, 1.3rem);
+  font-weight: 780;
+  line-height: 1.35;
+  letter-spacing: -.025em;
+  overflow-wrap: anywhere;
+}
+.employee-ops-page .sheet-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.employee-ops-page .sheet-card-grid > div {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+}
+.employee-ops-page .sheet-card-grid > div > span {
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 750;
+  line-height: 1.35;
+  text-transform: uppercase;
+  letter-spacing: .045em;
+  overflow-wrap: anywhere;
+}
+.employee-ops-page .sheet-card-grid > div > b {
+  font-size: .96rem;
+  line-height: 1.45;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+.employee-ops-page .row:has(> select, > input) {
+  align-items: stretch;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+}
+.employee-ops-page .row:has(> select, > input) select,
+.employee-ops-page .row:has(> select, > input) input {
+  min-height: 46px;
+  min-width: 0 !important;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+}
+.employee-ops-page .page-head h1 { letter-spacing: -.04em; }
+@media (max-width: 620px) {
+  .employee-ops-page .sheet-card-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .employee-ops-page .sheet-card-grid > div { padding: 12px; }
+  .employee-ops-page .row:has(> select, > input) { display: grid; grid-template-columns: minmax(0,1fr); }
+  .employee-ops-page .row:has(> select, > input) > * { width: 100%; }
+}
