@@ -840,7 +840,29 @@ export default function Tally() {
           box-shadow: 0 5px 20px rgba(70, 48, 15, 0.035);
         }
 
-        .tally-page .tally-live-summary { margin-bottom: 1.25rem; }
+        .tally-page .tally-live-summary {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: .75rem;
+          margin-bottom: .75rem;
+        }
+        .tally-page .page-head { margin-bottom: .75rem; }
+        .tally-page .tally-live-summary .tally-summary-card {
+          padding: .75rem 1rem;
+          border-radius: 14px;
+        }
+        .tally-page .tally-live-summary .tally-summary-number {
+          margin-top: .15rem;
+          font-size: clamp(1.35rem, 2vw, 1.7rem);
+        }
+        .tally-page .tally-live-summary small { font-size: .75rem; }
+        .tally-page > .card { padding: .85rem 1rem; }
+        .tally-page .tally-toolbar { gap: .75rem; }
+        .tally-page .tally-note { margin: .45rem 0 0; }
+        .tally-page .tally-table thead th { height: 44px; padding: .65rem .6rem; }
+        .tally-page .tally-table td { height: 54px; padding: 5px; }
+        .tally-page .tally-table tbody th:first-child { padding: .65rem .8rem; }
+        .tally-page .tally-scroll { max-height: min(72vh, 680px); }
         .tally-page .tally-live-card {
           position: relative;
           overflow: hidden;
@@ -890,16 +912,21 @@ export default function Tally() {
             grid-template-columns: 1fr;
           }
 
-          .tally-page .tally-summary {
+          .tally-page .tally-summary,
+          .tally-page .tally-live-summary {
             grid-template-columns: 1fr 1fr;
+            gap: .5rem;
           }
+
+          .tally-page .tally-live-summary .tally-summary-card { padding: .7rem; }
+          .tally-page .tally-live-summary .tally-summary-number { font-size: 1.35rem; }
 
           .tally-page .tally-summary-card:last-child {
             grid-column: 1 / -1;
           }
 
           .tally-page .tally-scroll {
-            max-height: 68vh;
+            max-height: min(68vh, 560px);
           }
 
           .tally-page .tally-table {
