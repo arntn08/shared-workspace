@@ -551,3 +551,42 @@
   .tabbar a, .tabbar button.emp-tab, .qa, .file-item { transition: none; }
   .qa:hover, .file-item:hover { transform: none; }
 }
+
+
+/* Final responsive refinements for the employee portal. */
+.emp-app { width: 100%; overflow-x: clip; }
+.emp-main { width: min(1240px, 100%); }
+.emp-top,
+.emp-top-actions,
+.emp-top-copy { min-width: 0; }
+.emp-top-copy strong { overflow-wrap: anywhere; }
+@media (min-width: 901px) {
+  .tabbar {
+    grid-template-columns: minmax(190px, 1.4fr) repeat(6, minmax(74px, 1fr));
+  }
+  .emp-main { padding-top: 1.15rem; }
+}
+@media (max-width: 900px) {
+  .tabbar { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .emp-main { width: 100%; }
+  .emp-top { align-items: flex-start; gap: 8px; }
+  .emp-top-actions { flex: none; }
+  .tabbar { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .tabbar a,
+  .tabbar button.emp-tab {
+    min-width: 0;
+    min-height: 50px;
+    padding-inline: 0;
+  }
+  .tabbar .lbl-short { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .emp-main > * { max-width: 100%; }
+}
+@media (max-width: 380px) {
+  .tabbar { left: 6px; right: 6px; padding: 4px; gap: 2px; }
+  .tabbar a,
+  .tabbar button.emp-tab { font-size: .57rem; }
+  .tabbar .ico svg { width: 17px; height: 17px; }
+  .emp-top-copy strong { max-width: 180px; }
+}
