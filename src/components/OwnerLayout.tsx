@@ -1,6 +1,6 @@
 
-import { useState } from 'react'
-import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { useSettings } from '../lib/settings'
 import { Avatar, Icon, ThemeButton } from './Nav'
@@ -37,11 +37,47 @@ const editorLinks: [string, string, string, string][] = [
   ['/settings', 'Settings', 'settings', 'Account']
 ]
 
+function SidebarClock() {
+  const [now, setNow] = useState(() => new Date())
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  const day = new Intl.DateTimeFormat('en-PH', {
+    timeZone: 'Asia/Manila',
+    weekday: 'long'
+  }).format(now)
+  const date = new Intl.DateTimeFormat('en-PH', {
+    timeZone: 'Asia/Manila',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }).format(now)
+  const time = new Intl.DateTimeFormat('en-PH', {
+    timeZone: 'Asia/Manila',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  }).format(now)
+
+  return (
+    <section className="ops-sidebar-clock" aria-label="Current date and time">
+      <div className="ops-clock-top"><span className="ops-clock-live-dot" /> PHILIPPINE TIME</div>
+      <strong>{time}</strong>
+      <span className="ops-clock-day">{day}</span>
+      <span className="ops-clock-date">{date}</span>
+    </section>
+  )
+}
+
 export default function OwnerLayout() {
   const { profile, signOut } = useAuth()
   const [settings] = useSettings()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const location = useLocation()
+  const location = useLocation()\n  const navigate = useNavigate()
 
   const isOwner = profile?.role === 'owner'
   const links = isOwner ? ownerLinks : editorLinks
@@ -90,7 +126,7 @@ export default function OwnerLayout() {
           </button>
         </div>
 
-        <div className="ops-workspace-label">WORKSPACE</div>
+        <div className="ops-workspace-label">WORKSPACE</div>\n        <SidebarClock />
 
         <nav className="ops-nav" aria-label="Main navigation">
           {groups.map(group => {
@@ -141,7 +177,7 @@ export default function OwnerLayout() {
             <button
               className="ops-icon-button"
               type="button"
-              onClick={signOut}
+              onClick={async () => { await signOut(); navigate('/', { replace: true }) }}
               title="Sign out"
               aria-label="Sign out"
             >
