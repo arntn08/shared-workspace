@@ -1,5 +1,5 @@
 
-import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { useSettings } from '../lib/settings'
 import { NotifProvider, useNotifs } from '../lib/notifications'
@@ -26,7 +26,7 @@ const tabs: [string, string, string, string][] = [
 
 function TabBar({ title }: { title: string }) {
   const { unread: serverUnread } = useNotifs()
-  const { profile, signOut } = useAuth()
+  const { profile, signOut } = useAuth()\n  const navigate = useNavigate()
   const local = useLocalUpdates(profile?.id)
   const unread = serverUnread + local.unread
 
@@ -59,7 +59,7 @@ function TabBar({ title }: { title: string }) {
       <button
         type="button"
         className="emp-tab emp-tab-logout"
-        onClick={() => void signOut()}
+        onClick={async () => { await signOut(); navigate('/', { replace: true }) }}
         aria-label="Log out"
         title="Log out"
       >
