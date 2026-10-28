@@ -30,6 +30,15 @@ const getCurrentMonth = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 }
 
+const addDays = (dateString: string, amount: number) => {
+  const date = new Date(`${dateString}T12:00:00`)
+  date.setDate(date.getDate() + amount)
+  return formatDate(date)
+}
+
+const getWeekDates = (start: string) =>
+  Array.from({ length: 7 }, (_, index) => addDays(start, index))
+
 const getMonthDates = (month: string) => {
   const [year, monthNumber] = month.split('-').map(Number)
   const days = new Date(year, monthNumber, 0).getDate()
@@ -66,26 +75,22 @@ export default function Tally() {
   const [teams, setTeams] = useState<Team[]>([])
   const [departmentId, setDepartmentId] = useState('')
   const [month, setMonth] = useState(getCurrentMonth)
+  const [weekOffset, setWeekOffset] = useState(0)
   const [dailyCounts, setDailyCounts] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
 
-  const dates = useMemo(() => getMonthDates(month), [month])
+  const monthDates = useMemo(() => getMonthDates(month), [month])
   const monthStart = `${month}-01`
-  const monthEnd = dates[dates.length - 1]
-
-  const now = new Date()
-  const currentMonth = getCurrentMonth()
-  const reportDate =
-    month === currentMonth
-      ? formatDate(now) < monthEnd
-        ? formatDate(now)
-        : monthEnd
-      : monthEnd
-
-  const weekStart = getWeekStart(reportDate)
+  const monthEnd = monthDates[monthDates.length - 1]
+  const currentWeekStart = getWeekStart(formatDate(new Date()))
+  const weekStart = addDays(currentWeekStart, weekOffset * 7)
+  const dates = useMemo(() => getWeekDates(weekStart), [weekStart])
+  const weekEnd = dates[dates.length - 1]
+  const nowDate = formatDate(new Date())
+  const reportDate = weekStart > nowDate ? weekStart : weekEnd < nowDate ? weekEnd : nowDate
 
   const activeTeams = useMemo(
     () =>
@@ -160,14 +165,16 @@ export default function Tally() {
       const firstDayOfWeek = firstOfMonth.getDay()
       const daysBack = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1
       firstOfMonth.setDate(firstOfMonth.getDate() - daysBack)
-      const queryStart = formatDate(firstOfMonth)
+      const monthQueryStart = formatDate(firstOfMonth)
+      const queryStart = monthQueryStart < weekStart ? monthQueryStart : weekStart
+      const queryEnd = monthEnd > weekEnd ? monthEnd : weekEnd
 
       const dailyResult = await supabase
         .from('installation_daily_counts')
         .select('team_id,work_date,daily_count')
         .in('team_id', teamIds)
         .gte('work_date', queryStart)
-        .lte('work_date', monthEnd)
+        .lte('work_date', queryEnd)
 
       if (dailyResult.error) throw dailyResult.error
 
@@ -188,19 +195,16 @@ export default function Tally() {
     } finally {
       setLoading(false)
     }
-  }, [departmentId, month, monthEnd])
+  }, [departmentId, month, monthEnd, weekStart, weekEnd])
 
   useEffect(() => {
     void loadBoard()
   }, [loadBoard])
 
-  function changeMonth(offset: number) {
-    const [year, monthNumber] = month.split('-').map(Number)
-    const next = new Date(year, monthNumber - 1 + offset, 1)
-
-    setMonth(
-      `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`
-    )
+  function changeWeek(offset: number) {
+    const nextWeekStart = addDays(weekStart, offset * 7)
+    setWeekOffset(current => current + offset)
+    setMonth(nextWeekStart.slice(0, 7))
   }
 
   function updateDaily(teamId: string, date: string, value: string) {
@@ -327,7 +331,7 @@ export default function Tally() {
       `"${String(value).replace(/"/g, '""')}"`
 
     const rows: (string | number)[][] = [
-      ['Team', ...dates.map(date => Number(date.slice(8))), 'WTD', 'MTD']
+      ['Team', ...dates, 'WTD', 'MTD']
     ]
 
     activeTeams.forEach(team => {
@@ -610,7 +614,7 @@ export default function Tally() {
         <div>
           <h1>Installation Tally</h1>
           <p className="muted" style={{ margin: 0 }}>
-            Monthly installation performance by team
+            Weekly installation performance by team
           </p>
         </div>
 
@@ -654,42 +658,23 @@ export default function Tally() {
 
           <div>
             <label style={{ display: 'block', marginBottom: '0.4rem' }}>
-              Reporting month
+              Reporting week
             </label>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <button
-                type="button"
-                className="btn"
-                aria-label="Previous month"
-                onClick={() => changeMonth(-1)}
-              >
-                ←
-              </button>
-
-              <input
-                type="month"
-                value={month}
-                onChange={event => {
-                  if (event.target.value) setMonth(event.target.value)
-                }}
-                style={{ flex: 1, minWidth: 0 }}
-              />
-
-              <button
-                type="button"
-                className="btn"
-                aria-label="Next month"
-                onClick={() => changeMonth(1)}
-              >
-                →
-              </button>
+              <button type="button" className="btn" aria-label="Previous week" onClick={() => changeWeek(-1)}>←</button>
+              <div style={{ flex: 1, minWidth: 0, textAlign: 'center', fontWeight: 700 }}>
+                {new Date(`${weekStart}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                {' — '}
+                {new Date(`${weekEnd}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </div>
+              <button type="button" className="btn" aria-label="Next week" onClick={() => changeWeek(1)}>→</button>
             </div>
           </div>
         </div>
 
         <p className="tally-note">
           {canEdit
-            ? 'Enter a daily count and leave the field to save. WTD and MTD update automatically from saved daily counts.'
+            ? 'Enter a daily count and leave the field to save. Weekly dates are shown; WTD and MTD update automatically from saved daily counts.'
             : 'Read-only view. Contact an owner or editor to update counts.'}
         </p>
       </div>
@@ -732,13 +717,12 @@ export default function Tally() {
             <h2 style={{ margin: 0 }}>
               {departments.find(item => item.id === departmentId)?.code ?? 'Department'}
               {' — '}
-              {new Date(`${month}-01T12:00:00`).toLocaleDateString('en-US', {
-                month: 'long',
-                year: 'numeric'
+              {new Date(`${weekStart}T12:00:00`).toLocaleDateString('en-US', {
+                month: 'long', day: 'numeric', year: 'numeric'
               })}
             </h2>
             <p className="muted" style={{ margin: '0.35rem 0 0' }}>
-              Daily counts by team · WTD and MTD calculated automatically
+              Daily counts by team · Monday–Sunday · WTD and MTD calculated automatically
             </p>
           </div>
 
@@ -748,7 +732,7 @@ export default function Tally() {
         </div>
 
         {loading ? (
-          <p className="muted">Loading monthly board…</p>
+          <p className="muted">Loading weekly board…</p>
         ) : activeTeams.length === 0 ? (
           <div className="empty">
             No active teams in this department. Add teams in Team Settings first.
@@ -858,7 +842,7 @@ export default function Tally() {
         <p className="tally-note">
           WTD means Week-to-Date (Monday through the reporting date). MTD means
           Month-to-Date (the first day of the month through the reporting date).
-          Historical months use their final day as the reporting date. Totals are
+          Historical weeks use Sunday as the reporting date. Totals are
           calculated per team from daily counts; no separate WID/MID entry is needed.
         </p>
       </div>
