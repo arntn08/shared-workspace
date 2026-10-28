@@ -1785,3 +1785,57 @@ body {
     padding-inline: 1px;
   }
 }
+
+
+/* Compact KPI tiles for Department WTD, Department MTD, and Active Teams. */
+.ops-page .tally-page .tally-department-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.ops-page .tally-page .tally-department-summary-card {
+  min-width: 0;
+  min-height: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+.ops-page .tally-page .tally-department-summary-card .muted {
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ops-page .tally-page .tally-department-summary-card .tally-summary-number {
+  margin: 0;
+  font-size: clamp(18px, 2vw, 24px);
+  line-height: 1.15;
+  font-weight: 750;
+  letter-spacing: -0.035em;
+}
+@media (max-width: 600px) {
+  .ops-page .tally-page .tally-department-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .ops-page .tally-page .tally-department-summary-card {
+    padding: 8px 7px;
+    border-radius: 10px;
+    gap: 4px;
+  }
+  .ops-page .tally-page .tally-department-summary-card .muted {
+    font-size: 9px;
+    line-height: 1.2;
+    letter-spacing: -.01em;
+  }
+  .ops-page .tally-page .tally-department-summary-card .tally-summary-number {
+    font-size: clamp(15px, 4.5vw, 19px);
+    line-height: 1.1;
+  }
+}
