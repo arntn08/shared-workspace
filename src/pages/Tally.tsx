@@ -243,6 +243,26 @@ export default function Tally() {
     void loadBoard()
   }, [loadBoard])
 
+  // Keep shared completed totals fresh for every signed-in account.
+  useEffect(() => {
+    const refreshImportedLoads = async () => {
+      const [year, monthNumber] = month.split('-').map(Number)
+      const start = `${month}-01`
+      const end = `${month}-${String(new Date(year, monthNumber, 0).getDate()).padStart(2, '0')}`
+      const result = await supabase
+        .from('installation_imported_work_orders')
+        .select('work_date,team_id,department_id,status,wo_id')
+        .gte('work_date', start)
+        .lte('work_date', end)
+      if (!result.error) {
+        setImportedLoads((result.data ?? []) as Array<{work_date:string; team_id:string|null; department_id:string|null; status:string; wo_id:string}>)
+        setLoadBreakdownError('')
+      }
+    }
+    const timer = window.setInterval(() => { void refreshImportedLoads() }, 30000)
+    return () => window.clearInterval(timer)
+  }, [month])
+
   function changeWeek(offset: number) {
     const nextWeekStart = addDays(weekStart, offset * 7)
     setWeekOffset(current => current + offset)
@@ -578,6 +598,11 @@ export default function Tally() {
     0
   )
 
+  const completedInstalled = importedLoads.filter(row => row.status === 'COMPLETED').length
+  const daysRemaining = month === getCurrentMonth()
+    ? Math.max(0, Number(monthEnd.slice(-2)) - Number(nowDate.slice(-2)))
+    : month > getCurrentMonth() ? Number(monthEnd.slice(-2)) : 0
+
   const departmentDailyTotals = useMemo(
     () =>
       dates.map(date =>
@@ -711,8 +736,8 @@ export default function Tally() {
           min-width: 84px;
           height: 60px;
           padding: 1rem 0.75rem;
-          background: #efe2c9;
-          color: #674615;
+          background: var(--tally-soft);
+          color: var(--text, #30291e);
           text-align: center;
           font-size: 1.05rem;
           font-weight: 800;
@@ -724,13 +749,13 @@ export default function Tally() {
           z-index: 5;
           min-width: 210px;
           text-align: left;
-          background: #dfc797;
-          color: #503510;
+          background: var(--tally-card);
+          color: var(--text, #30291e);
         }
 
         .tally-page .tally-table thead th:nth-last-child(-n+2) {
           min-width: 120px;
-          background: #956b25;
+          background: var(--tally-accent);
           color: white;
         }
 
@@ -740,8 +765,8 @@ export default function Tally() {
           z-index: 2;
           min-width: 210px;
           padding: 1rem;
-          background: #f1e5cf;
-          color: #704b15;
+          background: var(--tally-soft);
+          color: var(--text, #30291e);
           text-align: left;
           white-space: nowrap;
           font-size: 1.05rem;
@@ -749,15 +774,15 @@ export default function Tally() {
         }
 
         .tally-page .tally-table tbody tr:nth-child(even) td {
-          background: #faf6ee;
+          background: var(--tally-card);
         }
 
         .tally-page .tally-table tbody tr:hover td {
-          background: #f1e6d1;
+          background: var(--tally-soft);
         }
 
         .tally-page .tally-table tbody tr:hover th:first-child {
-          background: #e6d3ad;
+          background: var(--tally-soft);
         }
 
         .tally-page .tally-table td {
@@ -788,13 +813,13 @@ export default function Tally() {
         }
 
         .tally-page .tally-table td:nth-last-child(-n+2) {
-          background: #f0e4cc;
+          background: color-mix(in srgb, var(--tally-accent) 9%, var(--tally-card));
         }
 
         .tally-page .tally-table td:nth-last-child(-n+2) input {
-          background: #f8efde;
-          border-color: #d8c29b;
-          color: #704b15;
+          background: var(--tally-soft);
+          border-color: var(--tally-border);
+          color: var(--text, #30291e);
           font-size: 1.2rem;
           font-weight: 800;
           text-align: center;
@@ -802,7 +827,7 @@ export default function Tally() {
 
         .tally-page .tally-summary {
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 1rem;
           margin-bottom: 1rem;
         }
@@ -815,6 +840,26 @@ export default function Tally() {
           box-shadow: 0 5px 20px rgba(70, 48, 15, 0.035);
         }
 
+        .tally-page .tally-live-summary { margin-bottom: 1.25rem; }
+        .tally-page .tally-live-card {
+          position: relative;
+          overflow: hidden;
+          border-radius: 18px;
+          background: linear-gradient(135deg, var(--tally-card), var(--tally-soft));
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.045);
+        }
+        .tally-page .tally-live-card::after {
+          content: '';
+          position: absolute;
+          width: 100px;
+          height: 100px;
+          right: -28px;
+          top: -30px;
+          border-radius: 50%;
+          background: color-mix(in srgb, var(--tally-accent) 10%, transparent);
+          pointer-events: none;
+        }
+        .tally-page .tally-live-card small { display: block; margin-top: .35rem; }
         .tally-page .tally-summary-number {
           margin-top: 0.35rem;
           font-size: 1.8rem;
@@ -910,6 +955,19 @@ export default function Tally() {
 
       {error && <div className="notice error">{error}</div>}
       {message && <div className="notice">{message}</div>}
+
+      <div className="tally-summary tally-live-summary" aria-live="polite">
+        <div className="tally-summary-card tally-live-card">
+          <span className="muted">Completed installed · ${month}</span>
+          <div className="tally-summary-number">${completedInstalled.toLocaleString()}</div>
+          <small className="muted">Unique imported work orders marked COMPLETED</small>
+        </div>
+        <div className="tally-summary-card tally-live-card">
+          <span className="muted">Days remaining in month</span>
+          <div className="tally-summary-number">${daysRemaining}</div>
+          <small className="muted"> ${month === getCurrentMonth() ? 'Until month-end' : 'Based on selected month'} </small>
+        </div>
+      </div>
 
       {importPreview && (
         <div className="card" style={{ marginBottom: '1rem', border: '1px solid var(--tally-border)' }}>
