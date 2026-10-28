@@ -378,10 +378,20 @@ export default function Tally() {
         const code = normalizeTeamCode(team.code)
         teamByCode.set(code, team)
         addAlias(code, team)
-        // Excel exports may use the three-digit OMT code while the app's
-        // configured team uses the two-digit form. Only alias OMT001 to OMT01;
-        // do not merge OMT002/OMT003 into OMT01 because they may be separate teams.
-        if (code === 'AHBA_OMT01') addAlias('AHBA_OMT001', team)
+        // Excel exports may use three-digit OMT codes while Supabase stores
+        // the matching two-digit codes. Map each code to its own team.
+        const omtCodeAliases: Record<string, string> = {
+          AHBA_OMT001: 'AHBA_OMT01',
+          AHBA_OMT002: 'AHBA_OMT02',
+          AHBA_OMT003: 'AHBA_OMT03'
+        }
+        const aliasTarget = omtCodeAliases[code]
+        if (aliasTarget) {
+          const matchingTeam = teams.find(
+            item => item.active && normalizeTeamCode(item.code) === aliasTarget
+          )
+          if (matchingTeam) addAlias(code, matchingTeam)
+        }
         // Excel exports sometimes include a company prefix that isn't part of the configured team code.
         const stripped = code.replace(/^(AHBA_|A8_|AHBA-|A8-)/, '')
         if (stripped !== code) addAlias(stripped, team)
