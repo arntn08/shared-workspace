@@ -378,6 +378,10 @@ export default function Tally() {
         const code = normalizeTeamCode(team.code)
         teamByCode.set(code, team)
         addAlias(code, team)
+        // Excel exports may use the three-digit OMT code while the app's
+        // configured team uses the two-digit form. Only alias OMT001 to OMT01;
+        // do not merge OMT002/OMT003 into OMT01 because they may be separate teams.
+        if (code === 'AHBA_OMT01') addAlias('AHBA_OMT001', team)
         // Excel exports sometimes include a company prefix that isn't part of the configured team code.
         const stripped = code.replace(/^(AHBA_|A8_|AHBA-|A8-)/, '')
         if (stripped !== code) addAlias(stripped, team)
