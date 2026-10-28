@@ -68,3 +68,37 @@ select.small { min-height: 34px; width: auto; padding: 0.25rem 0.7rem; font-size
 .badge.edit { background: var(--accent-soft); color: var(--accent); }
 .badge.admin { background: rgba(253, 224, 71, 0.16); color: var(--yellow); border-color: transparent; }
 .badge.view { background: rgba(127, 127, 127, 0.15); color: var(--muted); border-color: transparent; }
+
+
+/* Compact department WTD / MTD / active-team summary cards on the tally page. */
+.tally-department-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+.tally-department-summary .tally-department-summary-card {
+  min-width: 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: 15px;
+}
+.tally-department-summary-card > .muted:first-child {
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+.tally-department-summary-card .tally-summary-number {
+  font-size: clamp(1.35rem, 2.2vw, 1.8rem);
+  line-height: 1.15;
+  margin: 0.2rem 0;
+}
+.tally-department-summary-card > .muted:last-child {
+  font-size: 0.72rem !important;
+  line-height: 1.25;
+}
+@media (max-width: 600px) {
+  .tally-department-summary { gap: 0.45rem; }
+  .tally-department-summary .tally-department-summary-card { padding: 0.6rem; }
+  .tally-department-summary-card > .muted:first-child { font-size: 0.7rem; }
+  .tally-department-summary-card .tally-summary-number { font-size: 1.25rem; }
+  .tally-department-summary-card > .muted:last-child { font-size: 0.66rem !important; }
+}
