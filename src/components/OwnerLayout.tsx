@@ -77,7 +77,8 @@ export default function OwnerLayout() {
   const { profile, signOut } = useAuth()
   const [settings] = useSettings()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const location = useLocation()\n  const navigate = useNavigate()
+  const location = useLocation()
+  const navigate = useNavigate()
 
   const isOwner = profile?.role === 'owner'
   const links = isOwner ? ownerLinks : editorLinks
@@ -126,7 +127,8 @@ export default function OwnerLayout() {
           </button>
         </div>
 
-        <div className="ops-workspace-label">WORKSPACE</div>\n        <SidebarClock />
+        <div className="ops-workspace-label">WORKSPACE</div>
+        <SidebarClock />
 
         <nav className="ops-nav" aria-label="Main navigation">
           {groups.map(group => {
