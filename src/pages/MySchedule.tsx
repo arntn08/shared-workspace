@@ -22,6 +22,33 @@ function isHeading(cells: string[]) {
   return text.slice(1).every((c) => NUM.test(c.trim()) || LABEL.test(c.trim()))
 }
 
+
+function scheduleDateValue(label: string): string | null {
+  const text = label.trim().toUpperCase().replace(/\\s+/g, ' ')
+  const match = text.match(/^(?:([A-Z]+)\\s+)?([A-Z]{3,9})\\s+(\\d{1,2})(?:,?\\s+(\\d{4}))?$/)
+  if (!match) return null
+  const monthText = match[2] || match[1]
+  const dayText = match[3]
+  const yearText = match[4]
+  const months: Record<string, number> = { JAN:0, JANUARY:0, FEB:1, FEBRUARY:1, MAR:2, MARCH:2, APR:3, APRIL:3, MAY:4, JUN:5, JUNE:5, JUL:6, JULY:6, AUG:7, AUGUST:7, SEP:8, SEPT:8, SEPTEMBER:8, OCT:9, OCTOBER:9, NOV:10, NOVEMBER:10, DEC:11, DECEMBER:11 }
+  const month = months[monthText]
+  if (month === undefined) return null
+  const today = new Date()
+  const year = yearText ? Number(yearText) : today.getFullYear()
+  const date = new Date(year, month, Number(dayText))
+  if (!yearText && date.getTime() < new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime() - 180 * 86400000) date.setFullYear(year + 1)
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
+}
+function tomorrowLocalIso() {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
+function dateLabelIso(value: string) {
+  const [y,m,d] = value.split('-').map(Number)
+  return new Date(y, m-1, d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }).toUpperCase()
+}
+
 interface Hit {
   section: string
   labels: string[]
@@ -77,6 +104,7 @@ export default function MySchedule() {
   const [busy, setBusy] = useState(true)
   const [err, setErr] = useState('')
   const [savedAt, setSavedAt] = useState<number | null>(null)
+  const [selectedDate, setSelectedDate] = useState('')
 
   useEffect(() => {
     supabase
@@ -137,6 +165,26 @@ export default function MySchedule() {
   }, [fileId])
 
   const hits = useMemo(() => findHits(rows, name), [rows, name])
+  const dateOptions = useMemo(() => {
+    const unique = new Map<string, string>()
+    for (const hit of hits) {
+      const iso = scheduleDateValue(hit.section)
+      if (iso) unique.set(iso, hit.section)
+    }
+    return [...unique.entries()].sort(([a], [b]) => {
+      const tomorrow = tomorrowLocalIso()
+      const da = a >= tomorrow ? a : `9999-${a}`
+      const db = b >= tomorrow ? b : `9999-${b}`
+      return da.localeCompare(db)
+    })
+  }, [hits])
+  useEffect(() => {
+    if (!dateOptions.length) { setSelectedDate(''); return }
+    const tomorrow = tomorrowLocalIso()
+    const defaultDate = dateOptions.find(([date]) => date >= tomorrow)?.[0] ?? dateOptions[0][0]
+    setSelectedDate(current => dateOptions.some(([date]) => date === current) ? current : defaultDate)
+  }, [dateOptions])
+  const visibleHits = selectedDate ? hits.filter(hit => scheduleDateValue(hit.section) === selectedDate) : hits
   const n = norm(name)
 
   return (
@@ -154,6 +202,9 @@ export default function MySchedule() {
       {savedAt && <div className="notice">Offline: showing your schedule saved {ageLabel(savedAt)}. It may be out of date.</div>}
 
       <div className="row" style={{ marginBottom: '0.75rem' }}>
+        {dateOptions.length > 0 && <select aria-label="Schedule date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} style={{ flex: 1, minWidth: 160 }}>
+          {dateOptions.map(([date, original]) => <option key={date} value={date}>{dateLabelIso(date)}{date === tomorrowLocalIso() ? ' · TOMORROW' : ''}</option>)}
+        </select>}
         {files.length > 1 && (
           <select value={fileId} onChange={(e) => setFileId(e.target.value)} style={{ flex: 1, minWidth: 160 }}>
             {files.map((f) => (
@@ -175,13 +226,13 @@ export default function MySchedule() {
       {err && <p className="error">{err}</p>}
       {!busy && !err && files.length === 0 && <p className="muted">No spreadsheets are shared with you yet.</p>}
       {!busy && !err && files.length > 0 && n.length < 3 && <p className="muted">Type at least 3 letters of a name to search.</p>}
-      {!busy && !err && n.length >= 3 && hits.length === 0 && (
+      {!busy && !err && n.length >= 3 && visibleHits.length === 0 && (
         <p className="muted">
           No rows found for "{name}" in this sheet. Check the spelling, try another tab, or ask the owner to check your name on the People page.
         </p>
       )}
 
-      {hits.map((h, i) => {
+      {visibleHits.map((h, i) => {
         const cols = h.cells.map((_, ci) => ci).filter((ci) => filled(h.cells[ci]))
         const mine = cols.find((ci) => norm(h.cells[ci]).includes(n))
         const role = mine !== undefined ? h.labels[mine] : ''
