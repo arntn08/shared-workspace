@@ -157,9 +157,9 @@ export default function Profile() {
       {savedAt && <div className="notice">Offline: showing the details saved {ageLabel(savedAt)}.</div>}
       {msg && <div className={`notice${msg.err ? ' error' : ''}`}>{msg.text}</div>}
 
-      <div className="idscene" onPointerMove={move} onPointerLeave={leave} onPointerCancel={leave}>
+      <div className="idscene">
         <div className="id-sway">
-          <div className="idcard" ref={card}>
+          <div className="idcard" ref={card} onPointerMove={move} onPointerLeave={leave} onPointerCancel={leave}>
             <div className="id-sheen" />
             <div className="id-head">
               <span className="id-org">AHBA Development</span>
