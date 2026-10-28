@@ -161,6 +161,7 @@ export default function Profile() {
         <div className="id-sway">
           <div className="idcard" ref={card} onPointerMove={move} onPointerLeave={leave} onPointerCancel={leave}>
             <div className="id-sheen" />
+            <div className="id-orgbar"><span className="id-brand">A</span><strong>AHBA DEVELOPMENT</strong><span className="id-status">ACTIVE</span></div>
             <div className="portrait-card">
               <div className="id-avatar">
                 {photo ? <img src={photo} alt={`${name} profile photo`} /> : (
@@ -189,14 +190,11 @@ export default function Profile() {
                 )}
               </div>
             </div>
-          </div>
           <div className="portrait-name">
             <span>Name</span>
             <strong>{name}</strong>
           </div>
-        </div>
-      </div>
-      <div className="card profile-details">
+                <div className="profile-details">
         <h2>Employee details</h2>
         <dl className="profile-detail-grid">
           <div><dt>Full name</dt><dd>{name}</dd></div>
@@ -208,7 +206,9 @@ export default function Profile() {
           <div><dt>Account reference</dt><dd>{ref}</dd></div>
         </dl>
       </div>
-
+          <div className="id-footer"><span>Account ref {ref}</span><strong>SHARED WORKSPACE</strong></div>
+        </div>
+      </div>
       <div className="card profile-actions">
         <h2>Your card</h2>
         <div className="row">
