@@ -342,9 +342,25 @@ export default function Tally() {
       const missing = required.filter(header => !headers.includes(header))
       if (missing.length) throw new Error(`Missing required Excel column(s): ${missing.join(', ')}.`)
 
-      const teamByCode = new Map(
-        teams.map(team => [team.code.trim().toUpperCase(), team])
-      )
+      const normalizeTeamCode = (value: unknown) =>
+        String(value ?? '').trim().toUpperCase().replace(/\\s+/g, '').replace(/[–—]/g, '-')
+      const teamByCode = new Map<string, Team>()
+      const teamAliases = new Map<string, Team[]>()
+      const addAlias = (alias: string, team: Team) => {
+        if (!alias) return
+        const current = teamAliases.get(alias) ?? []
+        if (!current.some(item => item.id === team.id)) current.push(team)
+        teamAliases.set(alias, current)
+      }
+      teams.filter(team => team.active).forEach(team => {
+        const code = normalizeTeamCode(team.code)
+        teamByCode.set(code, team)
+        addAlias(code, team)
+        // Excel exports sometimes include a company prefix that isn't part of the configured team code.
+        const stripped = code.replace(/^(AHBA_|A8_|AHBA-|A8-)/, '')
+        if (stripped !== code) addAlias(stripped, team)
+        addAlias(code.replace(/^(AHBA_|A8_|AHBA-|A8-)/, ''), team)
+      })
       const grouped = new Map<string, ImportPreviewRow>()
       const seenWorkOrders = new Set<string>()
       const unmatchedCounts = new Map<string, number>()
@@ -379,7 +395,13 @@ export default function Tally() {
           ignoredRows += 1
           continue
         }
-        const team = teamByCode.get(teamCode)
+        const normalizedTeamCode = normalizeTeamCode(teamCode)
+        let team = teamByCode.get(normalizedTeamCode)
+        if (!team) {
+          const strippedCode = normalizedTeamCode.replace(/^(AHBA_|A8_|AHBA-|A8-)/, '')
+          const candidates = teamAliases.get(strippedCode) ?? []
+          if (candidates.length === 1) team = candidates[0]
+        }
         if (!team) {
           unmatchedCounts.set(teamCode || '(blank team)', (unmatchedCounts.get(teamCode || '(blank team)') ?? 0) + 1)
           continue
@@ -392,7 +414,14 @@ export default function Tally() {
       }
 
       const rows = [...grouped.values()].sort((a, b) => a.date.localeCompare(b.date) || a.teamCode.localeCompare(b.teamCode))
-      if (!rows.length) throw new Error('No completed rows could be matched to an active team and valid installation date.')
+      if (!rows.length) {
+        const sampleCodes = [...unmatchedCounts.entries()].slice(0, 8).map(([code, count]) => `${code} (${count})`).join(', ')
+        throw new Error(
+          completedRows === 0
+            ? 'No rows have STATUS = COMPLETED. Check that the Excel status column contains COMPLETED.'
+            : `Found ${completedRows} completed rows, but none matched a configured active team and valid date. Unmatched team codes: ${sampleCodes || 'none'}.`
+        )
+      }
       setImportPreview({
         fileName: file.name,
         rows,
