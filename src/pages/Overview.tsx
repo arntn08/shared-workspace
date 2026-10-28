@@ -28,6 +28,7 @@ type OverviewStats = {
   activeTeams: number
   wtd: number
   mtd: number
+  completedInstalled: number
 }
 
 function localISO(date: Date) {
@@ -86,7 +87,8 @@ export default function Overview() {
     assignments: 0,
     activeTeams: 0,
     wtd: 0,
-    mtd: 0
+    mtd: 0,
+    completedInstalled: 0
   })
   const [recent, setRecent] = useState<FileRow[]>([])
   const [days, setDays] = useState<{ key: string; label: string; count: number }[]>([])
@@ -108,7 +110,7 @@ export default function Overview() {
         const weekStart = localISO(getWeekStart(now))
         const queryStart = weekStart < monthStart ? weekStart : monthStart
 
-        const [files, people, assignments, recentFiles, teams, daily] =
+        const [files, people, assignments, recentFiles, teams, daily, completed] =
           await Promise.all([
             supabase.from('files').select('*', { count: 'exact', head: true }),
             supabase.from('profiles').select('*', { count: 'exact', head: true })
@@ -121,11 +123,17 @@ export default function Overview() {
             supabase.from('installation_daily_counts')
               .select('work_date,daily_count')
               .gte('work_date', queryStart)
-              .lte('work_date', today)
+              .lte('work_date', today),
+            supabase.from('installation_imported_work_orders')
+              .select('wo_id', { count: 'exact', head: true })
+              .eq('status', 'COMPLETED')
+              .gte('work_date', monthStart)
+              .lte('work_date', `${today.slice(0, 7)}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, '0')}`)
           ])
 
         if (daily.error) throw daily.error
         if (teams.error) throw teams.error
+        if (completed.error) throw completed.error
 
         const records = (daily.data ?? []) as DailyCount[]
         const wtd = records
@@ -156,7 +164,8 @@ export default function Overview() {
           assignments: assignments.count ?? 0,
           activeTeams: teams.count ?? 0,
           wtd,
-          mtd
+          mtd,
+          completedInstalled: completed.count ?? 0
         })
         setRecent((recentFiles.data ?? []) as FileRow[])
         setDays(dayBuckets)
@@ -184,7 +193,8 @@ export default function Overview() {
     }
 
     void loadOverview()
-    return () => { cancelled = true }
+    const refreshId = window.setInterval(() => { void loadOverview() }, 30000)
+    return () => { cancelled = true; window.clearInterval(refreshId) }
   }, [isOwner])
 
   const name = displayName(profile?.full_name, profile?.email)
@@ -235,6 +245,8 @@ export default function Overview() {
       </div>
 
       <div className="ops-overview-stats">
+        <StatCard label="Completed installed" value={stats.completedInstalled} note="Completed work orders · current month" symbol="✓" />
+        <StatCard label="Days left this month" value={Math.max(0, new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() - new Date().getDate())} note="Until month-end" symbol="◷" />
         <StatCard label="Week-to-date" value={stats.wtd} note="All teams · Monday to today" symbol="↗" />
         <StatCard label="Month-to-date" value={stats.mtd} note="All teams · this month" symbol="▥" />
         <StatCard label="Active teams" value={stats.activeTeams} note="Across all departments" symbol="◈" />
