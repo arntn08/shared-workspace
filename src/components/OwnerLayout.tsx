@@ -33,6 +33,7 @@ const editorLinks: [string, string, string, string][] = [
   ['/schedule', 'Schedule', 'schedule', 'Operations'],
   ['/files', 'Files & resources', 'files', 'Workspace'],
   ['/teams', 'Team Settings', 'users-round', 'Management'],
+  ['/people', 'People', 'people', 'Management'],
   ['/settings', 'Settings', 'settings', 'Account']
 ]
 
@@ -173,7 +174,7 @@ export default function OwnerLayout() {
             <Route path="/schedule" element={<MySchedule />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/teams" element={<TeamSettings />} />
-            {isOwner && <Route path="/people" element={<People />} />}
+            <Route path="/people" element={<People />} />
             {isOwner && <Route path="/design" element={<DashboardDesign />} />}
             {isOwner && <Route path="/activity" element={<Activity />} />}
             <Route path="*" element={<Navigate to="/" replace />} />
