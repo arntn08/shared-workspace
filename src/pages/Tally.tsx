@@ -105,6 +105,7 @@ export default function Tally() {
   const [importing, setImporting] = useState(false)
   const [importedLoads, setImportedLoads] = useState<Array<{work_date:string; team_id:string|null; department_id:string|null; status:string; wo_id:string}>>([])
   const [loadBreakdownError, setLoadBreakdownError] = useState('')
+  const [tallyView, setTallyView] = useState<'wtd-mtd' | 'total-loads'>('wtd-mtd')
 
   const monthDates = useMemo(() => getMonthDates(month), [month])
   const monthStart = `${month}-01`
@@ -965,6 +966,30 @@ export default function Tally() {
       )}
 
       <div className="card" style={{ marginBottom: '1rem' }}>
+        <div role="tablist" aria-label="Installation tally views" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tallyView === 'wtd-mtd'}
+            className={tallyView === 'wtd-mtd' ? 'btn primary' : 'btn'}
+            onClick={() => setTallyView('wtd-mtd')}
+          >
+            WTD / MTD
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tallyView === 'total-loads'}
+            className={tallyView === 'total-loads' ? 'btn primary' : 'btn'}
+            onClick={() => setTallyView('total-loads')}
+          >
+            Total Loads
+          </button>
+        </div>
+      </div>
+
+      {tallyView === 'wtd-mtd' && (
+      <div className="card" style={{ marginBottom: '1rem' }}>
         <div className="tally-toolbar">
           <label>
             Department
@@ -1012,6 +1037,9 @@ export default function Tally() {
         </p>
       </div>
 
+      )}
+
+      {tallyView === 'total-loads' && (
       <div className="card" style={{ marginBottom: '1rem' }}>
         <div className="tally-month-title">
           <div>
@@ -1058,7 +1086,9 @@ export default function Tally() {
         </div>
         <p className="tally-note">These status totals are separate from the manual WTD/MTD daily-count board. They update after a successful import and when the board reloads.</p>
       </div>
+      )}
 
+      {tallyView === 'wtd-mtd' && (
       <div className="tally-summary">
         <div className="tally-summary-card">
           <div className="muted">Department WTD</div>
@@ -1226,6 +1256,7 @@ export default function Tally() {
           calculated per team from daily counts; no separate WID/MID entry is needed.
         </p>
       </div>
+      )}
     </section>
   )
 }
