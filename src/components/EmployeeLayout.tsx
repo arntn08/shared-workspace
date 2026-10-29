@@ -13,6 +13,7 @@ import Profile from '../pages/Profile'
 import Notifications from '../pages/Notifications'
 import Settings from '../pages/Settings'
 import Tally from '../pages/Tally'
+import EmployeeNtes from '../pages/EmployeeNtes'
 
 const employeeLinks: [string, string, string, string][] = [
   ['/', 'Home', 'home', 'Workspace'],
@@ -20,6 +21,7 @@ const employeeLinks: [string, string, string, string][] = [
   ['/tally', 'Installation Tally', 'tally', 'Operations'],
   ['/schedule', 'Schedule', 'schedule', 'Operations'],
   ['/notifications', 'Notifications', 'bell', 'Operations'],
+  ['/my-ntes', 'My NTEs', 'file-text', 'Operations'],
   ['/profile', 'My profile', 'user', 'Account'],
   ['/settings', 'Settings', 'settings', 'Account']
 ]
@@ -216,6 +218,7 @@ export default function EmployeeLayout() {
               <Route path="/file/:id" element={<FileViewer />} />
               <Route path="/schedule" element={<MySchedule />} />
               <Route path="/notifications" element={<Notifications />} />
+              <Route path="/my-ntes" element={<EmployeeNtes />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
