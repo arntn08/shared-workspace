@@ -20,7 +20,7 @@ type Team = {
   active: boolean
 }
 
-type RosterRow = { team: string; code: string | null; jo_mob: string | null }
+type RosterRow = { team?: string | null; code?: string | null; team_code?: string | null; jo_mob?: string | null }
 
 type DailyRecord = {
   team_id: string
@@ -117,7 +117,7 @@ export default function Tally() {
     supabase.rpc('my_roster').then(({ data, error }) => {
       if (cancelled || error) return
       const rows = (data ?? []) as RosterRow[]
-      setMyTeamCodes([...new Set(rows.map(row => row.code?.trim()).filter((code): code is string => Boolean(code)))])
+      setMyTeamCodes([...new Set(rows.flatMap(row => [row.code, row.team_code, row.team]).map(value => value?.trim()).filter((code): code is string => Boolean(code)))])
     })
     return () => { cancelled = true }
   }, [canEdit, profile?.id])
@@ -135,7 +135,7 @@ export default function Tally() {
   const activeTeams = useMemo(
     () =>
       teams
-        .filter(team => team.active && team.department_id === departmentId && (canEdit || myTeamCodes.includes(team.code)))
+        .filter(team => team.active && team.department_id === departmentId && (canEdit || myTeamCodes.some(code => code.localeCompare(team.code, undefined, { sensitivity: 'accent' }) === 0 || code.localeCompare(team.name, undefined, { sensitivity: 'accent' }) === 0 || code.toLowerCase() === team.code.toLowerCase() || code.toLowerCase() === team.name.toLowerCase())))
         .sort((a, b) => a.code.localeCompare(b.code)),
     [teams, departmentId, canEdit, myTeamCodes]
   )
