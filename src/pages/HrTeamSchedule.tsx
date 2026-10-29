@@ -101,7 +101,29 @@ export default function HrTeamSchedule() {
       [data-theme="dark"] .hr-schedule-page .schedule-person{background:linear-gradient(125deg,#392b3b,#302638 60%,#25273a)!important;border-color:#65445c!important;color:#f2e5ec}
       [data-theme="dark"] .hr-schedule-page .schedule-chip{background:linear-gradient(115deg,#3b2c3b,#30283d);color:#f1dce6;border-color:#624357!important}
       @media(max-width:640px){.hr-schedule-page .schedule-hero{padding:1rem}.hr-schedule-page .schedule-hero:after{font-size:3rem;right:.7rem}.hr-schedule-page .schedule-grid{grid-template-columns:1fr}}
-    `}</style>
+    `}.hr-schedule-page .schedule-hero{background:linear-gradient(125deg,#05070d,#0b1730 52%,#123b78)!important;border-color:#234b85!important}
+.hr-schedule-page .schedule-kicker{color:#9fc5ff!important}
+.hr-schedule-page .schedule-hero h1{color:#f3f7ff!important}
+.hr-schedule-page .schedule-hero p{color:#c2d4f3!important}
+.hr-schedule-page .schedule-hero:after{color:#75aaff!important;opacity:.24!important}
+.hr-schedule-page .schedule-tools{background:linear-gradient(125deg,#080d18,#101f38 65%,#142c50)!important;border-color:#294775!important}
+.hr-schedule-page .schedule-tools input,.hr-schedule-page .schedule-tools select{background:#0d1728!important;color:#eaf2ff!important;border-color:#355783!important}
+.hr-schedule-page .schedule-column{background:linear-gradient(145deg,#090d16,#101a2b 58%,#142541)!important;border-color:#294775!important}
+.hr-schedule-page .schedule-column h2{color:#dbe9ff!important}
+.hr-schedule-page .schedule-count{background:linear-gradient(135deg,#14294a,#1e4b88)!important;color:#eaf3ff!important;border-color:#3b67a5!important}
+.hr-schedule-page .schedule-person{background:linear-gradient(125deg,#080b12,#101d32 58%,#173968)!important;border-color:#2d5285!important;color:#e7efff!important}
+.hr-schedule-page .schedule-person-name{color:#c8ddff!important}
+.hr-schedule-page .schedule-chip{background:linear-gradient(115deg,#101a2b,#182d4d)!important;color:#d9e8ff!important;border-color:#2d4e7a!important}
+.hr-schedule-page .schedule-chip-label{color:#8db9ff!important}
+.hr-schedule-page .schedule-meta{color:#9db3d4!important}
+.hr-schedule-page .schedule-refresh{background:linear-gradient(120deg,#101827,#174b91)!important;border-color:#3869a8!important;color:#fff!important}
+.hr-schedule-modal{background:linear-gradient(145deg,#080c14,#101c30 60%,#17345d)!important;border-color:#31558a!important;color:#eaf2ff!important}
+.hr-schedule-modal h2{color:#e4efff!important}
+.hr-schedule-modal-close{background:linear-gradient(135deg,#101a2b,#1b3d6e)!important;border-color:#355783!important;color:#fff!important}
+.hr-schedule-modal-line{background:linear-gradient(110deg,#0d1625,#142844)!important;border-color:#2d4e7a!important}
+.hr-schedule-modal-line span{color:#9fc5ff!important}
+.hr-schedule-modal-line strong{color:#f0f6ff!important}
+</style>
     <div className="hr-schedule-page">
     <div className="schedule-hero"><div className="schedule-kicker">♡ People • Planning • Progress</div><div className="page-head"><div><h1>Team schedules</h1><p className="muted" style={{margin:0}}>All shared team schedules in a compact calendar-style overview.</p></div><button className="schedule-refresh" onClick={()=>fileId&&void load(fileId,tab)}>↻ Refresh</button></div></div>
     <div className="row schedule-tools" style={{gap:'.55rem',marginBottom:'.75rem',flexWrap:'wrap'}}>
