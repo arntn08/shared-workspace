@@ -265,6 +265,7 @@ export default function People() {
               <div className="actions">
                 <select className="small" value={p.role} onChange={(e) => changeRole(p, e.target.value)}>
                   <option value="employee">Employee</option>
+                  <option value="hr">HR</option>
                   <option value="editor">Editor</option>
                 </select>
                 <button className="small" onClick={() => setEditing(editing === p.id ? null : p.id)}>Teams</button>
