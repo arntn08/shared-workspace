@@ -40,7 +40,7 @@ export default function Files() {
   async function load() {
     const [f, p, a, t] = await Promise.all([
       supabase.from('files').select('*').order('created_at', { ascending: false }),
-      supabase.from('profiles').select('*').eq('role', 'employee').eq('active', true).order('email'),
+      supabase.from('profiles').select('*').in('role', ['employee', 'hr']).eq('active', true).order('email'),
       supabase.from('assignments').select('file_id,user_id').limit(10000),
       supabase.from('teams').select('name').order('sort').order('name')
     ])
@@ -82,7 +82,7 @@ export default function Files() {
 
   async function toggleGroup(f: FileRow, label: string, ids: string[]) {
     setMsg(null)
-    if (ids.length === 0) return setMsg({ text: `No active employees in ${label} yet.`, err: true })
+    if (ids.length === 0) return setMsg({ text: `No active people in ${label} yet.`, err: true })
     const have = new Set(links[f.id] ?? [])
     const full = ids.every((i) => have.has(i))
     if (full) {
@@ -229,7 +229,7 @@ export default function Files() {
                     )
                   })}
                 </div>
-                {people.length === 0 && <p className="muted">No active employees yet. Add some on the People page.</p>}
+                {people.length === 0 && <p className="muted">No active employees or HR users yet. Add them on the People page.</p>}
                 {people.map((p) => (
                   <label key={p.id} style={{ ...rowLabel, padding: '0.3rem 0' }}>
                     <input type="checkbox" style={box} checked={have.has(p.id)} onChange={() => toggleGroup(f, p.email, [p.id])} />
