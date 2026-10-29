@@ -1274,7 +1274,6 @@ export default function Tally() {
         </div>
       </div>
 
-      <>
       <div className="card">
         <div className="tally-month-title">
           <div>
