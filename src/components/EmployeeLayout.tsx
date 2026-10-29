@@ -71,6 +71,7 @@ function EmployeeSidebar({ title, mobileOpen, setMobileOpen }: {
 }) {
   const { profile, signOut } = useAuth()
   const [settings] = useSettings()
+  const [tallyExpanded, setTallyExpanded] = useState(true)
   const navigate = useNavigate()
   const { unread: serverUnread } = useNotifs()
   const local = useLocalUpdates(profile?.id)
@@ -127,20 +128,36 @@ function EmployeeSidebar({ title, mobileOpen, setMobileOpen }: {
               <div className="ops-nav-group" key={group}>
                 <div className="ops-nav-heading">{group}</div>
                 {groupLinks.map(([to, label, icon]) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    end={to === '/'}
-                    onClick={() => setMobileOpen(false)}
-                    className={({ isActive }) => `ops-nav-link${isActive ? ' active' : ''}`}
-                  >
-                    <span className="ops-nav-icon"><Icon name={icon} /></span>
-                    <span className="ops-nav-label">{label}</span>
-                    {to === '/tally' && <span className="ops-nav-tag">LIVE</span>}
-                    {to === '/notifications' && unread > 0 && (
-                      <span className="ops-nav-tag">{unread > 99 ? '99+' : unread} NEW</span>
-                    )}
-                  </NavLink>
+                  {to === '/my-team' ? null : (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      end={to === '/'}
+                      onClick={() => { setMobileOpen(false); if (to === '/tally') setTallyExpanded(true) }}
+                      className={({ isActive }) => `ops-nav-link${isActive ? ' active' : ''}`}
+                    >
+                      <span className="ops-nav-icon"><Icon name={icon} /></span>
+                      <span className="ops-nav-label">{label}</span>
+                      {to === '/tally' && <span className="ops-nav-tag">LIVE</span>}
+                      {to === '/notifications' && unread > 0 && (
+                        <span className="ops-nav-tag">{unread > 99 ? '99+' : unread} NEW</span>
+                      )}
+                    </NavLink>
+                  )}
+                  {to === '/tally' && (
+                    <div style={{ margin: '.15rem 0 .4rem 2.2rem' }}>
+                      <button type="button" className="ops-nav-link" aria-expanded={tallyExpanded} onClick={() => setTallyExpanded(value => !value)} style={{ width: '100%', border: 0, background: 'transparent', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '.5rem', font: 'inherit', padding: '.45rem .55rem', opacity: .9 }}>
+                        <span aria-hidden="true">{tallyExpanded ? '▾' : '▸'}</span>
+                        <span className="ops-nav-label">My Team Summary</span>
+                      </button>
+                      {tallyExpanded && (
+                        <NavLink to="/my-team" onClick={() => setMobileOpen(false)} className={({ isActive }) => `ops-nav-link${isActive ? ' active' : ''}`} style={{ marginLeft: '.3rem', fontSize: '.92em' }}>
+                          <span className="ops-nav-icon"><Icon name="users" /></span>
+                          <span className="ops-nav-label">My team</span>
+                        </NavLink>
+                      )}
+                    </div>
+                  )}
                 ))}
               </div>
             )

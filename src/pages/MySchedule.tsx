@@ -188,6 +188,11 @@ export default function MySchedule() {
   }, [dateOptions])
   const visibleHits = selectedDate ? hits.filter(hit => scheduleDateValue(hit.section) === selectedDate) : hits
   const n = norm(name)
+  // A status notice is shown only when the signed-in person's matching schedule row
+  // explicitly contains a coding/rest-day status; never infer rest day from missing rows.
+  const matchedStatus = visibleHits.flatMap(hit => hit.cells).map(value => norm(value))
+  const isRestDay = matchedStatus.some(value => /^(REST\s*DAY|RESTDAY|REST)$/i.test(value))
+  const isCodingDay = matchedStatus.some(value => /^(CODING|CODING\s*DAY)$/i.test(value))
 
   return (
     <>
@@ -228,12 +233,25 @@ export default function MySchedule() {
 
       {busy && <p className="muted">Loading…</p>}
       {err && <p className="error">{err}</p>}
+      {!busy && !err && isRestDay && (
+        <div role="status" aria-live="polite" className="notice" style={{ border: '1px solid #b9d8c4', background: 'linear-gradient(120deg, rgba(34,197,94,.13), rgba(16,185,129,.07))', borderRadius: 14, padding: '1rem', marginBottom: '.8rem' }}>
+          <strong>🌿 Rest day</strong>
+          <div>You are marked as REST DAY on the selected schedule. Enjoy your day off!</div>
+        </div>
+      )}
+      {!busy && !err && !isRestDay && isCodingDay && (
+        <div role="status" aria-live="polite" className="notice" style={{ border: '1px solid #bfd2f7', background: 'linear-gradient(120deg, rgba(59,130,246,.12), rgba(99,102,241,.07))', borderRadius: 14, padding: '1rem', marginBottom: '.8rem' }}>
+          <strong>🖥️ Coding day</strong>
+          <div>You are marked for CODING on the selected schedule.</div>
+        </div>
+      )}
       {!busy && !err && files.length === 0 && <p className="muted">No spreadsheets are shared with you yet.</p>}
       {!busy && !err && files.length > 0 && n.length < 3 && <p className="muted">Type at least 3 letters of a name to search.</p>}
       {!busy && !err && n.length >= 3 && visibleHits.length === 0 && (
-        <p className="muted">
-          No rows found for "{name}" in this sheet. Check the spelling, try another tab, or ask the owner to check your name on the People page.
-        </p>
+        <div className="notice" role="status" aria-live="polite" style={{ borderRadius: 14, padding: '1rem' }}>
+          <strong>Schedule not listed</strong>
+          <p style={{ margin: '.35rem 0 0' }}>We couldn't find a schedule row for "{name}" on this sheet/date. This does not automatically mean you are on rest day. Try another tab or date, or ask the workspace owner to confirm your schedule on the People page.</p>
+        </div>
       )}
 
       {visibleHits.map((h, i) => {
