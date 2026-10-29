@@ -81,10 +81,10 @@ export default function HrTeamSchedule() {
       .hr-schedule-page .schedule-column{padding:.85rem!important;margin:0!important;min-width:0;border:1px solid #efd5e0!important;border-radius:18px!important;background:linear-gradient(160deg,#fffdfd,#fff8fb)!important;box-shadow:0 7px 24px rgba(139,83,110,.07);}
       .hr-schedule-page .schedule-column h2{font-size:.9rem!important;letter-spacing:.015em;color:#674657;line-height:1.4}
       .hr-schedule-page .schedule-count{display:inline-flex;align-items:center;justify-content:center;min-width:29px;height:29px;padding:0 .45rem;border-radius:10px;background:#f7e4ed;color:#9e4e72;font-weight:800;font-size:.78rem;border:1px solid #edcada}
-      .hr-schedule-page .schedule-person{border:1px solid #f0dce5!important;border-radius:13px!important;padding:.6rem!important;background:#fff!important;color:#5a4751;font-size:.76rem;box-shadow:0 2px 7px rgba(120,75,96,.035);transition:transform .18s ease,box-shadow .18s ease}
+      .hr-schedule-page .schedule-person{border:1px solid #efcddd!important;border-radius:13px!important;padding:.6rem!important;background:linear-gradient(125deg,#fff0f6 0%,#fff8fb 55%,#f4efff 100%)!important;color:#5a4751;font-size:.76rem;box-shadow:0 2px 7px rgba(120,75,96,.035);transition:transform .18s ease,box-shadow .18s ease}
       .hr-schedule-page .schedule-person:hover{transform:translateY(-1px);box-shadow:0 6px 14px rgba(120,75,96,.08)}
       .hr-schedule-page .schedule-person-name{display:flex;align-items:center;gap:.4rem;color:#70435a;font-size:.79rem;margin-bottom:.45rem}
-      .hr-schedule-page .schedule-chip{display:inline-flex;align-items:center;max-width:100%;border:1px solid #f0d9e4!important;border-radius:7px!important;padding:.2rem .42rem!important;background:#fff9fc;color:#705c66;line-height:1.45;overflow-wrap:anywhere}
+      .hr-schedule-page .schedule-chip{display:inline-flex;align-items:center;max-width:100%;border:1px solid #f0d9e4!important;border-radius:7px!important;padding:.2rem .42rem!important;background:linear-gradient(115deg,#fff8fb,#f8efff);color:#705c66;line-height:1.45;overflow-wrap:anywhere}
       .hr-schedule-page .schedule-chip-label{color:#ad7891;font-weight:650}
       .hr-schedule-page .schedule-meta{color:#9b7c8b;font-size:.78rem;margin:.2rem 0 .7rem}
       .hr-schedule-page .schedule-refresh{border-radius:11px;background:#b95f86;color:white;border:1px solid #b95f86;padding:.58rem .9rem;box-shadow:0 5px 12px rgba(185,95,134,.17)}
@@ -96,8 +96,8 @@ export default function HrTeamSchedule() {
       [data-theme="dark"] .hr-schedule-page .schedule-tools input,[data-theme="dark"] .hr-schedule-page .schedule-tools select{background:#2b2430;color:#f5eaf0;border-color:#594052}
       [data-theme="dark"] .hr-schedule-page .schedule-column{background:linear-gradient(160deg,#29232c,#241f28)!important;border-color:#594052!important}
       [data-theme="dark"] .hr-schedule-page .schedule-column h2,[data-theme="dark"] .hr-schedule-page .schedule-person-name{color:#f0cddd}
-      [data-theme="dark"] .hr-schedule-page .schedule-person{background:#302733!important;border-color:#594052!important;color:#f2e5ec}
-      [data-theme="dark"] .hr-schedule-page .schedule-chip{background:#382b36;color:#f1dce6;border-color:#624357!important}
+      [data-theme="dark"] .hr-schedule-page .schedule-person{background:linear-gradient(125deg,#392b3b,#302638 60%,#25273a)!important;border-color:#65445c!important;color:#f2e5ec}
+      [data-theme="dark"] .hr-schedule-page .schedule-chip{background:linear-gradient(115deg,#3b2c3b,#30283d);color:#f1dce6;border-color:#624357!important}
       @media(max-width:640px){.hr-schedule-page .schedule-hero{padding:1rem}.hr-schedule-page .schedule-hero:after{font-size:3rem;right:.7rem}.hr-schedule-page .schedule-grid{grid-template-columns:1fr}}
     `}</style>
     <div className="hr-schedule-page">
