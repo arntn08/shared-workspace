@@ -1274,7 +1274,8 @@ export default function Tally() {
         </div>
       </div>
 
-      {canEdit ?       <div className="card">
+      <>
+      <div className="card">
         <div className="tally-month-title">
           <div>
             <h2 style={{ margin: 0 }}>
@@ -1433,7 +1434,8 @@ export default function Tally() {
           Historical weeks use Sunday as the reporting date. Totals are
           calculated per team from daily counts; no separate WID/MID entry is needed.
         </p>
-      </div> : <div className="card">
+      </div>
+      <div className="card">
         <div className="tally-month-title">
           <div>
             <h2 style={{ margin: 0 }}>{departments.find(item => item.id === departmentId)?.code ?? 'Department'} — Team Summary</h2>
@@ -1455,7 +1457,8 @@ export default function Tally() {
           </div>
         )}
         <p className="tally-note">Combined totals across all active teams in this department. Individual team names and team-by-team rows are hidden from employee view.</p>
-      </div>}      </>
+      </div>
+      </>
       )}
     </section>
   )
