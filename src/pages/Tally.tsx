@@ -135,9 +135,9 @@ export default function Tally() {
   const activeTeams = useMemo(
     () =>
       teams
-        .filter(team => team.active && team.department_id === departmentId)
+        .filter(team => team.active && team.department_id === departmentId && (canEdit || myTeamCodes.includes(team.code)))
         .sort((a, b) => a.code.localeCompare(b.code)),
-    [teams, departmentId]
+    [teams, departmentId, canEdit, myTeamCodes]
   )
 
   const loadBoard = useCallback(async () => {
@@ -1301,7 +1301,7 @@ export default function Tally() {
             No active teams in this department. Add teams in Team Settings first.
           </div>
         ) : (
-          <div className="tally-scroll">
+          <div className="tally-scroll tally-desktop-table" role="region" aria-label="Weekly team tally table" tabIndex={0}>
             <table className="tally-table">
               <thead>
                 <tr>
