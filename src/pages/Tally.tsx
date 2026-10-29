@@ -135,7 +135,7 @@ export default function Tally() {
   const activeTeams = useMemo(
     () =>
       teams
-        .filter(team => team.active && team.department_id === departmentId && (canEdit || myTeamCodes.some(code => code.localeCompare(team.code, undefined, { sensitivity: 'accent' }) === 0 || code.localeCompare(team.name, undefined, { sensitivity: 'accent' }) === 0 || code.toLowerCase() === team.code.toLowerCase() || code.toLowerCase() === team.name.toLowerCase())))
+        .filter(team => team.active && team.department_id === departmentId)
         .sort((a, b) => a.code.localeCompare(b.code)),
     [teams, departmentId, canEdit, myTeamCodes]
   )
@@ -1024,14 +1024,14 @@ export default function Tally() {
               />
             </label>
           )}
-          <button
+          {canEdit && <button
             type="button"
             className="btn"
             onClick={exportCsv}
             disabled={loading || activeTeams.length === 0}
           >
             Export CSV
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -1218,7 +1218,7 @@ export default function Tally() {
             </div>
           })}
         </div>
-        <div className="tally-scroll" style={{ maxHeight: '320px' }}>
+        {canEdit && <div className="tally-scroll" style={{ maxHeight: '320px' }}>
           <table className="tally-table">
             <thead><tr><th>Team</th><th>Total load</th><th>Completed</th><th>Incomplete</th><th>Canceled</th></tr></thead>
             <tbody>
@@ -1235,7 +1235,7 @@ export default function Tally() {
               })}
             </tbody>
           </table>
-        </div>
+        </div>}
         <p className="tally-note">These status totals are separate from the manual WTD/MTD daily-count board. They update after a successful import and when the board reloads.</p>
       </div>
       )}
@@ -1274,7 +1274,7 @@ export default function Tally() {
         </div>
       </div>
 
-      <div className="card">
+      {canEdit ?       <div className="card">
         <div className="tally-month-title">
           <div>
             <h2 style={{ margin: 0 }}>
@@ -1433,8 +1433,29 @@ export default function Tally() {
           Historical weeks use Sunday as the reporting date. Totals are
           calculated per team from daily counts; no separate WID/MID entry is needed.
         </p>
-      </div>
-      </>
+      </div> : <div className="card">
+        <div className="tally-month-title">
+          <div>
+            <h2 style={{ margin: 0 }}>{departments.find(item => item.id === departmentId)?.code ?? 'Department'} — Team Summary</h2>
+            <p className="muted" style={{ margin: '0.35rem 0 0' }}>Combined installation tally · no individual team breakdown</p>
+          </div>
+        </div>
+        {loading ? <p className="muted">Loading team summary…</p> : (
+          <div className="tally-summary">
+            {dates.filter(date => date >= weekStart && date <= reportDate).map(date => (
+              <div className="tally-summary-card" key={date}>
+                <div className="muted">{new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
+                <div className="tally-summary-number">{departmentDailyTotals[dates.indexOf(date)].toLocaleString()}</div>
+              </div>
+            ))}
+            <div className="tally-summary-card">
+              <div className="muted">Selected week total</div>
+              <div className="tally-summary-number">{departmentWTD.toLocaleString()}</div>
+            </div>
+          </div>
+        )}
+        <p className="tally-note">Combined totals across all active teams in this department. Individual team names and team-by-team rows are hidden from employee view.</p>
+      </div>}      </>
       )}
     </section>
   )
