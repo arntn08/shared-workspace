@@ -2,7 +2,7 @@ import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'reac
 import { useAuth } from '../lib/auth'
 import { useSettings } from '../lib/settings'
 import { Avatar, Icon, ThemeButton } from './Nav'
-import MySchedule from '../pages/MySchedule'
+import HrTeamSchedule from '../pages/HrTeamSchedule'
 import HrNtes from '../pages/HrNtes'
 import Settings from '../pages/Settings'
 import EmployeeFiles from '../pages/EmployeeFiles'
@@ -40,7 +40,7 @@ export default function HrLayout() {
       <div className="ops-page employee-ops-page">
         <Routes>
           <Route path="/" element={<section className="card"><h1>HR portal</h1><p className="muted">Manage team schedules and confidential employee notices from one place.</p><div className="row" style={{gap:'.75rem',flexWrap:'wrap'}}><NavLink className="button primary" to="/schedule">Open team schedules</NavLink><NavLink className="button" to="/ntes">Manage NTEs</NavLink></div></section>}/>
-          <Route path="/schedule" element={<MySchedule/>}/>
+          <Route path="/schedule" element={<HrTeamSchedule/>}/>
           <Route path="/ntes" element={<HrNtes/>}/>
           <Route path="/files" element={<EmployeeFiles settings={settings} />}/>
           <Route path="/file/:id" element={<FileViewer/>}/>
