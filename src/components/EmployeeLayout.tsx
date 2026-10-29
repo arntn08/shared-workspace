@@ -13,12 +13,14 @@ import Profile from '../pages/Profile'
 import Notifications from '../pages/Notifications'
 import Settings from '../pages/Settings'
 import Tally from '../pages/Tally'
+import MyTeamSummary from '../pages/MyTeamSummary'
 import EmployeeNtes from '../pages/EmployeeNtes'
 
 const employeeLinks: [string, string, string, string][] = [
   ['/', 'Home', 'home', 'Workspace'],
   ['/files', 'Files & resources', 'files', 'Workspace'],
   ['/tally', 'Installation Tally', 'tally', 'Operations'],
+  ['/my-team', 'My Team', 'users', 'Operations'],
   ['/schedule', 'Schedule', 'schedule', 'Operations'],
   ['/notifications', 'Notifications', 'bell', 'Operations'],
   ['/my-ntes', 'My NTEs', 'file-text', 'Operations'],
@@ -214,6 +216,7 @@ export default function EmployeeLayout() {
             <Routes>
               <Route path="/" element={<EmployeeHome settings={settings} />} />
               <Route path="/tally" element={<Tally />} />
+              <Route path="/my-team" element={<MyTeamSummary />} />
               <Route path="/files" element={<EmployeeFiles settings={settings} />} />
               <Route path="/file/:id" element={<FileViewer />} />
               <Route path="/schedule" element={<MySchedule />} />
