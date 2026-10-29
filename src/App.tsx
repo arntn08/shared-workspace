@@ -5,6 +5,7 @@ import { applyPrefs, defaultPrefs, loadPrefs } from './lib/prefs'
 import Login from './pages/Login'
 import OwnerLayout from './components/OwnerLayout'
 import EmployeeLayout from './components/EmployeeLayout'
+import HrLayout from './components/HrLayout'
 
 function Gate() {
   const { session, profile, loading, signOut } = useAuth()
@@ -43,7 +44,7 @@ function Gate() {
       </div>
     )
   }
-   return profile.role === 'owner' || profile.role === 'editor' ? <OwnerLayout /> : <EmployeeLayout />
+   return profile.role === 'owner' || profile.role === 'editor' ? <OwnerLayout /> : profile.role === 'hr' ? <HrLayout /> : <EmployeeLayout />
 }
 
 export default function App() {
