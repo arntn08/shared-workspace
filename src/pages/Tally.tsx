@@ -1226,7 +1226,7 @@ export default function Tally() {
                 const rows = importedLoads.filter(row => row.team_id === team.id)
                 const countStatus = (status: string) => rows.filter(row => String(row.status).toUpperCase() === status).length
                 return <tr key={team.id}>
-                  <th scope="row">{team.code}</th>
+                  <th scope="row" title={team.code} style={{ fontSize: '.72rem', whiteSpace: 'nowrap', letterSpacing: '-0.03em', paddingLeft: '.45rem', paddingRight: '.45rem' }}>{team.code}</th>
                   <td><strong>{rows.length.toLocaleString()}</strong></td>
                   <td>{countStatus('COMPLETED').toLocaleString()}</td>
                   <td>{countStatus('INCOMPLETE').toLocaleString()}</td>
