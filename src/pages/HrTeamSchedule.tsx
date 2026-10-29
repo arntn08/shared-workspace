@@ -101,7 +101,7 @@ export default function HrTeamSchedule() {
       [data-theme="dark"] .hr-schedule-page .schedule-person{background:linear-gradient(125deg,#392b3b,#302638 60%,#25273a)!important;border-color:#65445c!important;color:#f2e5ec}
       [data-theme="dark"] .hr-schedule-page .schedule-chip{background:linear-gradient(115deg,#3b2c3b,#30283d);color:#f1dce6;border-color:#624357!important}
       @media(max-width:640px){.hr-schedule-page .schedule-hero{padding:1rem}.hr-schedule-page .schedule-hero:after{font-size:3rem;right:.7rem}.hr-schedule-page .schedule-grid{grid-template-columns:1fr}}
-    `}.hr-schedule-page .schedule-hero{background:linear-gradient(125deg,#05070d,#0b1730 52%,#123b78)!important;border-color:#234b85!important}
+      .hr-schedule-page .schedule-hero{background:linear-gradient(125deg,#05070d,#0b1730 52%,#123b78)!important;border-color:#234b85!important}
 .hr-schedule-page .schedule-kicker{color:#9fc5ff!important}
 .hr-schedule-page .schedule-hero h1{color:#f3f7ff!important}
 .hr-schedule-page .schedule-hero p{color:#c2d4f3!important}
@@ -123,6 +123,7 @@ export default function HrTeamSchedule() {
 .hr-schedule-modal-line{background:linear-gradient(110deg,#0d1625,#142844)!important;border-color:#2d4e7a!important}
 .hr-schedule-modal-line span{color:#9fc5ff!important}
 .hr-schedule-modal-line strong{color:#f0f6ff!important}
+    `}
 </style>
     <div className="hr-schedule-page">
     <div className="schedule-hero"><div className="schedule-kicker">♡ People • Planning • Progress</div><div className="page-head"><div><h1>Team schedules</h1><p className="muted" style={{margin:0}}>All shared team schedules in a compact calendar-style overview.</p></div><button className="schedule-refresh" onClick={()=>fileId&&void load(fileId,tab)}>↻ Refresh</button></div></div>
