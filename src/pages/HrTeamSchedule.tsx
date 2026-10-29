@@ -43,6 +43,7 @@ export default function HrTeamSchedule() {
   const [rows,setRows] = useState<string[][]>([])
   const [search,setSearch] = useState('')
   const [dateFilter,setDateFilter] = useState('all')
+  const [selectedRow,setSelectedRow] = useState<{section:string;headers:string[];cells:string[]}|null>(null)
   const [busy,setBusy] = useState(true)
   const [error,setError] = useState('')
   useEffect(() => {
@@ -81,14 +82,15 @@ export default function HrTeamSchedule() {
       .hr-schedule-page .schedule-column{padding:.85rem!important;margin:0!important;min-width:0;border:1px solid #efd5e0!important;border-radius:18px!important;background:linear-gradient(160deg,#fffdfd,#fff8fb)!important;box-shadow:0 7px 24px rgba(139,83,110,.07);}
       .hr-schedule-page .schedule-column h2{font-size:.9rem!important;letter-spacing:.015em;color:#674657;line-height:1.4}
       .hr-schedule-page .schedule-count{display:inline-flex;align-items:center;justify-content:center;min-width:29px;height:29px;padding:0 .45rem;border-radius:10px;background:#f7e4ed;color:#9e4e72;font-weight:800;font-size:.78rem;border:1px solid #edcada}
-      .hr-schedule-page .schedule-person{border:1px solid #efcddd!important;border-radius:13px!important;padding:.6rem!important;background:linear-gradient(125deg,#fff0f6 0%,#fff8fb 55%,#f4efff 100%)!important;color:#5a4751;font-size:.76rem;box-shadow:0 2px 7px rgba(120,75,96,.035);transition:transform .18s ease,box-shadow .18s ease}
-      .hr-schedule-page .schedule-person:hover{transform:translateY(-1px);box-shadow:0 6px 14px rgba(120,75,96,.08)}
+      .hr-schedule-page button.schedule-person{width:100%;text-align:left;cursor:pointer;font:inherit;display:block}.hr-schedule-page .schedule-person{border:1px solid #efcddd!important;border-radius:13px!important;padding:.6rem!important;background:linear-gradient(125deg,#fff0f6 0%,#fff8fb 55%,#f4efff 100%)!important;color:#5a4751;font-size:.76rem;box-shadow:0 2px 7px rgba(120,75,96,.035);transition:transform .18s ease,box-shadow .18s ease}
+      .hr-schedule-page .schedule-person:focus-visible{outline:3px solid #b95f86;outline-offset:2px}.hr-schedule-page .schedule-person:hover{transform:translateY(-1px);box-shadow:0 6px 14px rgba(120,75,96,.08)}
       .hr-schedule-page .schedule-person-name{display:flex;align-items:center;gap:.4rem;color:#70435a;font-size:.79rem;margin-bottom:.45rem}
       .hr-schedule-page .schedule-chip{display:inline-flex;align-items:center;max-width:100%;border:1px solid #f0d9e4!important;border-radius:7px!important;padding:.2rem .42rem!important;background:linear-gradient(115deg,#fff8fb,#f8efff);color:#705c66;line-height:1.45;overflow-wrap:anywhere}
       .hr-schedule-page .schedule-chip-label{color:#ad7891;font-weight:650}
       .hr-schedule-page .schedule-meta{color:#9b7c8b;font-size:.78rem;margin:.2rem 0 .7rem}
       .hr-schedule-page .schedule-refresh{border-radius:11px;background:#b95f86;color:white;border:1px solid #b95f86;padding:.58rem .9rem;box-shadow:0 5px 12px rgba(185,95,134,.17)}
       .hr-schedule-page .schedule-refresh:hover{background:#a64e75}
+      .hr-schedule-page .schedule-modal-backdrop{position:fixed;inset:0;z-index:1000;background:rgba(20,15,25,.58);backdrop-filter:blur(7px);display:grid;place-items:center;padding:1rem}.hr-schedule-page .schedule-modal{width:min(100%,560px);max-height:min(85vh,760px);overflow:auto;background:linear-gradient(145deg,#fffafd,#fff 60%,#f5efff);border:1px solid #e9c9d9;border-radius:22px;padding:1.1rem;box-shadow:0 24px 80px rgba(0,0,0,.25);color:#513d49}.hr-schedule-page .schedule-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;border-bottom:1px solid #efd8e3;padding-bottom:.8rem;margin-bottom:.75rem}.hr-schedule-page .schedule-modal h2{margin:0;color:#674257;font-size:1.2rem}.hr-schedule-page .schedule-modal-close{width:38px;height:38px;border:1px solid #e8cad8;border-radius:12px;background:#fff0f6;color:#8e4969;font-size:1.5rem;cursor:pointer}.hr-schedule-page .schedule-modal-lines{display:grid;gap:.55rem}.hr-schedule-page .schedule-modal-line{display:flex;flex-direction:column;gap:.25rem;padding:.7rem .75rem;border:1px solid #efd9e4;border-radius:12px;background:linear-gradient(110deg,#fff,#fff5fa 65%,#f5f0ff);overflow-wrap:anywhere}.hr-schedule-page .schedule-modal-line span{font-size:.72rem;font-weight:750;letter-spacing:.04em;text-transform:uppercase;color:#a06e86}.hr-schedule-page .schedule-modal-line strong{font-size:.95rem;color:#493746;white-space:pre-wrap;overflow-wrap:anywhere}[data-theme="dark"] .hr-schedule-page .schedule-modal{background:linear-gradient(145deg,#29212c,#211d2b);border-color:#65445c;color:#f5eaf0}[data-theme="dark"] .hr-schedule-page .schedule-modal h2{color:#f4d5e4}[data-theme="dark"] .hr-schedule-page .schedule-modal-line{background:linear-gradient(110deg,#342838,#2a2639);border-color:#594052}[data-theme="dark"] .hr-schedule-page .schedule-modal-line strong{color:#f8edf3}[data-theme="dark"] .hr-schedule-page .schedule-modal-line span{color:#d4a9c0}[data-theme="dark"] .hr-schedule-page .schedule-modal-close{background:#392a3b;color:#f4d5e4;border-color:#65445c}
       [data-theme="dark"] .hr-schedule-page .schedule-hero{background:linear-gradient(120deg,#2a2028,#272334);border-color:#594052}
       [data-theme="dark"] .hr-schedule-page .schedule-hero h1{color:#f8eaf1}
       [data-theme="dark"] .hr-schedule-page .schedule-hero p{color:#d0b7c6}
@@ -120,14 +122,16 @@ export default function HrTeamSchedule() {
           {section.rows.map((r,ri)=>{
             const cells=r.map((v,i)=>({v,i})).filter(x=>filled(x.v))
             const nameCell=cells.find(x=>/[a-z]/i.test(x.v)&&!NUM.test(x.v))
-            return <div key={ri} className="schedule-person">
+            return <button type="button" key={ri} className="schedule-person" onClick={()=>setSelectedRow({section:section.title,headers:section.headers,cells:r})} aria-label={`View schedule details for ${nameCell?.v || cells[0]?.v || 'schedule row'}`}>
               <div className="schedule-person-name"><span>♡</span><strong style={{overflowWrap:"anywhere"}}>{nameCell?.v || cells[0]?.v || 'Schedule row'}</strong></div>
               <div style={{display:'flex',gap:'.25rem',flexWrap:'wrap'}}>{cells.filter(x=>x!==nameCell).map(x=><span key={x.i} className="schedule-chip"><span className="schedule-chip-label">{section.headers[x.i] ? section.headers[x.i]+': ' : ''}</span>{x.v}</span>)}</div>
-            </div>
+            </button>
           })}
         </div>
       </section>)}
     </div>
     </div>
+
+    {selectedRow&&<div className="schedule-modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setSelectedRow(null)}}><section className="schedule-modal" role="dialog" aria-modal="true" aria-labelledby="hr-schedule-modal-title" onKeyDown={e=>{if(e.key==='Escape')setSelectedRow(null)}}><div className="schedule-modal-head"><div><div className="schedule-kicker">Schedule details</div><h2 id="hr-schedule-modal-title">{selectedRow.section}</h2></div><button type="button" className="schedule-modal-close" onClick={()=>setSelectedRow(null)} aria-label="Close schedule details">×</button></div><div className="schedule-modal-lines">{selectedRow.cells.map((value,i)=>value.trim()?<div className="schedule-modal-line" key={i}><span>{selectedRow.headers[i]||'Detail '+(i+1)}</span><strong>{value}</strong></div>:null)}</div></section></div>}
   </>
 }
