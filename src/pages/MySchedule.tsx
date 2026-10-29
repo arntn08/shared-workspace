@@ -105,6 +105,7 @@ export default function MySchedule() {
   const [err, setErr] = useState('')
   const [savedAt, setSavedAt] = useState<number | null>(null)
   const [selectedDate, setSelectedDate] = useState('')
+  const [selectedHit, setSelectedHit] = useState<Hit | null>(null)
 
   useEffect(() => {
     supabase
@@ -190,6 +191,8 @@ export default function MySchedule() {
 
   return (
     <>
+      <style>{".owner-schedule-theme .sheet-card{border:1px solid #b9c9f4!important;border-radius:16px!important;background:linear-gradient(125deg,#edf3ff,#f7f9ff 52%,#e9eefe)!important;box-shadow:0 7px 22px rgba(37,67,130,.09);padding:.85rem!important;color:#18243b}.owner-schedule-theme .sheet-card-title{color:#1c376c;font-weight:800}.owner-schedule-theme .sheet-card-grid{display:grid;grid-template-columns:1fr!important;gap:.5rem!important}.owner-schedule-theme .sheet-card-grid>div{display:flex;flex-direction:column;gap:.22rem;border:1px solid #d3def8!important;border-radius:10px;background:linear-gradient(120deg,#fff,#edf3ff);padding:.55rem .65rem;min-width:0}.owner-schedule-theme .sheet-card-grid>div span{color:#536d9f;font-size:.72rem;font-weight:750;text-transform:uppercase;letter-spacing:.035em}.owner-schedule-theme .sheet-card-grid>div b{color:#17233a;overflow-wrap:anywhere;white-space:pre-wrap}.owner-schedule-theme .page-head h1{color:#172b52}.owner-schedule-theme .schedule-controls{border:1px solid #cbd7f4;border-radius:14px;padding:.65rem;background:linear-gradient(120deg,#f4f7ff,#edf1ff)}.owner-schedule-theme input,.owner-schedule-theme select{border-color:#c4d1f2;border-radius:10px}.owner-schedule-theme .sheet-card-button{width:100%;text-align:left;cursor:pointer;font:inherit;display:block;appearance:none}.owner-schedule-theme .sheet-card-button:focus-visible{outline:3px solid #5d82d8;outline-offset:2px}.owner-schedule-theme .schedule-modal-backdrop{position:fixed;inset:0;z-index:10000;background:rgba(8,14,28,.64);backdrop-filter:blur(7px);display:grid;place-items:center;padding:1rem}.owner-schedule-theme .schedule-modal{width:min(100%,560px);max-height:min(85vh,760px);overflow:auto;background:linear-gradient(145deg,#f7f9ff,#fff 60%,#eaf0ff);border:1px solid #c4d1f2;border-radius:22px;padding:1.1rem;box-shadow:0 24px 80px rgba(0,0,0,.3);color:#17233a}.owner-schedule-theme .schedule-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;border-bottom:1px solid #d7e0f8;padding-bottom:.8rem;margin-bottom:.75rem}.owner-schedule-theme .schedule-modal h2{margin:0;color:#1c376c;font-size:1.2rem}.owner-schedule-theme .schedule-modal-close{width:38px;height:38px;border:1px solid #c4d1f2;border-radius:12px;background:#eaf0ff;color:#24457f;font-size:1.5rem;cursor:pointer}.owner-schedule-theme .schedule-modal-lines{display:grid;grid-template-columns:1fr!important;gap:.55rem!important}.owner-schedule-theme .schedule-modal-line{display:flex;flex-direction:column;gap:.25rem;padding:.7rem .75rem;border:1px solid #d3def8;border-radius:12px;background:linear-gradient(110deg,#fff,#f1f5ff);overflow-wrap:anywhere}.owner-schedule-theme .schedule-modal-line span{font-size:.72rem;font-weight:750;letter-spacing:.04em;text-transform:uppercase;color:#536d9f}.owner-schedule-theme .schedule-modal-line strong{font-size:.95rem;color:#17233a;white-space:pre-wrap;overflow-wrap:anywhere}[data-theme=dark] .owner-schedule-theme .sheet-card{background:linear-gradient(125deg,#151d30,#1b2740 55%,#222943)!important;border-color:#3c568b!important;color:#e7edff}[data-theme=dark] .owner-schedule-theme .sheet-card-title,[data-theme=dark] .owner-schedule-theme .page-head h1{color:#c9d9ff}[data-theme=dark] .owner-schedule-theme .sheet-card-grid>div{background:linear-gradient(120deg,#1c2942,#222d48);border-color:#3c568b!important}[data-theme=dark] .owner-schedule-theme .sheet-card-grid>div span{color:#a9c0f5}[data-theme=dark] .owner-schedule-theme .sheet-card-grid>div b{color:#f0f4ff}[data-theme=dark] .owner-schedule-theme .schedule-controls{background:linear-gradient(120deg,#151d30,#202943);border-color:#3c568b}[data-theme=dark] .owner-schedule-theme .schedule-modal{background:linear-gradient(145deg,#151d30,#202943);border-color:#3c568b;color:#f0f4ff}[data-theme=dark] .owner-schedule-theme .schedule-modal h2{color:#c9d9ff}[data-theme=dark] .owner-schedule-theme .schedule-modal-line{background:linear-gradient(110deg,#1c2942,#222d48);border-color:#3c568b}[data-theme=dark] .owner-schedule-theme .schedule-modal-line strong{color:#f0f4ff}[data-theme=dark] .owner-schedule-theme .schedule-modal-line span{color:#a9c0f5}"}</style>
+      <div className="owner-schedule-theme">
       <div className="page-head">
         <div>
           <h1>My schedule</h1>
@@ -202,7 +205,7 @@ export default function MySchedule() {
       )}
       {savedAt && <div className="notice">Offline: showing your schedule saved {ageLabel(savedAt)}. It may be out of date.</div>}
 
-      <div className="row" style={{ marginBottom: '0.75rem' }}>
+      <div className="row schedule-controls" style={{ marginBottom: '0.75rem' }}>
         {dateOptions.length > 0 && <select aria-label="Schedule date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} style={{ flex: 1, minWidth: 160 }}>
           {dateOptions.map(([date, original]) => <option key={date} value={date}>{dateLabelIso(date)}{date === tomorrowLocalIso() ? ' · TOMORROW' : ''}</option>)}
         </select>}
@@ -238,7 +241,7 @@ export default function MySchedule() {
         const mine = cols.find((ci) => norm(h.cells[ci]).includes(n))
         const role = mine !== undefined ? h.labels[mine] : ''
         return (
-          <div key={i} className="sheet-card" style={{ marginBottom: '0.75rem' }}>
+          <button type="button" key={i} className="sheet-card sheet-card-button" aria-label={`View schedule details for ${h.section || "schedule"}`} onClick={() => setSelectedHit(h)} style={{ marginBottom: '0.75rem' }}>
             <div className="sheet-card-title">
               {h.section || 'Schedule'}
               {role ? ` · ${role}` : ''}
@@ -251,9 +254,11 @@ export default function MySchedule() {
                 </div>
               ))}
             </div>
-          </div>
+          </button>
         )
       })}
+      {selectedHit && <div className="schedule-modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setSelectedHit(null) }}><section className="schedule-modal" role="dialog" aria-modal="true" aria-labelledby="my-schedule-modal-title"><div className="schedule-modal-head"><div><div style={{fontSize:'.72rem',letterSpacing:'.12em',textTransform:'uppercase',fontWeight:800,color:'#536d9f',marginBottom:'.3rem'}}>Schedule details</div><h2 id="my-schedule-modal-title">{selectedHit.section || 'Schedule'}</h2></div><button type="button" className="schedule-modal-close" onClick={() => setSelectedHit(null)} aria-label="Close schedule details">×</button></div><div className="schedule-modal-lines">{selectedHit.cells.map((value, ci) => value.trim() ? <div className="schedule-modal-line" key={ci}><span>{selectedHit.labels[ci] || 'Detail ' + (ci + 1)}</span><strong>{value}</strong></div> : null)}</div></section></div>}
+      </div>
     </>
   )
 }
