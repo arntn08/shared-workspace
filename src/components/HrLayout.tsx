@@ -5,11 +5,14 @@ import { Avatar, Icon, ThemeButton } from './Nav'
 import MySchedule from '../pages/MySchedule'
 import HrNtes from '../pages/HrNtes'
 import Settings from '../pages/Settings'
+import EmployeeFiles from '../pages/EmployeeFiles'
+import FileViewer from '../pages/FileViewer'
 
 const links = [
   ['/','HR overview','home'],
   ['/schedule','Team schedules','schedule'],
   ['/ntes','Notices to Explain','file-text'],
+  ['/files','Files & resources','files'],
   ['/settings','Settings','settings']
 ] as const
 
@@ -39,6 +42,8 @@ export default function HrLayout() {
           <Route path="/" element={<section className="card"><h1>HR portal</h1><p className="muted">Manage team schedules and confidential employee notices from one place.</p><div className="row" style={{gap:'.75rem',flexWrap:'wrap'}}><NavLink className="button primary" to="/schedule">Open team schedules</NavLink><NavLink className="button" to="/ntes">Manage NTEs</NavLink></div></section>}/>
           <Route path="/schedule" element={<MySchedule/>}/>
           <Route path="/ntes" element={<HrNtes/>}/>
+          <Route path="/files" element={<EmployeeFiles settings={settings} />}/>
+          <Route path="/file/:id" element={<FileViewer/>}/>
           <Route path="/settings" element={<Settings/>}/>
           <Route path="*" element={<Navigate to="/" replace/>}/>
         </Routes>
