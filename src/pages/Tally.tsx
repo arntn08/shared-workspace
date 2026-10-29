@@ -20,6 +20,8 @@ type Team = {
   active: boolean
 }
 
+type RosterRow = { team: string; code: string | null; jo_mob: string | null }
+
 type DailyRecord = {
   team_id: string
   work_date: string
@@ -92,6 +94,8 @@ export default function Tally() {
     (profile.role === 'owner' || profile.role === 'editor')
 
   const [departments, setDepartments] = useState<Department[]>([])
+  const [myTeamCodes, setMyTeamCodes] = useState<string[]>([])
+  const [expandedTeams, setExpandedTeams] = useState<Record<string, boolean>>({})
   const [teams, setTeams] = useState<Team[]>([])
   const [departmentId, setDepartmentId] = useState('')
   const [month, setMonth] = useState(getCurrentMonth)
@@ -106,6 +110,17 @@ export default function Tally() {
   const [importedLoads, setImportedLoads] = useState<Array<{work_date:string; team_id:string|null; department_id:string|null; status:string; wo_id:string}>>([])
   const [loadBreakdownError, setLoadBreakdownError] = useState('')
   const [tallyView, setTallyView] = useState<'wtd-mtd' | 'total-loads'>('wtd-mtd')
+
+  useEffect(() => {
+    if (canEdit || !profile?.id) return
+    let cancelled = false
+    supabase.rpc('my_roster').then(({ data, error }) => {
+      if (cancelled || error) return
+      const rows = (data ?? []) as RosterRow[]
+      setMyTeamCodes([...new Set(rows.map(row => row.code?.trim()).filter((code): code is string => Boolean(code)))])
+    })
+    return () => { cancelled = true }
+  }, [canEdit, profile?.id])
 
   const monthDates = useMemo(() => getMonthDates(month), [month])
   const monthStart = `${month}-01`
@@ -902,6 +917,31 @@ export default function Tally() {
           font-variant-numeric: tabular-nums;
         }
 
+
+        .tally-page .tally-mobile-teams { display: none; }
+        .tally-page .tally-mobile-team { border: 1px solid var(--tally-border); border-radius: 16px; background: var(--tally-card); margin: 0 0 .75rem; overflow: hidden; }
+        .tally-page .tally-mobile-team summary { list-style: none; cursor: pointer; padding: 1rem; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: .75rem; align-items: center; }
+        .tally-page .tally-mobile-team summary::-webkit-details-marker { display:none; }
+        .tally-page .tally-mobile-team-name { font-weight: 800; overflow-wrap: anywhere; }
+        .tally-page .tally-mobile-totals { display:flex; gap:.5rem; }
+        .tally-page .tally-mobile-total { min-width: 58px; text-align:center; border-radius:10px; background:var(--tally-soft); padding:.45rem .55rem; }
+        .tally-page .tally-mobile-total strong { display:block; color:var(--tally-accent); font-size:1.1rem; }
+        .tally-page .tally-mobile-total small { font-size:.68rem; }
+        .tally-page .tally-mobile-days { padding: 0 .75rem .85rem; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem; }
+        .tally-page .tally-mobile-day { display:flex; justify-content:space-between; align-items:center; gap:.5rem; border-radius:10px; background:var(--tally-soft); padding:.6rem .7rem; }
+        .tally-page .tally-mobile-day input { width:64px; max-width:42%; min-height:40px; text-align:center; border:1px solid var(--tally-border); border-radius:9px; background:var(--tally-card); color:var(--text); font-size:1rem; }
+        @media (max-width: 600px) {
+          .tally-page .tally-mobile-teams { display:block; }
+          .tally-page .tally-desktop-table { display:none; }
+          .tally-page .tally-month-title { align-items:flex-start; }
+          .tally-page .tally-month-title > span { display:none; }
+          .tally-page .tally-mobile-totals { gap:.35rem; }
+          .tally-page .tally-mobile-total { min-width:50px; padding:.4rem; }
+          .tally-page .tally-mobile-team summary { padding:.85rem; }
+          .tally-page .tally-mobile-days { grid-template-columns:1fr 1fr; }
+          .tally-page .tally-toolbar { grid-template-columns:1fr; }
+        }
+
         .tally-page .tally-month-title {
           display: flex;
           align-items: center;
@@ -1359,6 +1399,31 @@ export default function Tally() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!loading && activeTeams.length > 0 && (
+          <div className="tally-mobile-teams" aria-label="Team tally cards">
+            {activeTeams.map(team => (
+              <details className="tally-mobile-team" key={team.id} open={!!expandedTeams[team.id]}>
+                <summary onClick={event => { event.preventDefault(); setExpandedTeams(current => ({ ...current, [team.id]: !current[team.id] })) }}>
+                  <span className="tally-mobile-team-name">{team.code}<small className="muted" style={{display:'block',fontWeight:400,marginTop:'.2rem'}}>{expandedTeams[team.id] ? 'Hide daily counts' : 'Tap to view daily counts'}</small></span>
+                  <span className="tally-mobile-totals">
+                    <span className="tally-mobile-total"><small>WTD</small><strong>{getWTD(team.id).toLocaleString()}</strong></span>
+                    <span className="tally-mobile-total"><small>MTD</small><strong>{getMTD(team.id).toLocaleString()}</strong></span>
+                  </span>
+                </summary>
+                {expandedTeams[team.id] && <div className="tally-mobile-days">
+                  {dates.map(date => {
+                    const key = dailyKey(team.id, date)
+                    return <label className="tally-mobile-day" key={date}>
+                      <span><strong>{new Date(`${date}T12:00:00`).toLocaleDateString('en-US',{weekday:'short'})}</strong><small className="muted" style={{display:'block'}}>{Number(date.slice(8))}</small></span>
+                      {canEdit ? <input aria-label={`${team.code} count for ${date}`} type="number" min="0" step="1" inputMode="numeric" value={dailyCounts[key] ?? ''} placeholder="0" onChange={event => updateDaily(team.id,date,event.target.value)} onBlur={() => void saveDaily(team.id,date)} /> : <strong>{getCount(team.id,date).toLocaleString()}</strong>}
+                    </label>
+                  })}
+                </div>}
+              </details>
+            ))}
           </div>
         )}
 
