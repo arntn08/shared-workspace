@@ -58,7 +58,7 @@ export default function OwnerLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const isOwner = profile?.role === 'owner'
-  const links = isOwner ? ownerLinks : editorLinks
+  const links = isOwner ? ownerLinks : editorLinks.filter(([to]) => to !== '/people' && to !== '/teams' && to !== '/design' && to !== '/activity')
   const currentPage = links.find(([to]) => to === '/' ? location.pathname === '/' : location.pathname.startsWith(to))?.[1] ?? 'Workspace'
   const groups = ['Workspace', 'Operations', 'Management', 'Account']
 
