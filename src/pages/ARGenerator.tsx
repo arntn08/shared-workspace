@@ -171,7 +171,7 @@ function numberWords(value: string) {
 }
 
 function packageAmountWords(packageName: string) {
-  const match = packageName.match(/(?:SKY\\s*FIBER|SKYFIBER)\\s*([0-9,]+(?:\\.\\d{1,2})?)/i)
+  const match = packageName.match(/(?:SKY\s*FIBER|SKYFIBER)\s*([0-9,]+(?:\.\d{1,2})?)/i)
   if (!match) return ''
   const words = numberWords(match[1].replace(/,/g, '')).replace(/ pesos(?: and .*?)? only$/i, '')
   if (!words) return ''
