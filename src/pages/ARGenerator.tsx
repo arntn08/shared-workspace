@@ -49,60 +49,91 @@ const blankDraft = (): ARDraft => ({
   totalPayable: '', ocrText: '', status: 'draft'
 })
 
-const clean = (s: string) => s.replace(/\s+/g, ' ').trim()
+const clean = (s: string) => s.replace(/\\s+/g, ' ').trim()
+
+// Labels that can appear on the JO reassignment screen. Keeping this list
+// centralized prevents a blank field from consuming the next field's label.
 const JO_LABELS = [
-  'Job Order Number', 'Job Order No', 'JO No', 'Account Number', 'Account No',
-  'Subscriber Name', 'Subscriber', 'Complete Address', 'Address',
-  'Package Name', 'Package', 'Transaction Type', 'Job Order Date', 'JO Date', 'Jo Date',
-  'NAP Code', 'Nap Code', 'Serial Number', 'Serial No', 'Division Code', 'Company Code'
+  'Transaction Type', 'Job Order No', 'Job Order Number', 'JO No', 'JO Date',
+  'Job Order Date', 'Account No', 'Account Number', 'Subscriber Name',
+  'Complete Address', 'Address', 'Package Name', 'Package', 'NAP Code',
+  'Serial No', 'Serial Number', 'Division Code', 'Company Code'
 ]
 
-function afterLabel(text: string, labels: string[]) {
-  const lines = text.split(/\r?\n/).map(clean).filter(Boolean)
-  const normalize = (value: string) => value.toLowerCase().replace(/[:：.]\s*$/, '').trim()
-  const isLabel = (value: string) => JO_LABELS.some(label => {
-    const current = normalize(value)
-    const candidate = normalize(label)
-    return current === candidate || current.startsWith(candidate + ' ') || current.startsWith(candidate + ':')
-  })
-
-  for (let i = 0; i < lines.length; i++) {
-    const current = lines[i]
-    for (const label of labels) {
-      const prefix = normalize(label)
-      const normalizedLine = normalize(current)
-      if (normalizedLine === prefix || normalizedLine.startsWith(prefix + ' ') || normalizedLine.startsWith(prefix + ':')) {
-        const value = clean(current.slice(label.length).replace(/^\s*[:：.]?\s*/, ''))
-        if (value) return value
-        const next = clean(lines[i + 1] || '')
-        return next && !isLabel(next) ? next : ''
-      }
-    }
-  }
-  return ''
-}
 function extractJobOrder(text: string, fileName: string): Partial<ARDraft> {
-  const find = (labels: string[]) => afterLabel(text, labels)
-  const jo = find(['Job Order No', 'Job Order Number', 'JO No'])
-  const account = find(['Account No', 'Account Number'])
-  const name = find(['Subscriber Name', 'Subscriber'])
-  const address = find(['Complete Address', 'Address'])
-  const pkg = find(['Package Name', 'Package'])
-  const tx = find(['Transaction Type'])
-  const date = find(['Jo Date', 'JO Date', 'Job Order Date'])
-  const nap = find(['Nap Code'])
-  const serial = find(['Serial No', 'Serial Number'])
-  const division = find(['Division Code'])
-  const company = find(['Company Code'])
-  const crew = text.match(/REASSIGN\s+JO\s+TO\s+CREW[\s\S]*?\n([^\n]+)/i)?.[1] || ''
+  const lines = text.split(/\\r?\\n/).map(clean).filter(Boolean)
+  const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+  const isLabel = (s: string) => {
+    const value = normalize(s)
+    return JO_LABELS.some(label => value === normalize(label) || value.startsWith(normalize(label) + ' '))
+  }
+
+  const byLabel = (labels: string[]) => {
+    const wanted = labels.map(normalize)
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      const normalized = normalize(line)
+      const label = labels.find(candidate => normalized === normalize(candidate) || normalized.startsWith(normalize(candidate) + ' '))
+      if (!label || !wanted.includes(normalize(label))) continue
+      const tail = clean(line.slice(line.toLowerCase().indexOf(label.toLowerCase()) + label.length).replace(/^\\s*[:：-]?\\s*/, ''))
+      if (tail && normalize(tail) !== normalize(label)) return tail
+      const next = lines[i + 1] || ''
+      if (next && !isLabel(next)) return next
+    }
+    return ''
+  }
+
+  const findPattern = (pattern: RegExp) => {
+    const match = text.match(pattern)
+    return match ? clean(match[1] || match[0]) : ''
+  }
+
+  // Stable identifiers are safer to recognize by their visible format than
+  // by OCR line order, especially when the form uses two columns.
+  const joNo = findPattern(/\\b(R\\d{6,})\\b/i) || byLabel(['Job Order No', 'Job Order Number', 'JO No'])
+  const accountNo = findPattern(/(?:Account\\s*(?:No\\.?|Number)\\s*[:：]?\\s*)(\\d{8,})/i) ||
+    findPattern(/\\b(\\d{10,14})\\b/) || byLabel(['Account No', 'Account Number'])
+  const joDate = findPattern(/\\b(20\\d{2}-\\d{2}-\\d{2})(?:T[0-9:.]+Z?)?/i) ||
+    byLabel(['JO Date', 'Job Order Date'])
+  const transactionType = /MAINLINE\\s+APPLICATION/i.test(text) ? 'MAINLINE APPLICATION' : byLabel(['Transaction Type'])
+  const subscriberName = findPattern(/(?:Subscriber\\s*Name\\s*[:：]?\\s*)([A-Z][A-Z ,.'-]{5,})/i) ||
+    byLabel(['Subscriber Name'])
+  const packageName = findPattern(/\\b(SKY\\s+FIBER\\s+\\d+)\\b/i) || byLabel(['Package Name', 'Package'])
+  const divisionCode = findPattern(/(?:Division\\s*Code\\s*[:：]?\\s*)([A-Z0-9-]+)/i) ||
+    findPattern(/\\b(SKYNC)\\b/i) || byLabel(['Division Code'])
+  const companyCode = findPattern(/(?:Company\\s*Code\\s*[:：]?\\s*)([A-Z0-9-]+)/i) ||
+    findPattern(/\\b(COMCL)\\b/i) || byLabel(['Company Code'])
+
+  const crewHeader = lines.findIndex(line => /REASSIGN\\s+JO\\s+TO\\s+CREW/i.test(line))
+  const crewCandidate = crewHeader >= 0
+    ? (lines.slice(crewHeader + 1).find(line => /[A-Z]{2,}.*-.*[A-Z0-9]+/i.test(line)) || '')
+    : (text.match(/\\b([A-Z][A-Z .'-]+\\s*-\\s*[A-Z]{1,4}\\d{2,})\\b/)?.[1] || '')
+  const businessStyle = crewCandidate ? 'CREW: ' + clean(crewCandidate) : ''
+
+  // Do not infer NAP/serial from adjacent labels, and never infer money from
+  // the package name (e.g. "SKY FIBER 999" is not an amount received).
+  const napCode = byLabel(['NAP Code'])
+  const serialNo = byLabel(['Serial No', 'Serial Number'])
+  const address = byLabel(['Complete Address', 'Address'])
+
   return {
-    sourceName: fileName, transactionType: tx, joNo: jo, joDate: date,
-    accountNo: account, subscriberName: name, address, packageName: pkg,
-    napCode: nap, serialNo: serial, divisionCode: division, companyCode: company,
-    paymentDescription: pkg || tx, ocrText: text,
-    amount: pkg.match(/(?:₱|PHP|P)?\s*([\d,]+(?:\.\d{1,2})?)/i)?.[1]?.replace(/,/g, '') || '',
-    totalPayable: pkg.match(/(?:₱|PHP|P)?\s*([\d,]+(?:\.\d{1,2})?)/i)?.[1]?.replace(/,/g, '') || '',
-    businessStyle: crew ? 'CREW: ' + clean(crew) : ''
+    sourceName: fileName,
+    transactionType,
+    joNo,
+    joDate,
+    accountNo,
+    subscriberName: clean(subscriberName).replace(/^Subscriber\\s*Name\\s*/i, ''),
+    address,
+    packageName,
+    napCode,
+    serialNo,
+    divisionCode,
+    companyCode,
+    paymentDescription: packageName || transactionType,
+    businessStyle,
+    amount: '',
+    totalPayable: '',
+    ocrText: text
   }
 }
 
