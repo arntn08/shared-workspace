@@ -6,6 +6,7 @@ import Login from './pages/Login'
 import OwnerLayout from './components/OwnerLayout'
 import EmployeeLayout from './components/EmployeeLayout'
 import HrLayout from './components/HrLayout'
+import ARGenerator from './pages/ARGenerator'
 
 function Gate() {
   const { session, profile, loading, signOut } = useAuth()
@@ -44,7 +45,7 @@ function Gate() {
       </div>
     )
   }
-   return profile.role === 'owner' || profile.role === 'editor' ? <OwnerLayout /> : profile.role === 'hr' ? <HrLayout /> : <EmployeeLayout />
+   return profile.role === 'ar_encoder' ? <div className="employee-shell"><div className="ops-page"><ARGenerator /></div></div> : profile.role === 'owner' || profile.role === 'editor' ? <OwnerLayout /> : profile.role === 'hr' ? <HrLayout /> : <EmployeeLayout />
 }
 
 export default function App() {
