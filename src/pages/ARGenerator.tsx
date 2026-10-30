@@ -276,23 +276,6 @@ export default function ARGenerator() {
     </>:<section className="card"><div className="ar-batch-head"><div><h2>Recent AR records</h2><p>Latest 100 records available to your account.</p></div><button className="secondary" onClick={loadHistory}>Refresh</button></div>{saved.length?<div className="ar-history-wrap"><table><thead><tr><th>Date</th><th>Receipt No.</th><th>Job Order</th><th>Subscriber</th><th>Payment</th><th>Amount</th></tr></thead><tbody>{saved.map(row=><tr key={row.id}><td>{new Date(row.created_at).toLocaleDateString('en-PH')}</td><td>{row.receipt_no||'—'}</td><td>{row.jo_no||'—'}</td><td>{row.subscriber_name}</td><td>{row.payment_type}</td><td>₱{peso(String(row.amount))}</td></tr>)}</tbody></table></div>:<p className="muted">No AR records found yet.</p>}</section>}
   </div>
 }
-, 'i').test(value)
-  )
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    for (const label of labels) {
-      const re = new RegExp('^' + label.replace(/[.*+?^${}()|[\]\\]/g, '\\function afterLabel(text: string, labels: string[]) {
-  const lines = text.split(/\r?\n/).map(clean).filter(Boolean)
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    for (const label of labels) {
-      const re = new RegExp('^' + label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*[:：]?\\s*(.*)$', 'i')
-      const match = line.match(re)
-      if (match) return clean(match[1]) || clean(lines[i + 1] || '')
-    }
-  }
-  return ''
-}') + '\\s*[:：]?\\s*(.*)
 function extractJobOrder(text: string, fileName: string): Partial<ARDraft> {
   const find = (labels: string[]) => afterLabel(text, labels)
   const jo = find(['Job Order No', 'Job Order Number', 'JO No'])
