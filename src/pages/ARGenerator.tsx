@@ -248,6 +248,7 @@ export default function ARGenerator() {
   const [progress,setProgress] = useState('')
   const [error,setError] = useState('')
   const [tab,setTab] = useState<'create'|'history'>('create')
+  const [activeDraftId,setActiveDraftId] = useState<string|null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const update = useCallback((id:string, patch:Partial<ARDraft>)=>setDrafts(prev=>prev.map(d=>d.id===id?{...d,...patch}:d)),[])
   const loadHistory = useCallback(async()=>{
@@ -270,7 +271,7 @@ export default function ARGenerator() {
         if(draft.packageName && !draft.amount) setProgress('Package found; amount needs manual entry.')
         added.push(draft)
       }
-      setDrafts(prev=>[...prev,...added])
+      setDrafts(prev=>[...prev,...added]);if(added[0])setActiveDraftId(added[0].id)
       setProgress('Extracted '+added.length+' screenshot(s). Review every field before saving.')
     }catch(e){setError(e instanceof Error?e.message:'Could not read the selected screenshots. You can still enter details manually.')}
     finally{if(worker)await worker.terminate();setBusy(false);if(inputRef.current)inputRef.current.value=''}
@@ -299,50 +300,53 @@ export default function ARGenerator() {
       <div className="ar-upload card">
         <div><h2>Import job-order screenshots</h2><p>Upload one or several Messenger screenshots. OCR reads the text locally in your browser; review all extracted details before saving.</p></div>
         <input ref={inputRef} type="file" accept="image/*" multiple onChange={e=>processFiles(e.target.files)} />
-        <div className="ar-upload-actions"><button onClick={()=>inputRef.current?.click()} disabled={busy}>{busy?'Reading screenshots…':'＋ Upload screenshots'}</button><button className="secondary" onClick={()=>setDrafts(prev=>[...prev,blankDraft()])}>＋ Add manually</button></div>
+        <div className="ar-upload-actions"><button onClick={()=>inputRef.current?.click()} disabled={busy}>{busy?'Reading screenshots…':'＋ Upload screenshots'}</button><button className="secondary" onClick={()=>setDrafts(prev=>{const d=blankDraft();setActiveDraftId(d.id);return [...prev,d]})}>＋ Add manually</button></div>
         {progress&&<p className="ar-progress">{progress}</p>}
         <p className="ar-hint">OCR may misread names, account numbers or addresses. Confirm every field manually. Images are not uploaded to Supabase by this feature.</p>
       </div>
       <div className="ar-batch-head"><div><h2>AR drafts <span>{counts.total}</span></h2><p>{counts.saved} saved • {counts.total-counts.saved} awaiting review</p></div><button onClick={exportAll} disabled={!counts.saved}>Download combined PDF</button></div>
       {!drafts.length&&<div className="card ar-empty"><strong>No AR drafts yet</strong><p>Upload job-order screenshots or add an AR manually to begin.</p></div>}
-      {drafts.map((d,index)=><section className="card ar-draft" key={d.id}>
+      {drafts.map((d,index)=><section className="card ar-draft-summary" key={d.id}>
         <div className="ar-draft-head"><div><span className="ar-draft-number">AR DRAFT {index+1}</span><h2>{d.subscriberName||'New subscriber'}</h2><p>{d.joNo||'No job order number'} {d.sourceName?' • '+d.sourceName:''}</p></div><span className={'ar-status '+d.status}>{d.status==='saved'?'Saved':'Needs review'}</span></div>
-        <div className="ar-draft-workspace">
-          {d.sourcePreview&&<details className="ar-source-preview" open>
-            <summary>Uploaded screenshot</summary>
-            <div className="ar-source-preview-body"><img src={d.sourcePreview} alt="Uploaded job order screenshot preview" /><p>Keep this source visible while reviewing and correcting the extracted details.</p></div>
-          </details>}
-          <div className="ar-fields">
-          <Field label="Job Order No." value={d.joNo} onChange={v=>update(d.id,{joNo:v})}/>
-          <Field label="JO Date" value={d.joDate} onChange={v=>update(d.id,{joDate:v})}/>
-          <Field label="Subscriber Name" value={d.subscriberName} onChange={v=>update(d.id,{subscriberName:v})}/>
-          <Field label="Account No." value={d.accountNo} onChange={v=>update(d.id,{accountNo:v})}/>
-          <Field label="Complete Address" value={d.address} onChange={v=>update(d.id,{address:v})} wide/>
-          <Field label="Transaction Type" value={d.transactionType} onChange={v=>update(d.id,{transactionType:v})}/>
-          <Field label="Package Name" value={d.packageName} onChange={v=>update(d.id,{packageName:v})}/>
-          <Field label="NAP Code" value={d.napCode} onChange={v=>update(d.id,{napCode:v})}/>
-          <Field label="Serial No." value={d.serialNo} onChange={v=>update(d.id,{serialNo:v})}/>
-          <Field label="Division Code" value={d.divisionCode} onChange={v=>update(d.id,{divisionCode:v})}/>
-          <Field label="Company Code" value={d.companyCode} onChange={v=>update(d.id,{companyCode:v})}/>
-          <Field label="Receipt Date" value={d.receiptDate} onChange={v=>update(d.id,{receiptDate:v})} type="date"/>
-          <Field label="Official Receipt No. (manual)" value={d.receiptNo} onChange={v=>update(d.id,{receiptNo:v})}/>
-          <Field label="SA No." value={d.saNo} onChange={v=>update(d.id,{saNo:v})}/>
-          <Field label="Business Style" value={d.businessStyle} onChange={v=>update(d.id,{businessStyle:v})}/>
-          <Field label="TIN" value={d.tin} onChange={v=>update(d.id,{tin:v})}/>
-          <Field label="Amount received (₱)" value={d.amount} onChange={v=>update(d.id,{amount:v,totalPayable:v})} type="number"/>
-          <Field label="Amount in words (optional)" value={d.amountWords} onChange={v=>update(d.id,{amountWords:v})} wide/>
-          <label className="ar-field"><span>Payment type</span><select value={d.paymentType} onChange={e=>update(d.id,{paymentType:e.target.value as 'FULL'|'PARTIAL'})}><option value="FULL">Full Payment</option><option value="PARTIAL">Partial Payment</option></select></label>
-          <Field label="Payment description" value={d.paymentDescription} onChange={v=>update(d.id,{paymentDescription:v})}/>
-          <Field label="Bank / Check No." value={d.bankCheckNo} onChange={v=>update(d.id,{bankCheckNo:v})}/>
-          <Field label="VATable Receipt" value={d.vatable} onChange={v=>update(d.id,{vatable:v})}/>
-          <Field label="VAT Amount" value={d.vatAmount} onChange={v=>update(d.id,{vatAmount:v})}/>
-          <Field label="VAT Exempt" value={d.vatExempt} onChange={v=>update(d.id,{vatExempt:v})}/>
-          <Field label="Total Amount Payable" value={d.totalPayable} onChange={v=>update(d.id,{totalPayable:v})}/>
-          </div>
-        </div>
-        <div className="ar-template-note">Receipt output follows the supplied SKY AR layout. Verify VAT values, printed authorization details and current company-approved receipt format with Accounting before official use.</div>
-        <div className="ar-draft-actions"><button className="secondary" onClick={()=>exportOne(d)}>Download this AR PDF</button><button onClick={()=>saveDraft(d)} disabled={d.status==='saved'}>{d.status==='saved'?'Saved to history':'Verify & save AR'}</button><button className="danger" onClick={()=>setDrafts(prev=>prev.filter(x=>x.id!==d.id))}>Remove</button></div>
+        <div className="ar-draft-actions"><button onClick={()=>setActiveDraftId(d.id)}>Open draft form</button><button className="secondary" onClick={()=>exportOne(d)}>Download PDF</button><button className="danger" onClick={()=>setDrafts(prev=>prev.filter(x=>x.id!==d.id))}>Remove</button></div>
       </section>)}
+      {drafts.filter(d=>d.id===activeDraftId).map(d=><div className="ar-modal-backdrop" role="presentation" key={d.id} onMouseDown={e=>{if(e.target===e.currentTarget)setActiveDraftId(null)}}>
+        <section className="ar-modal-card" role="dialog" aria-modal="true" aria-label="AR draft form">
+          <div className="ar-modal-heading"><div><span className="ar-draft-number">AR DRAFT</span><h2>{d.subscriberName||'New subscriber'}</h2><p>Review and complete the extracted job-order details.</p></div><button className="secondary" onClick={()=>setActiveDraftId(null)}>Close ✕</button></div>
+          <div className="ar-draft-workspace">
+            {d.sourcePreview&&<details className="ar-source-preview" open><summary>Uploaded screenshot</summary><div className="ar-source-preview-body"><img src={d.sourcePreview} alt="Uploaded job order screenshot preview"/><p>Compare this original image with the extracted fields below.</p></div></details>}
+            <div className="ar-fields">
+              <Field label="Job Order No." value={d.joNo} onChange={v=>update(d.id,{joNo:v})}/>
+              <Field label="JO Date" value={d.joDate} onChange={v=>update(d.id,{joDate:v})}/>
+              <Field label="Subscriber Name" value={d.subscriberName} onChange={v=>update(d.id,{subscriberName:v})}/>
+              <Field label="Account No." value={d.accountNo} onChange={v=>update(d.id,{accountNo:v})}/>
+              <Field label="Complete Address" value={d.address} onChange={v=>update(d.id,{address:v})} wide/>
+              <Field label="Transaction Type" value={d.transactionType} onChange={v=>update(d.id,{transactionType:v})}/>
+              <Field label="Package Name" value={d.packageName} onChange={v=>update(d.id,{packageName:v})}/>
+              <Field label="NAP Code" value={d.napCode} onChange={v=>update(d.id,{napCode:v})}/>
+              <Field label="Serial No." value={d.serialNo} onChange={v=>update(d.id,{serialNo:v})}/>
+              <Field label="Division Code" value={d.divisionCode} onChange={v=>update(d.id,{divisionCode:v})}/>
+              <Field label="Company Code" value={d.companyCode} onChange={v=>update(d.id,{companyCode:v})}/>
+              <Field label="Receipt Date" value={d.receiptDate} onChange={v=>update(d.id,{receiptDate:v})} type="date"/>
+              <Field label="Official Receipt No. (manual)" value={d.receiptNo} onChange={v=>update(d.id,{receiptNo:v})}/>
+              <Field label="SA No." value={d.saNo} onChange={v=>update(d.id,{saNo:v})}/>
+              <Field label="Business Style" value={d.businessStyle} onChange={v=>update(d.id,{businessStyle:v})}/>
+              <Field label="TIN" value={d.tin} onChange={v=>update(d.id,{tin:v})}/>
+              <Field label="Amount received (₱)" value={d.amount} onChange={v=>update(d.id,{amount:v,totalPayable:v})} type="number"/>
+              <Field label="Amount in words (optional)" value={d.amountWords} onChange={v=>update(d.id,{amountWords:v})} wide/>
+              <label className="ar-field"><span>Payment type</span><select value={d.paymentType} onChange={e=>update(d.id,{paymentType:e.target.value as 'FULL'|'PARTIAL'})}><option value="FULL">Full Payment</option><option value="PARTIAL">Partial Payment</option></select></label>
+              <Field label="Payment description" value={d.paymentDescription} onChange={v=>update(d.id,{paymentDescription:v})}/>
+              <Field label="Bank / Check No." value={d.bankCheckNo} onChange={v=>update(d.id,{bankCheckNo:v})}/>
+              <Field label="VATable Receipt" value={d.vatable} onChange={v=>update(d.id,{vatable:v})}/>
+              <Field label="VAT Amount" value={d.vatAmount} onChange={v=>update(d.id,{vatAmount:v})}/>
+              <Field label="VAT Exempt" value={d.vatExempt} onChange={v=>update(d.id,{vatExempt:v})}/>
+              <Field label="Total Amount Payable" value={d.totalPayable} onChange={v=>update(d.id,{totalPayable:v})}/>
+            </div>
+          </div>
+          <div className="ar-template-note">OCR may leave fields blank. Confirm every value against the uploaded screenshot before saving.</div>
+          <div className="ar-draft-actions"><button className="secondary" onClick={()=>exportOne(d)}>Download this AR PDF</button><button onClick={()=>saveDraft(d)} disabled={d.status==='saved'}>{d.status==='saved'?'Saved to history':'Verify & save AR'}</button><button className="danger" onClick={()=>{setDrafts(prev=>prev.filter(x=>x.id!==d.id));setActiveDraftId(null)}}>Remove draft</button></div>
+        </section>
+      </div>)}
       {counts.saved>0&&<div className="ar-export-footer"><div><strong>{counts.saved} saved receipt(s)</strong><p>Combined PDF contains one AR per page.</p></div><button onClick={exportAll}>Download combined PDF</button></div>}
     </>:<section className="card"><div className="ar-batch-head"><div><h2>Recent AR records</h2><p>Latest 100 records available to your account.</p></div><button className="secondary" onClick={loadHistory}>Refresh</button></div>{saved.length?<div className="ar-history-wrap"><table><thead><tr><th>Date</th><th>Receipt No.</th><th>Job Order</th><th>Subscriber</th><th>Payment</th><th>Amount</th></tr></thead><tbody>{saved.map(row=><tr key={row.id}><td>{new Date(row.created_at).toLocaleDateString('en-PH')}</td><td>{row.receipt_no||'—'}</td><td>{row.jo_no||'—'}</td><td>{row.subscriber_name}</td><td>{row.payment_type}</td><td>₱{peso(String(row.amount))}</td></tr>)}</tbody></table></div>:<p className="muted">No AR records found yet.</p>}</section>}
   </div>
