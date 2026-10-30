@@ -27,7 +27,7 @@ type ARDraft = {
   tin: string
   amount: string
   amountWords: string
-  paymentType: 'FULL' | 'PARTIAL' | 'OMA'
+  paymentType: 'FULL' | 'PARTIAL'
   paymentDescription: string
   bankCheckNo: string
   vatable: string
@@ -46,7 +46,7 @@ const blankDraft = (): ARDraft => ({
   accountNo: '', subscriberName: '', address: '', packageName: '', napCode: '',
   serialNo: '', divisionCode: '', companyCode: '', receiptDate: today(), receiptNo: '',
   saNo: '', businessStyle: '', tin: '', amount: '', amountWords: '', paymentType: 'FULL',
-  paymentDescription: '', bankCheckNo: '', vatable: '', vatAmount: '', vatExempt: '',
+  paymentDescription: 'OMA', bankCheckNo: '', vatable: '', vatAmount: '', vatExempt: '',
   totalPayable: '', ocrText: '', status: 'draft'
 })
 
@@ -144,7 +144,7 @@ function extractJobOrder(text: string, fileName: string): Partial<ARDraft> {
     serialNo,
     divisionCode,
     companyCode,
-    paymentDescription: packageName || transactionType,
+    paymentDescription: 'OMA',
     businessStyle,
     amount: findPattern(/(?:Amount\s*(?:Received|Paid)|Payment\s*Amount|Cash\s*Received)\s*[:：]?\s*(?:PHP|₱)?\s*([0-9,]+(?:\.\d{1,2})?)/i).replace(/,/g, ''),
     totalPayable: '',
@@ -206,7 +206,7 @@ function drawReceipt(doc: jsPDF, d: ARDraft) {
   label('engaged in Business Style of',438,286,10); line(657,288,W-28); val(d.businessStyle,660,284,170,8.5)
   label('the sum of',20,326); line(86,328,W-28); val(packageAmountWords(d.packageName) || d.amountWords || numberWords(d.amount),90,324,730,9.5)
   label('Pesos (P',20,367); line(74,369,384); val(d.amount ? peso(d.amount) : '',79,365,290)
-  label(') as (' + (d.paymentType === 'OMA' ? 'OMA / One-Month-Advance' : d.paymentType) + ') payment of',391,367,10); line(610,369,W-28); val(d.paymentDescription || d.packageName,614,365,210,9)
+  label(') as (',391,367,10); line(438,369,548); val(d.paymentType === 'PARTIAL' ? 'Partial Payment' : 'Full Payment',442,365,102,8); label(') payment of',555,367,10); line(622,369,W-28); val(d.paymentDescription || 'OMA',626,365,204,9)
   label('SA No.',20,405); line(75,407,340); val(d.saNo,80,403,255)
   label('Account No.',355,405); line(430,407,W-28); val(d.accountNo,435,403,390)
   label('BANK/CHECK No.',20,492,9.5); line(20,520,225); val(d.bankCheckNo,25,516,195)
@@ -326,7 +326,7 @@ export default function ARGenerator() {
           <Field label="TIN" value={d.tin} onChange={v=>update(d.id,{tin:v})}/>
           <Field label="Amount received (₱)" value={d.amount} onChange={v=>update(d.id,{amount:v,totalPayable:v})} type="number"/>
           <Field label="Amount in words (optional)" value={d.amountWords} onChange={v=>update(d.id,{amountWords:v})} wide/>
-          <label className="ar-field"><span>Payment type</span><select value={d.paymentType} onChange={e=>update(d.id,{paymentType:e.target.value as 'FULL'|'PARTIAL'|'OMA'})}><option value="FULL">Full payment</option><option value="PARTIAL">Partial payment</option><option value="OMA">OMA / One-Month-Advance</option></select></label>
+          <label className="ar-field"><span>Payment type</span><select value={d.paymentType} onChange={e=>update(d.id,{paymentType:e.target.value as 'FULL'|'PARTIAL'})}><option value="FULL">Full Payment</option><option value="PARTIAL">Partial Payment</option></select></label>
           <Field label="Payment description" value={d.paymentDescription} onChange={v=>update(d.id,{paymentDescription:v})}/>
           <Field label="Bank / Check No." value={d.bankCheckNo} onChange={v=>update(d.id,{bankCheckNo:v})}/>
           <Field label="VATable Receipt" value={d.vatable} onChange={v=>update(d.id,{vatable:v})}/>
