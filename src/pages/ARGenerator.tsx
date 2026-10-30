@@ -302,7 +302,7 @@ export default function ARGenerator() {
     const image = canvas.toDataURL('image/png')
     if (!profile?.id) return
     setSignatureBusy(true); setSignatureMessage('')
-    const { error } = await supabase.from('profiles').update({ ar_signature: image }).eq('id', profile.id)
+    const { error } = await supabase.rpc('save_my_ar_signature', { p_signature: image })
     setSignatureBusy(false)
     if (error) { setSignatureMessage('Could not save signature: '+error.message); return }
     setSignature(image); setSignatureMessage('E-signature saved to your account. It will be applied to AR PDFs generated while signed in.')
@@ -310,7 +310,7 @@ export default function ARGenerator() {
   const clearSignature = async () => {
     if (!profile?.id) return
     setSignatureBusy(true)
-    const { error } = await supabase.from('profiles').update({ ar_signature: null }).eq('id', profile.id)
+    const { error } = await supabase.rpc('save_my_ar_signature', { p_signature: null })
     setSignatureBusy(false)
     if (error) { setSignatureMessage('Could not remove signature: '+error.message); return }
     setSignature(''); setSignatureMessage('Saved e-signature removed from your account.')
