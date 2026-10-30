@@ -8,6 +8,7 @@ import './ar-generator.css'
 type ARDraft = {
   id: string
   sourceName: string
+  sourcePreview: string
   transactionType: string
   joNo: string
   joDate: string
@@ -41,7 +42,7 @@ type SavedAR = { id: string; jo_no: string | null; receipt_no: string | null; su
 
 const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
 const blankDraft = (): ARDraft => ({
-  id: crypto.randomUUID(), sourceName: '', transactionType: '', joNo: '', joDate: '',
+  id: crypto.randomUUID(), sourceName: '', sourcePreview: '', transactionType: '', joNo: '', joDate: '',
   accountNo: '', subscriberName: '', address: '', packageName: '', napCode: '',
   serialNo: '', divisionCode: '', companyCode: '', receiptDate: today(), receiptNo: '',
   saNo: '', businessStyle: '', tin: '', amount: '', amountWords: '', paymentType: 'FULL',
@@ -88,6 +89,18 @@ function extractJobOrder(text: string, fileName: string): Partial<ARDraft> {
     return match ? clean(match[1] || match[0]) : ''
   }
 
+  // OCR sometimes drops a field label or merges it with a neighboring column.
+  // Use conservative shape-based fallbacks for names and Philippine addresses.
+  const nameFallback = lines.find(line =>
+    /^[A-Z][A-Z .,'-]{5,}$/.test(line) &&
+    line.includes(',') &&
+    !/^(TRANSACTION|PACKAGE|DIVISION|COMPANY|MAINLINE|REASSIGN|CREW)/i.test(line) &&
+    !/\\b(?:APPLICATION|FIBER|SKY)\\b/i.test(line)
+  ) || ''
+  const addressFallback = lines
+    .filter(line => /\\b(?:LOT|BLOCK|BLK|PUROK|PHASE|UNIT|ROOM|HOUSE|STREET|ST|BRGY|BARANGAY|QUEZON CITY|MANILA|CALOOCAN|PASIG|TAGUIG|MAKATI|MARIKINA|NAGKAISANG)\\b/i.test(line))
+    .sort((a,b) => b.length-a.length)[0] || ''
+
   // Stable identifiers are safer to recognize by their visible format than
   // by OCR line order, especially when the form uses two columns.
   const joNo = findPattern(/\b(R\d{6,})\b/i) || byLabel(['Job Order No', 'Job Order Number', 'JO No'])
@@ -114,7 +127,7 @@ function extractJobOrder(text: string, fileName: string): Partial<ARDraft> {
   // the package name (e.g. "SKY FIBER 999" is not an amount received).
   const napCode = byLabel(['NAP Code'])
   const serialNo = byLabel(['Serial No', 'Serial Number'])
-  const address = byLabel(['Complete Address', 'Address'])
+  const address = byLabel(['Complete Address', 'Address']) || addressFallback
 
   return {
     sourceName: fileName,
@@ -232,7 +245,7 @@ export default function ARGenerator() {
       for(let i=0;i<files.length;i++){
         const file=files[i];setProgress('Reading '+file.name+' ('+(i+1)+'/'+files.length+')')
         const {data}=await worker.recognize(file)
-        const draft={...blankDraft(),...extractJobOrder(data.text,file.name)}
+        const draft={...blankDraft(),...extractJobOrder(data.text,file.name),sourcePreview:URL.createObjectURL(file)}
         if(draft.packageName && !draft.amount) setProgress('Package found; amount needs manual entry.')
         added.push(draft)
       }
@@ -273,6 +286,10 @@ export default function ARGenerator() {
       {!drafts.length&&<div className="card ar-empty"><strong>No AR drafts yet</strong><p>Upload job-order screenshots or add an AR manually to begin.</p></div>}
       {drafts.map((d,index)=><section className="card ar-draft" key={d.id}>
         <div className="ar-draft-head"><div><span className="ar-draft-number">AR DRAFT {index+1}</span><h2>{d.subscriberName||'New subscriber'}</h2><p>{d.joNo||'No job order number'} {d.sourceName?' • '+d.sourceName:''}</p></div><span className={'ar-status '+d.status}>{d.status==='saved'?'Saved':'Needs review'}</span></div>
+        {d.sourcePreview&&<details className="ar-source-preview">
+          <summary>Preview uploaded screenshot</summary>
+          <div className="ar-source-preview-body"><img src={d.sourcePreview} alt="Uploaded job order screenshot preview" /><p>Compare this original image with the extracted fields below. You can keep the image open while correcting the draft.</p></div>
+        </details>}
         <div className="ar-fields">
           <Field label="Job Order No." value={d.joNo} onChange={v=>update(d.id,{joNo:v})}/>
           <Field label="JO Date" value={d.joDate} onChange={v=>update(d.id,{joDate:v})}/>
