@@ -8,10 +8,12 @@ import Settings from '../pages/Settings'
 import EmployeeFiles from '../pages/EmployeeFiles'
 import FileViewer from '../pages/FileViewer'
 import Tally from '../pages/Tally'
+import ARGenerator from '../pages/ARGenerator'
 
 const links = [
   ['/','HR overview','home'],
   ['/schedule','Team schedules','schedule'],
+  ['/ar','AR Generator','receipt'],
   ['/ntes','Notices to Explain','file-text'],
   ['/tally','Installation Tally','tally'],
   ['/files','Files & resources','files'],
@@ -43,6 +45,7 @@ export default function HrLayout() {
         <Routes>
           <Route path="/" element={<section className="card"><h1>HR portal</h1><p className="muted">Manage team schedules and confidential employee notices from one place.</p><div className="row" style={{gap:'.75rem',flexWrap:'wrap'}}><NavLink className="button primary" to="/schedule">Open team schedules</NavLink><NavLink className="button" to="/ntes">Manage NTEs</NavLink></div></section>}/>
           <Route path="/schedule" element={<HrTeamSchedule/>}/>
+          <Route path="/ar" element={<ARGenerator/>}/>
           <Route path="/ntes" element={<HrNtes/>}/>
           <Route path="/tally" element={<Tally/>}/>
           <Route path="/files" element={<EmployeeFiles settings={settings} />}/>
