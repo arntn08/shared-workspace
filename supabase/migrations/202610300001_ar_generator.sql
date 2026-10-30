@@ -34,7 +34,7 @@ revoke all on public.ar_records from anon;
 grant select, insert on public.ar_records to authenticated;
 drop policy if exists "AR records visible to owners and editors" on public.ar_records;
 create policy "AR records visible to owners and editors" on public.ar_records for select to authenticated
-using (exists(select 1 from public.profiles p where p.id=auth.uid() and p.role in ('owner','editor') and p.active=true));
+using (exists(select 1 from public.profiles p where p.id=auth.uid() and p.role in ('owner','editor','ar_encoder') and p.active=true));
 drop policy if exists "Owners and editors create AR records" on public.ar_records;
 create policy "Owners and editors create AR records" on public.ar_records for insert to authenticated
 with check (created_by=auth.uid() and exists(select 1 from public.profiles p where p.id=auth.uid() and p.role in ('owner','editor') and p.active=true));
