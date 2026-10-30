@@ -1,4 +1,4 @@
-export type Role = 'owner' | 'editor' | 'employee' | 'hr'
+export type Role = 'owner' | 'editor' | 'employee' | 'hr' | 'ar_encoder'
 export type FileKind = 'gsheet' | 'gdoc' | 'excel' | 'word' | 'other'
 
 export interface Profile {
