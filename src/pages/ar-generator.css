@@ -7,3 +7,113 @@
 /* Popup AR draft editor */
 .ar-draft-summary{margin-bottom:1rem}.ar-modal-backdrop,.tally-quota-backdrop{position:fixed;inset:0;z-index:1000;background:rgba(8,12,18,.68);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;padding:1rem}.ar-modal-card,.tally-quota-modal{width:min(1180px,96vw);max-height:92vh;overflow:auto;background:var(--card, #fff);color:var(--text, #17202a);border:1px solid var(--border, #d9dee5);border-radius:18px;padding:1.15rem;box-shadow:0 24px 80px rgba(0,0,0,.32)}.ar-modal-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1rem}.ar-modal-heading h2{margin:.25rem 0}.ar-modal-heading p{margin:.2rem 0;color:var(--muted,#687386)}.ar-modal-card .ar-draft-workspace{max-height:62vh;overflow:visible}.ar-modal-card .ar-draft-workspace>.ar-source-preview{top:0;max-height:60vh}.ar-modal-card .ar-fields{padding-bottom:.5rem}.tally-quota-modal{width:min(900px,96vw)}.tally-quota-backdrop{z-index:1100}
 @media(max-width:760px){.ar-modal-backdrop,.tally-quota-backdrop{padding:.35rem;align-items:flex-end}.ar-modal-card,.tally-quota-modal{width:100%;max-height:94vh;border-radius:18px 18px 10px 10px;padding:.85rem}.ar-modal-card .ar-draft-workspace{grid-template-columns:1fr;max-height:none}.ar-modal-card .ar-draft-workspace>.ar-source-preview{position:relative;max-height:none}.ar-modal-heading{position:sticky;top:-.85rem;background:inherit;padding:.3rem 0;z-index:2}}
+
+
+/* AR editor modal: use the app theme tokens and keep actions in a real footer. */
+.ar-modal-backdrop{
+  z-index:1200;
+  align-items:center;
+  overflow-y:auto;
+}
+.ar-modal-card{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  width:min(1180px,96vw);
+  max-height:calc(100dvh - 2rem);
+  overflow:hidden;
+  background:linear-gradient(180deg,var(--surface-2),var(--surface));
+  color:var(--text);
+  border:1px solid var(--border);
+}
+.ar-modal-heading{
+  flex:0 0 auto;
+  position:relative;
+  z-index:3;
+  padding:0 0 .9rem;
+  border-bottom:1px solid var(--border);
+  background:var(--surface);
+}
+.ar-modal-card .ar-draft-workspace{
+  display:grid;
+  grid-template-columns:minmax(220px,300px) minmax(0,1fr);
+  flex:1 1 auto;
+  min-height:0;
+  max-height:none;
+  overflow:auto;
+  padding:.9rem 0;
+  overscroll-behavior:contain;
+}
+.ar-modal-card .ar-fields{
+  align-content:start;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.5rem .85rem;
+}
+.ar-modal-card .ar-field{position:relative;min-width:0;margin:.15rem 0 .45rem}
+.ar-modal-card .ar-field input,
+.ar-modal-card .ar-field select{
+  display:block;
+  position:relative;
+  width:100%;
+  min-width:0;
+  z-index:0;
+}
+.ar-modal-card .ar-template-note{flex:0 0 auto;margin:.15rem 0 .7rem}
+.ar-modal-card>.ar-draft-actions{
+  position:relative!important;
+  inset:auto!important;
+  z-index:4;
+  display:flex!important;
+  flex:0 0 auto;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  align-items:center;
+  gap:.6rem;
+  width:100%;
+  margin:0;
+  padding:.85rem 0 0;
+  border-top:1px solid var(--border);
+  background:var(--surface);
+}
+.ar-modal-card>.ar-draft-actions button{
+  position:static!important;
+  inset:auto!important;
+  float:none!important;
+  flex:0 0 auto;
+  width:auto!important;
+  min-width:150px;
+  margin:0!important;
+  transform:none;
+}
+.ar-modal-card .ar-draft-actions button:hover{transform:translateY(-1px)}
+.ar-modal-card .ar-source-preview{background:var(--surface)}
+.ar-modal-card .ar-source-preview-body{background:var(--surface)}
+@media(max-width:760px){
+  .ar-modal-backdrop{padding:.35rem;align-items:flex-end}
+  .ar-modal-card{
+    width:100%;
+    max-height:94dvh;
+    border-radius:18px 18px 10px 10px;
+    padding:.85rem;
+  }
+  .ar-modal-card .ar-draft-workspace{
+    display:flex;
+    flex-direction:column;
+    max-height:none;
+    min-height:0;
+  }
+  .ar-modal-card .ar-draft-workspace>.ar-source-preview{
+    position:relative;
+    top:auto;
+    max-height:none;
+  }
+  .ar-modal-card .ar-fields{grid-template-columns:1fr}
+  .ar-modal-card .ar-field.wide{grid-column:auto}
+  .ar-modal-heading{position:relative;top:auto}
+  .ar-modal-card>.ar-draft-actions{
+    position:sticky!important;
+    bottom:0;
+    padding:.75rem 0 calc(.25rem + env(safe-area-inset-bottom));
+  }
+  .ar-modal-card>.ar-draft-actions button{flex:1 1 100%;width:100%!important}
+}
