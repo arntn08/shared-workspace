@@ -89,17 +89,18 @@ function extractJobOrder(text: string, fileName: string): Partial<ARDraft> {
     return match ? clean(match[1] || match[0]) : ''
   }
 
-  // OCR sometimes drops a field label or merges it with a neighboring column.
-  // Use conservative shape-based fallbacks for names and Philippine addresses.
+  // OCR often separates a field label from its value or merges two columns.
+  // Keep candidate extraction conservative, but allow wrapped names/addresses.
   const nameFallback =
-    text.match(/\b([A-Z][A-Z.'-]{2,},\s*[A-Z][A-Z .'-]{2,})\b/)?.[1] ||
+    text.match(/\b([A-Z][A-Z.'-]{2,},\s*[A-Z][A-Z .'-]{2,})\b/i)?.[1] ||
     lines.find(line =>
       /^[A-Z][A-Z .,'-]{5,}$/i.test(line) &&
       line.includes(',') &&
-      !/^(TRANSACTION|PACKAGE|DIVISION|COMPANY|MAINLINE|REASSIGN|CREW)/i.test(line) &&
-      !/\b(?:APPLICATION|FIBER|SKY)\b/i.test(line)
+      !/^(TRANSACTION|PACKAGE|DIVISION|COMPANY|MAINLINE|REASSIGN|CREW|JOB ORDER|ACCOUNT|COMPLETE ADDRESS)/i.test(line) &&
+      !/\b(?:APPLICATION|FIBER|SKY|QUEZON CITY|MANILA)\b/i.test(line)
     ) || ''
   const addressFallback = lines
+    .map(line => line.replace(/^(?:Complete\s+)?Address\s*[:：-]?\s*/i, ''))
     .filter(line => /\b(?:LOT|BLOCK|BLK|PUROK|PHASE|UNIT|ROOM|HOUSE|STREET|ST|BRGY|BARANGAY|QUEZON CITY|MANILA|CALOOCAN|PASIG|TAGUIG|MAKATI|MARIKINA|NAGKAISANG)\b/i.test(line))
     .sort((a,b) => b.length-a.length)[0] || ''
 
@@ -111,8 +112,9 @@ function extractJobOrder(text: string, fileName: string): Partial<ARDraft> {
   const joDate = findPattern(/\b(20\d{2}-\d{2}-\d{2})(?:T[0-9:.]+Z?)?/i) ||
     byLabel(['JO Date', 'Job Order Date'])
   const transactionType = /MAINLINE\s+APPLICATION/i.test(text) ? 'MAINLINE APPLICATION' : byLabel(['Transaction Type'])
-  const subscriberName = findPattern(/(?:Subscriber\s*Name\s*[:：]?\s*)([A-Z][A-Z ,.'-]{5,})/i) ||
-    byLabel(['Subscriber Name']) || nameFallback
+  const subscriberName = byLabel(['Subscriber Name']) ||
+    findPattern(/(?:Subscriber\s*Name\s*[:：]?\s*)([A-Z][A-Z ,.'-]{5,}?)(?=\s+(?:Account\s*(?:No|Number)|Complete\s+Address|Transaction\s+Type|Package\s+Name)\b|[\r\n]|$)/i) ||
+    nameFallback
   const packageName = findPattern(/\b(SKY\s+FIBER\s+\d+)\b/i) || byLabel(['Package Name', 'Package'])
   const divisionCode = findPattern(/(?:Division\s*Code\s*[:：]?\s*)([A-Z0-9-]+)/i) ||
     findPattern(/\b(SKYNC)\b/i) || byLabel(['Division Code'])
