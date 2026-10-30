@@ -187,7 +187,7 @@ function packageAmountWords(packageName: string) {
     .replace(/\bNinety Nine\b/, 'Ninety-nine')
 }
 
-function drawReceipt(doc: jsPDF, d: ARDraft) {
+function drawReceipt(doc: jsPDF, d: ARDraft, signature?: string, signerName?: string) {
   const W = 864, H = 576
   doc.setFillColor(255,255,255); doc.rect(0,0,W,H,'F')
   doc.setFillColor(17,23,19); doc.rect(10,10,W-20,88,'F')
@@ -219,7 +219,7 @@ function drawReceipt(doc: jsPDF, d: ARDraft) {
   ;['VATable Receipt','VAT Amount','VATExempt','Total Amount Payable'].forEach((s,i)=>{const y=ty+i*rh;doc.rect(tx,y,c1+c2,rh);doc.line(tx+c1,y,tx+c1,y+rh);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text(s,tx+5,y+13)})
   val(d.vatable,tx+c1+5,ty+13,100,8); val(d.vatAmount,tx+c1+5,ty+32,100,8); val(d.vatExempt,tx+c1+5,ty+51,100,8); val(d.totalPayable || d.amount,tx+c1+5,ty+70,100,8)
   doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('SKY Cable Corporation',650,453,{align:'center'})
-  label('By:',525,496,10); line(554,499,W-28); doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.text('Cashier/Authorized Representative',665,515,{align:'center'})
+  label('By:',525,496,10); line(554,499,W-28); if(signature){try{doc.addImage(signature,'PNG',570,462,145,34,undefined,'FAST')}catch(e){console.warn('Could not embed AR signature',e)}} doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.text(signerName || 'Cashier/Authorized Representative',695,515,{align:'center'})
   doc.setFontSize(7);doc.text('3,500 books (50x3) SN 2100001 - 2275000',20,538)
   doc.text('BIR Authority to Print No. 126AU20210000006122',20,548)
   doc.text('Date of ATP: 12-14-2021    Expiry Date: 12-13-2026',20,558)
@@ -230,9 +230,9 @@ function drawReceipt(doc: jsPDF, d: ARDraft) {
   if(d.receiptNo){doc.setFont('helvetica','bold');doc.setFontSize(17);doc.setTextColor(145,55,55);doc.text(d.receiptNo,760,548,{align:'right'})}
 }
 
-function makePdf(drafts: ARDraft[], fileName: string) {
+function makePdf(drafts: ARDraft[], fileName: string, signature?: string, signerName?: string) {
   const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:[864,576] })
-  drafts.forEach((draft,index)=>{if(index)doc.addPage([864,576],'landscape');drawReceipt(doc,draft)})
+  drafts.forEach((draft,index)=>{if(index)doc.addPage([864,576],'landscape');drawReceipt(doc,draft,signature,signerName)})
   doc.save(fileName)
 }
 
@@ -249,6 +249,9 @@ export default function ARGenerator() {
   const [error,setError] = useState('')
   const [tab,setTab] = useState<'create'|'history'>('create')
   const [activeDraftId,setActiveDraftId] = useState<string|null>(null)
+  const [signature,setSignature] = useState<string>((profile as any)?.ar_signature || '')
+  const [signatureBusy,setSignatureBusy] = useState(false)
+  const [signatureMessage,setSignatureMessage] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const update = useCallback((id:string, patch:Partial<ARDraft>)=>setDrafts(prev=>prev.map(d=>d.id===id?{...d,...patch}:d)),[])
   const loadHistory = useCallback(async()=>{
@@ -288,8 +291,32 @@ export default function ARGenerator() {
     if(error){setError(error.message);return}
     update(d.id,{status:'saved'});await loadHistory()
   }
-  const exportOne=(d:ARDraft)=>makePdf([d],'AR-'+(d.receiptNo||d.joNo||'draft')+'.pdf')
-  const exportAll=()=>{const selected=drafts.filter(d=>d.status==='saved');if(!selected.length){setError('Save at least one verified AR before exporting the batch.');return}makePdf(selected,'SKY-AR-Batch-'+today()+'.pdf')}
+  const signerName = profile?.full_name || profile?.email || 'Authorized Representative'
+  const exportOne=(d:ARDraft)=>{if(!signature){setError('Set and save your e-signature before generating an AR PDF.');return}makePdf([d],'AR-'+(d.receiptNo||d.joNo||'draft')+'.pdf',signature,signerName)}
+  const exportAll=()=>{const selected=drafts.filter(d=>d.status==='saved');if(!signature){setError('Set and save your e-signature before generating AR PDFs.');return}if(!selected.length){setError('Save at least one verified AR before exporting the batch.');return}makePdf(selected,'SKY-AR-Batch-'+today()+'.pdf',signature,signerName)}
+  const saveSignature = async () => {
+    const canvas = document.getElementById('ar-signature-canvas') as HTMLCanvasElement | null
+    if (!canvas) return
+    const blank = document.createElement('canvas'); blank.width=canvas.width; blank.height=canvas.height
+    if (canvas.toDataURL() === blank.toDataURL()) { setSignatureMessage('Please draw your signature first.'); return }
+    const image = canvas.toDataURL('image/png')
+    if (!profile?.id) return
+    setSignatureBusy(true); setSignatureMessage('')
+    const { error } = await supabase.from('profiles').update({ ar_signature: image }).eq('id', profile.id)
+    setSignatureBusy(false)
+    if (error) { setSignatureMessage('Could not save signature: '+error.message); return }
+    setSignature(image); setSignatureMessage('E-signature saved to your account. It will be applied to AR PDFs generated while signed in.')
+  }
+  const clearSignature = async () => {
+    if (!profile?.id) return
+    setSignatureBusy(true)
+    const { error } = await supabase.from('profiles').update({ ar_signature: null }).eq('id', profile.id)
+    setSignatureBusy(false)
+    if (error) { setSignatureMessage('Could not remove signature: '+error.message); return }
+    setSignature(''); setSignatureMessage('Saved e-signature removed from your account.')
+    const canvas=document.getElementById('ar-signature-canvas') as HTMLCanvasElement|null
+    const ctx=canvas?.getContext('2d'); if(canvas&&ctx)ctx.clearRect(0,0,canvas.width,canvas.height)
+  }
   const counts=useMemo(()=>({total:drafts.length,saved:drafts.filter(d=>d.status==='saved').length}),[drafts])
 
   return <div className="ar-page">
@@ -297,6 +324,15 @@ export default function ARGenerator() {
     <div className="ar-tabs"><button className={tab==='create'?'active':''} onClick={()=>setTab('create')}>Create AR</button><button className={tab==='history'?'active':''} onClick={()=>{setTab('history');loadHistory()}}>AR History</button></div>
     {error&&<div className="ar-alert error">{error}</div>}
     {tab==='create'?<>
+      <section className="card ar-signature-card">
+        <div className="ar-signature-top"><div><h2>My E-Signature</h2><p>Your account signature is placed above the <strong>By:</strong> line on every AR PDF you generate.</p></div><span className={signature?'ar-signature-status ready':'ar-signature-status'}>{signature?'Signature saved':'Setup required'}</span></div>
+        {signature ? <div className="ar-signature-saved"><img src={signature} alt="Your saved e-signature"/><span>Saved for {signerName}</span></div> : null}
+        <div className="ar-signature-pad-wrap"><canvas id="ar-signature-canvas" className="ar-signature-canvas" width="900" height="220" aria-label="Draw your e-signature" onPointerDown={e=>{const c=e.currentTarget;const r=c.getBoundingClientRect();const x=(e.clientX-r.left)*c.width/r.width;const y=(e.clientY-r.top)*c.height/r.height;const ctx=c.getContext('2d');if(!ctx)return;c.setPointerCapture(e.pointerId);ctx.beginPath();ctx.moveTo(x,y);ctx.lineWidth=5;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#17251c'}} onPointerMove={e=>{if(e.buttons!==1)return;const c=e.currentTarget;const r=c.getBoundingClientRect();const ctx=c.getContext('2d');if(!ctx)return;ctx.lineTo((e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height);ctx.stroke()}} />
+          <div className="ar-signature-hint">Draw your usual signature using your mouse, trackpad, stylus or touchscreen.</div></div>
+        <div className="ar-signature-actions"><button onClick={()=>{const c=document.getElementById('ar-signature-canvas') as HTMLCanvasElement|null;c?.getContext('2d')?.clearRect(0,0,c.width,c.height)}} className="secondary">Clear pad</button><button onClick={saveSignature} disabled={signatureBusy}>{signatureBusy?'Saving…':'Save my e-signature'}</button>{signature&&<button onClick={clearSignature} disabled={signatureBusy} className="danger">Remove saved signature</button>}</div>
+        {signatureMessage&&<p className="ar-signature-message">{signatureMessage}</p>}
+        <p className="ar-hint">Your signature is stored on your own workspace profile and used for your generated AR PDFs. Only save a signature that you are authorized to use.</p>
+      </section>
       <div className="ar-upload card">
         <div><h2>Import job-order screenshots</h2><p>Upload one or several Messenger screenshots. OCR reads the text locally in your browser; review all extracted details before saving.</p></div>
         <input ref={inputRef} type="file" accept="image/*" multiple onChange={e=>processFiles(e.target.files)} />
