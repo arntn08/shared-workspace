@@ -38,7 +38,7 @@ function parseSections(rows: string[][]): Section[] {
 }
 export default function HrTeamSchedule() {
   const { profile } = useAuth()
-  const isHr = profile?.role === 'hr'
+  const isHr = profile?.role === 'hr' || profile?.role === 'ar_encoder'
   const [files,setFiles] = useState<FileRow[]>([])
   const [fileId,setFileId] = useState('')
   const [tabs,setTabs] = useState<string[]>([])
@@ -73,37 +73,79 @@ export default function HrTeamSchedule() {
   const count = visible.reduce((sum,s)=>sum+s.rows.length,0)
   return <>
     <style>{`
-      .hr-schedule-page.hr-schedule-hr{--rose:#c76b91;--rose-deep:#9f4e70;--rose-soft:#f9e9f0;--rose-line:#efd3df;color:var(--text)}
-      .hr-schedule-page .schedule-hero{position:relative;overflow:hidden;padding:1.25rem 1.35rem;border:1px solid var(--rose-line);border-radius:22px;background:linear-gradient(115deg,#fff8fb 0%,#fff 54%,#f5efff 100%);box-shadow:0 12px 35px rgba(158,91,123,.08);margin-bottom:1rem}
-      .hr-schedule-page .schedule-kicker{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;font-weight:800;color:var(--rose-deep);margin-bottom:.35rem}
-      .hr-schedule-page .schedule-hero h1{font-size:clamp(1.45rem,2.2vw,2rem);letter-spacing:-.04em;margin:0 0 .35rem;color:#573d4a}
-      .hr-schedule-page .schedule-hero p{color:#8a7180;max-width:640px}
-      .hr-schedule-page .schedule-hero:after{content:'✿';position:absolute;right:1.4rem;top:.5rem;font-size:4.4rem;color:#e8b9ce;opacity:.5;transform:rotate(12deg);pointer-events:none}
-      .hr-schedule-page .schedule-tools{padding:.75rem;background:rgba(255,250,252,.78);border:1px solid var(--rose-line);border-radius:16px;box-shadow:0 5px 20px rgba(158,91,123,.045)}
-      .hr-schedule-page .schedule-tools input,.hr-schedule-page .schedule-tools select{border-color:#e8c9d7;border-radius:11px;background:#fff;color:#5e4954;min-height:40px}
-      .hr-schedule-page .schedule-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:.85rem;align-items:start}
-      .hr-schedule-page .schedule-column{padding:.85rem!important;margin:0!important;min-width:0;border:1px solid #efd5e0!important;border-radius:18px!important;background:linear-gradient(160deg,#fffdfd,#fff8fb)!important;box-shadow:0 7px 24px rgba(139,83,110,.07);}
-      .hr-schedule-page .schedule-column h2{font-size:.9rem!important;letter-spacing:.015em;color:#674657;line-height:1.4}
-      .hr-schedule-page .schedule-count{display:inline-flex;align-items:center;justify-content:center;min-width:29px;height:29px;padding:0 .45rem;border-radius:10px;background:#f7e4ed;color:#9e4e72;font-weight:800;font-size:.78rem;border:1px solid #edcada}
-      .hr-schedule-page button.schedule-person{width:100%;text-align:left;cursor:pointer;font:inherit;display:block}.hr-schedule-page .schedule-person{border:1px solid #efcddd!important;border-radius:13px!important;padding:.6rem!important;background:linear-gradient(125deg,#fff0f6 0%,#fff8fb 55%,#f4efff 100%)!important;color:#5a4751;font-size:.76rem;box-shadow:0 2px 7px rgba(120,75,96,.035);transition:transform .18s ease,box-shadow .18s ease}
-      .hr-schedule-page .schedule-person:focus-visible{outline:3px solid #b95f86;outline-offset:2px}.hr-schedule-page .schedule-person:hover{transform:translateY(-1px);box-shadow:0 6px 14px rgba(120,75,96,.08)}
-      .hr-schedule-page .schedule-person-name{display:flex;align-items:center;gap:.4rem;color:#70435a;font-size:.79rem;margin-bottom:.45rem}
-      .hr-schedule-page .schedule-chip{display:inline-flex;align-items:center;max-width:100%;border:1px solid #f0d9e4!important;border-radius:7px!important;padding:.2rem .42rem!important;background:linear-gradient(115deg,#fff8fb,#f8efff);color:#705c66;line-height:1.45;overflow-wrap:anywhere}
-      .hr-schedule-page .schedule-chip-label{color:#ad7891;font-weight:650}
-      .hr-schedule-page .schedule-meta{color:#9b7c8b;font-size:.78rem;margin:.2rem 0 .7rem}
-      .hr-schedule-page .schedule-refresh{border-radius:11px;background:#b95f86;color:white;border:1px solid #b95f86;padding:.58rem .9rem;box-shadow:0 5px 12px rgba(185,95,134,.17)}
-      .hr-schedule-page .schedule-refresh:hover{background:#a64e75}
+      .hr-schedule-page.hr-schedule-hr.hr-schedule-hr{--rose:#c76b91;--rose-deep:#9f4e70;--rose-soft:#f9e9f0;--rose-line:#efd3df;color:var(--text)}
+      .hr-schedule-page.hr-schedule-hr .schedule-hero{position:relative;overflow:hidden;padding:1.25rem 1.35rem;border:1px solid var(--rose-line);border-radius:22px;background:linear-gradient(115deg,#fff8fb 0%,#fff 54%,#f5efff 100%);box-shadow:0 12px 35px rgba(158,91,123,.08);margin-bottom:1rem}
+      .hr-schedule-page.hr-schedule-hr .schedule-kicker{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;font-weight:800;color:var(--rose-deep);margin-bottom:.35rem}
+      .hr-schedule-page.hr-schedule-hr .schedule-hero h1{font-size:clamp(1.45rem,2.2vw,2rem);letter-spacing:-.04em;margin:0 0 .35rem;color:#573d4a}
+      .hr-schedule-page.hr-schedule-hr .schedule-hero p{color:#8a7180;max-width:640px}
+      .hr-schedule-page.hr-schedule-hr .schedule-hero:after{content:'✿';position:absolute;right:1.4rem;top:.5rem;font-size:4.4rem;color:#e8b9ce;opacity:.5;transform:rotate(12deg);pointer-events:none}
+      .hr-schedule-page.hr-schedule-hr .schedule-tools{padding:.75rem;background:rgba(255,250,252,.78);border:1px solid var(--rose-line);border-radius:16px;box-shadow:0 5px 20px rgba(158,91,123,.045)}
+      .hr-schedule-page.hr-schedule-hr .schedule-tools input,.hr-schedule-page.hr-schedule-hr .schedule-tools select{border-color:#e8c9d7;border-radius:11px;background:#fff;color:#5e4954;min-height:40px}
+      .hr-schedule-page.hr-schedule-hr .schedule-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:.85rem;align-items:start}
+      .hr-schedule-page.hr-schedule-hr .schedule-column{padding:.85rem!important;margin:0!important;min-width:0;border:1px solid #efd5e0!important;border-radius:18px!important;background:linear-gradient(160deg,#fffdfd,#fff8fb)!important;box-shadow:0 7px 24px rgba(139,83,110,.07);}
+      .hr-schedule-page.hr-schedule-hr .schedule-column h2{font-size:.9rem!important;letter-spacing:.015em;color:#674657;line-height:1.4}
+      .hr-schedule-page.hr-schedule-hr .schedule-count{display:inline-flex;align-items:center;justify-content:center;min-width:29px;height:29px;padding:0 .45rem;border-radius:10px;background:#f7e4ed;color:#9e4e72;font-weight:800;font-size:.78rem;border:1px solid #edcada}
+      .hr-schedule-page.hr-schedule-hr button.schedule-person{width:100%;text-align:left;cursor:pointer;font:inherit;display:block}.hr-schedule-page.hr-schedule-hr .schedule-person{border:1px solid #efcddd!important;border-radius:13px!important;padding:.6rem!important;background:linear-gradient(125deg,#fff0f6 0%,#fff8fb 55%,#f4efff 100%)!important;color:#5a4751;font-size:.76rem;box-shadow:0 2px 7px rgba(120,75,96,.035);transition:transform .18s ease,box-shadow .18s ease}
+      .hr-schedule-page.hr-schedule-hr .schedule-person:focus-visible{outline:3px solid #b95f86;outline-offset:2px}.hr-schedule-page.hr-schedule-hr .schedule-person:hover{transform:translateY(-1px);box-shadow:0 6px 14px rgba(120,75,96,.08)}
+      .hr-schedule-page.hr-schedule-hr .schedule-person-name{display:flex;align-items:center;gap:.4rem;color:#70435a;font-size:.79rem;margin-bottom:.45rem}
+      .hr-schedule-page.hr-schedule-hr .schedule-chip{display:inline-flex;align-items:center;max-width:100%;border:1px solid #f0d9e4!important;border-radius:7px!important;padding:.2rem .42rem!important;background:linear-gradient(115deg,#fff8fb,#f8efff);color:#705c66;line-height:1.45;overflow-wrap:anywhere}
+      .hr-schedule-page.hr-schedule-hr .schedule-chip-label{color:#ad7891;font-weight:650}
+      .hr-schedule-page.hr-schedule-hr .schedule-meta{color:#9b7c8b;font-size:.78rem;margin:.2rem 0 .7rem}
+      .hr-schedule-page.hr-schedule-hr .schedule-refresh{border-radius:11px;background:#b95f86;color:white;border:1px solid #b95f86;padding:.58rem .9rem;box-shadow:0 5px 12px rgba(185,95,134,.17)}
+      .hr-schedule-page.hr-schedule-hr .schedule-refresh:hover{background:#a64e75}
       .hr-schedule-modal-backdrop{position:fixed;inset:0;z-index:1000;background:rgba(20,15,25,.58);backdrop-filter:blur(7px);display:grid;place-items:center;padding:1rem}.hr-schedule-modal{width:min(100%,560px);max-height:min(85vh,760px);overflow:auto;background:linear-gradient(145deg,#fffafd,#fff 60%,#f5efff);border:1px solid #e9c9d9;border-radius:22px;padding:1.1rem;box-shadow:0 24px 80px rgba(0,0,0,.25);color:#513d49}.hr-schedule-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;border-bottom:1px solid #efd8e3;padding-bottom:.8rem;margin-bottom:.75rem}.hr-schedule-modal h2{margin:0;color:#674257;font-size:1.2rem}.hr-schedule-modal-close{width:38px;height:38px;border:1px solid #e8cad8;border-radius:12px;background:#fff0f6;color:#8e4969;font-size:1.5rem;cursor:pointer}.hr-schedule-modal-lines{display:grid;gap:.55rem}.hr-schedule-modal-line{display:flex;flex-direction:column;gap:.25rem;padding:.7rem .75rem;border:1px solid #efd9e4;border-radius:12px;background:linear-gradient(110deg,#fff,#fff5fa 65%,#f5f0ff);overflow-wrap:anywhere}.hr-schedule-modal-line span{font-size:.72rem;font-weight:750;letter-spacing:.04em;text-transform:uppercase;color:#a06e86}.hr-schedule-modal-line strong{font-size:.95rem;color:#493746;white-space:pre-wrap;overflow-wrap:anywhere}[data-theme="dark"] .hr-schedule-modal{background:linear-gradient(145deg,#29212c,#211d2b);border-color:#65445c;color:#f5eaf0}[data-theme="dark"] .hr-schedule-modal h2{color:#f4d5e4}[data-theme="dark"] .hr-schedule-modal-line{background:linear-gradient(110deg,#342838,#2a2639);border-color:#594052}[data-theme="dark"] .hr-schedule-modal-line strong{color:#f8edf3}[data-theme="dark"] .hr-schedule-modal-line span{color:#d4a9c0}[data-theme="dark"] .hr-schedule-modal-close{background:#392a3b;color:#f4d5e4;border-color:#65445c}
-      [data-theme="dark"] .hr-schedule-page.hr-schedule-hr .schedule-hero{background:linear-gradient(120deg,#2a2028,#272334);border-color:#594052}
-      [data-theme="dark"] .hr-schedule-page .schedule-hero h1{color:#f8eaf1}
-      [data-theme="dark"] .hr-schedule-page .schedule-hero p{color:#d0b7c6}
-      [data-theme="dark"] .hr-schedule-page .schedule-tools{background:#211c24;border-color:#594052}
-      [data-theme="dark"] .hr-schedule-page .schedule-tools input,[data-theme="dark"] .hr-schedule-page .schedule-tools select{background:#2b2430;color:#f5eaf0;border-color:#594052}
-      [data-theme="dark"] .hr-schedule-page .schedule-column{background:linear-gradient(160deg,#29232c,#241f28)!important;border-color:#594052!important}
-      [data-theme="dark"] .hr-schedule-page .schedule-column h2,[data-theme="dark"] .hr-schedule-page .schedule-person-name{color:#f0cddd}
-      [data-theme="dark"] .hr-schedule-page .schedule-person{background:linear-gradient(125deg,#392b3b,#302638 60%,#25273a)!important;border-color:#65445c!important;color:#f2e5ec}
-      [data-theme="dark"] .hr-schedule-page .schedule-chip{background:linear-gradient(115deg,#3b2c3b,#30283d);color:#f1dce6;border-color:#624357!important}
-      @media(max-width:640px){.hr-schedule-page .schedule-hero{padding:1rem}.hr-schedule-page .schedule-hero:after{font-size:3rem;right:.7rem}.hr-schedule-page .schedule-grid{grid-template-columns:1fr}}
+      [data-theme="dark"] .hr-schedule-page.hr-schedule-hr.hr-schedule-hr .schedule-hero{background:linear-gradient(120deg,#2a2028,#272334);border-color:#594052}
+      [data-theme="dark"] .hr-schedule-page.hr-schedule-hr .schedule-hero h1{color:#f8eaf1}
+      [data-theme="dark"] .hr-schedule-page.hr-schedule-hr .schedule-hero p{color:#d0b7c6}
+      [data-theme="dark"] .hr-schedule-page.hr-schedule-hr .schedule-tools{background:#211c24;border-color:#594052}
+      [data-theme="dark"] .hr-schedule-page.hr-schedule-hr .schedule-tools input,[data-theme="dark"] .hr-schedule-page.hr-schedule-hr .schedule-tools select{background:#2b2430;color:#f5eaf0;border-color:#594052}
+      [data-theme="dark"] .hr-schedule-page.hr-schedule-hr .schedule-column{background:linear-gradient(160deg,#29232c,#241f28)!important;border-color:#594052!important}
+      [data-theme="dark"] .hr-schedule-page.hr-schedule-hr .schedule-column h2,[data-theme="dark"] .hr-schedule-page.hr-schedule-hr .schedule-person-name{color:#f0cddd}
+      [data-theme="dark"] .hr-schedule-page.hr-schedule-hr .schedule-person{background:linear-gradient(125deg,#392b3b,#302638 60%,#25273a)!important;border-color:#65445c!important;color:#f2e5ec}
+      [data-theme="dark"] .hr-schedule-page.hr-schedule-hr .schedule-chip{background:linear-gradient(115deg,#3b2c3b,#30283d);color:#f1dce6;border-color:#624357!important}
+
+      /* Owner and Editor schedule palette */
+      .hr-schedule-page:not(.hr-schedule-hr){color:var(--text)}
+      .hr-schedule-page:not(.hr-schedule-hr) .schedule-hero{background:linear-gradient(115deg,#f5f9ff 0%,#fff 52%,#eaf1fb 100%);border-color:#cbdcf2;box-shadow:0 12px 35px rgba(54,91,145,.09)}
+      .hr-schedule-page:not(.hr-schedule-hr) .schedule-kicker{color:#315f9b}
+      .hr-schedule-page:not(.hr-schedule-hr) .schedule-hero h1{color:#263d5c}
+      .hr-schedule-page:not(.hr-schedule-hr) .schedule-hero p{color:#71839d}
+      .hr-schedule-page:not(.hr-schedule-hr) .schedule-hero:after{content:'✦';color:#9bb9e4}
+      .hr-schedule-page:not(.hr-schedule-hr) .schedule-tools{background:rgba(247,250,255,.88);border-color:#cbdcf2}
+      .hr-schedule-page:not(.hr-schedule-hr) .schedule-tools input,.hr-schedule-page:not(.hr-schedule-hr) .schedule-tools select{border-color:#cbdcf2;color:#334a68}
+      .hr-schedule-page:not(.hr-schedule-hr) .schedule-column{border-color:#cbdcf2!important;background:linear-gradient(160deg,#fff,#f3f7fd)!important;box-shadow:0 7px 24px rgba(55,91,145,.08)}
+      .hr-schedule-page:not(.hr-schedule-hr) .schedule-column h2{color:#34547d}
+      .hr-schedule-page:not(.hr-schedule-hr) .schedule-count{background:#e8f0fb;color:#315f9b;border-color:#cbdcf2}
+      .hr-schedule-page:not(.hr-schedule-hr) .schedule-person{border-color:#cbdcf2!important;background:linear-gradient(125deg,#edf4ff,#f8faff 60%,#e9eff9)!important;color:#334a68}
+      .hr-schedule-page:not(.hr-schedule-hr) .schedule-person-name{color:#315f9b}
+      .hr-schedule-page:not(.hr-schedule-hr) .schedule-chip{border-color:#d5e2f3!important;background:linear-gradient(115deg,#f7faff,#eaf1fb);color:#536a89}
+      .hr-schedule-page:not(.hr-schedule-hr) .schedule-chip-label{color:#6d8db8}
+      .hr-schedule-page:not(.hr-schedule-hr) .schedule-refresh{background:#315f9b;border-color:#315f9b}
+      .hr-schedule-page:not(.hr-schedule-hr) .schedule-refresh:hover{background:#274e80}
+      [data-theme="dark"] .hr-schedule-page:not(.hr-schedule-hr) .schedule-hero{background:linear-gradient(120deg,#17263a,#1e293b);border-color:#344b69}
+      [data-theme="dark"] .hr-schedule-page:not(.hr-schedule-hr) .schedule-hero h1{color:#e7f0ff}
+      [data-theme="dark"] .hr-schedule-page:not(.hr-schedule-hr) .schedule-hero p{color:#a9bad1}
+      [data-theme="dark"] .hr-schedule-page:not(.hr-schedule-hr) .schedule-tools{background:#172235;border-color:#344b69}
+      [data-theme="dark"] .hr-schedule-page:not(.hr-schedule-hr) .schedule-tools input,[data-theme="dark"] .hr-schedule-page:not(.hr-schedule-hr) .schedule-tools select{background:#202f45;color:#e5efff;border-color:#405979}
+      [data-theme="dark"] .hr-schedule-page:not(.hr-schedule-hr) .schedule-column{background:linear-gradient(160deg,#1c2b40,#172437)!important;border-color:#344b69!important}
+      [data-theme="dark"] .hr-schedule-page:not(.hr-schedule-hr) .schedule-column h2,[data-theme="dark"] .hr-schedule-page:not(.hr-schedule-hr) .schedule-person-name{color:#c5dcff}
+      [data-theme="dark"] .hr-schedule-page:not(.hr-schedule-hr) .schedule-person{background:linear-gradient(125deg,#243a56,#1d3049 60%,#19283d)!important;border-color:#405979!important;color:#e2edff}
+      [data-theme="dark"] .hr-schedule-page:not(.hr-schedule-hr) .schedule-chip{background:linear-gradient(115deg,#263c58,#1e3049);color:#d9e7fa;border-color:#405979!important}
+      .hr-schedule-modal-blue{background:rgba(8,18,34,.68)}
+      .hr-schedule-modal-blue .hr-schedule-modal{background:linear-gradient(145deg,#f7faff,#fff 60%,#eaf1fb);border-color:#cbdcf2;color:#263d5c}
+      .hr-schedule-modal-blue .hr-schedule-modal h2{color:#315f9b}
+      .hr-schedule-modal-blue .hr-schedule-modal-line{background:linear-gradient(110deg,#fff,#f2f7ff 65%,#eaf1fb);border-color:#cbdcf2}
+      .hr-schedule-modal-blue .hr-schedule-modal-line strong{color:#263d5c}
+      .hr-schedule-modal-blue .hr-schedule-modal-line span{color:#6d8db8}
+      .hr-schedule-modal-blue .hr-schedule-modal-close{background:#edf4ff;color:#315f9b;border-color:#cbdcf2}
+      [data-theme="dark"] .hr-schedule-modal-blue .hr-schedule-modal{background:linear-gradient(145deg,#1c2b40,#172437);border-color:#344b69;color:#e5efff}
+      [data-theme="dark"] .hr-schedule-modal-blue .hr-schedule-modal h2{color:#c5dcff}
+      [data-theme="dark"] .hr-schedule-modal-blue .hr-schedule-modal-line{background:linear-gradient(110deg,#243a56,#1d3049);border-color:#405979}
+      [data-theme="dark"] .hr-schedule-modal-blue .hr-schedule-modal-line strong{color:#e2edff}
+      [data-theme="dark"] .hr-schedule-modal-blue .hr-schedule-modal-line span{color:#a9c5e8}
+      [data-theme="dark"] .hr-schedule-modal-blue .hr-schedule-modal-close{background:#243a56;color:#c5dcff;border-color:#405979}
+
+      @media(max-width:640px){.hr-schedule-page.hr-schedule-hr .schedule-hero{padding:1rem}.hr-schedule-page.hr-schedule-hr .schedule-hero:after{font-size:3rem;right:.7rem}.hr-schedule-page.hr-schedule-hr .schedule-grid{grid-template-columns:1fr}}
 
     `}
 </style>
@@ -137,6 +179,6 @@ export default function HrTeamSchedule() {
     </div>
     </div>
 
-    {selectedRow&&<div className="hr-schedule-modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setSelectedRow(null)}}><section className="hr-schedule-modal" role="dialog" aria-modal="true" aria-labelledby="hr-schedule-modal-title" onKeyDown={e=>{if(e.key==='Escape')setSelectedRow(null)}}><div className="hr-schedule-modal-head"><div><div className="schedule-kicker">Schedule details</div><h2 id="hr-schedule-modal-title">{selectedRow.section}</h2></div><button type="button" className="hr-schedule-modal-close" onClick={()=>setSelectedRow(null)} aria-label="Close schedule details">×</button></div><div className="hr-schedule-modal-lines">{selectedRow.cells.map((value,i)=>value.trim()?<div className="hr-schedule-modal-line" key={i}><span>{selectedRow.headers[i]||'Detail '+(i+1)}</span><strong>{value}</strong></div>:null)}</div></section></div>}
+    {selectedRow&&<div className={`hr-schedule-modal-backdrop${isHr ? ' hr-schedule-modal-hr' : ' hr-schedule-modal-blue'}`} onMouseDown={e=>{if(e.target===e.currentTarget)setSelectedRow(null)}}><section className="hr-schedule-modal" role="dialog" aria-modal="true" aria-labelledby="hr-schedule-modal-title" onKeyDown={e=>{if(e.key==='Escape')setSelectedRow(null)}}><div className="hr-schedule-modal-head"><div><div className="schedule-kicker">Schedule details</div><h2 id="hr-schedule-modal-title">{selectedRow.section}</h2></div><button type="button" className="hr-schedule-modal-close" onClick={()=>setSelectedRow(null)} aria-label="Close schedule details">×</button></div><div className="hr-schedule-modal-lines">{selectedRow.cells.map((value,i)=>value.trim()?<div className="hr-schedule-modal-line" key={i}><span>{selectedRow.headers[i]||'Detail '+(i+1)}</span><strong>{value}</strong></div>:null)}</div></section></div>}
   </>
 }
