@@ -196,7 +196,6 @@ function drawReceipt(doc: jsPDF, d: ARDraft) {
   doc.text('VAT Reg. TIN: 000-443-507-00000',35,91)
   doc.setFillColor(16,22,18); doc.roundedRect(20,111,212,42,20,20,'F')
   doc.setTextColor(255,255,255); doc.setFontSize(16); doc.text('OFFICIAL RECEIPT',126,138,{align:'center'})
-  doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); doc.setFontSize(24); doc.text('A',W-28,137,{align:'right'})
   const label=(s:string,x:number,y:number,size=11)=>{doc.setFont('helvetica','bold');doc.setFontSize(size);doc.text(s,x,y)}
   const line=(x:number,y:number,x2:number)=>doc.line(x,y,x2,y)
   const val=(s:string,x:number,y:number,max=400,size=10)=>{if(s){doc.setFont('helvetica','normal');doc.setFontSize(size);doc.text(s,x,y,{maxWidth:max})}}
@@ -204,7 +203,7 @@ function drawReceipt(doc: jsPDF, d: ARDraft) {
   label('RECEIVED from',20,240); line(116,242,688); val(d.subscriberName,120,239,550,9.5)
   label('with',698,240)
   label('Address/TIN',20,286); line(98,288,430); val([d.address,d.tin].filter(Boolean).join(' / '),102,284,325,8.5)
-  label('engaged in Business Style of',438,286,10); line(657,288,W-28); val(d.businessStyle,660,284,170,8.5)
+  label('engaged in Business Style of',438,286,10); line(657,288,W-28)
   label('the sum of',20,326); line(86,328,W-28); val(packageAmountWords(d.packageName) || d.amountWords || numberWords(d.amount),90,324,730,9.5)
   const packageNumericAmount = packageAmountWords(d.packageName) ? (d.packageName.match(/SKY\s*FIBER\s*([0-9,]+)|SKYFIBER\s*([0-9,]+)/i)?.[1] || d.packageName.match(/SKY\s*FIBER\s*([0-9,]+)|SKYFIBER\s*([0-9,]+)/i)?.[2] || '').replace(/,/g, '') : ''
   const receiptNumericAmount = d.amount || packageNumericAmount
