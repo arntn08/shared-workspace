@@ -107,7 +107,7 @@ function numberWords(value: string) {
 
 function drawReceipt(doc: jsPDF, d: ARDraft) {
   const W = 864, H = 576
-  doc.setPage(1); doc.setFillColor(255,255,255); doc.rect(0,0,W,H,'F')
+  doc.setFillColor(255,255,255); doc.rect(0,0,W,H,'F')
   doc.setFillColor(17,23,19); doc.rect(10,10,W-20,88,'F')
   doc.setTextColor(255,255,255); doc.setFont('helvetica','bolditalic'); doc.setFontSize(22); doc.text('SKY',34,48)
   doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.text('Cable Corporation',79,48)
