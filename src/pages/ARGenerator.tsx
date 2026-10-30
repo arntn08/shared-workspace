@@ -144,7 +144,7 @@ function extractJobOrder(text: string, fileName: string): Partial<ARDraft> {
     companyCode,
     paymentDescription: packageName || transactionType,
     businessStyle,
-    amount: findPattern(/(?:Amount\s*(?:Received|Paid)|Payment\\s*Amount|Cash\s*Received)\\s*[:：]?\\s*(?:PHP|₱)?\s*([0-9,]+(?:\.\d{1,2})?)/i).replace(/,/g, ''),
+    amount: findPattern(/(?:Amount\s*(?:Received|Paid)|Payment\s*Amount|Cash\s*Received)\s*[:：]?\s*(?:PHP|₱)?\s*([0-9,]+(?:\.\d{1,2})?)/i).replace(/,/g, ''),
     totalPayable: '',
     ocrText: text
   }
