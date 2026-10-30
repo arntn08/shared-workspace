@@ -104,6 +104,10 @@ export default function HrTeamSchedule() {
       [data-theme="dark"] .hr-schedule-page.hr-schedule-hr .schedule-person{background:linear-gradient(125deg,#392b3b,#302638 60%,#25273a)!important;border-color:#65445c!important;color:#f2e5ec}
       [data-theme="dark"] .hr-schedule-page.hr-schedule-hr .schedule-chip{background:linear-gradient(115deg,#3b2c3b,#30283d);color:#f1dce6;border-color:#624357!important}
 
+      /* Keep Owner, Editor, HR and AR Encoder schedule cards on the same compact grid */
+      .hr-schedule-page .schedule-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:1rem!important;align-items:start}
+      .hr-schedule-page .schedule-column{width:100%;min-width:0;max-width:100%;align-self:start}
+
       /* Owner and Editor schedule palette */
       .hr-schedule-page:not(.hr-schedule-hr){color:var(--text)}
       .hr-schedule-page:not(.hr-schedule-hr) .schedule-hero{background:linear-gradient(115deg,#f5f9ff 0%,#fff 52%,#eaf1fb 100%);border-color:#cbdcf2;box-shadow:0 12px 35px rgba(54,91,145,.09)}
