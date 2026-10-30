@@ -471,19 +471,6 @@ export default function ARGenerator() {
     </>:<section className="card"><div className="ar-batch-head"><div><h2>Recent AR records</h2><p>Latest 100 records available to your account.</p></div><button className="secondary" onClick={loadHistory}>Refresh</button></div>{saved.length?<div className="ar-history-wrap"><table><thead><tr><th>Date</th><th>Receipt No.</th><th>Job Order</th><th>Subscriber</th><th>Payment</th><th>Amount</th></tr></thead><tbody>{saved.map(row=><tr key={row.id}><td>{new Date(row.created_at).toLocaleDateString('en-PH')}</td><td>{row.receipt_no||'—'}</td><td>{row.jo_no||'—'}</td><td>{row.subscriber_name}</td><td>{row.payment_type}</td><td>₱{peso(String(row.amount))}</td></tr>)}</tbody></table></div>:<p className="muted">No AR records found yet.</p>}</section>}
   </div>
 }
-, 'i')
-      const match = line.match(re)
-      if (match) {
-        const inlineValue = clean(match[1])
-        if (inlineValue) return inlineValue
-        const nextLine = clean(lines[i + 1] || '')
-        // Do not mistake the next field's label for the current field's value.
-        return nextLine && !isAnotherLabel(nextLine) ? nextLine : ''
-      }
-    }
-  }
-  return ''
-}
 function extractJobOrder(text: string, fileName: string): Partial<ARDraft> {
   const find = (labels: string[]) => afterLabel(text, labels)
   const jo = find(['Job Order No', 'Job Order Number', 'JO No'])
