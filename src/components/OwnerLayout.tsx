@@ -62,7 +62,7 @@ export default function OwnerLayout() {
   const currentPage = links.find(([to]) => to === '/' ? location.pathname === '/' : location.pathname.startsWith(to))?.[1] ?? 'Workspace'
   const groups = ['Workspace', 'Operations', 'Management', 'Account']
 
-  return <div className="ops-shell">
+  return <div className="ops-shell role-theme-blue">
     <button className="ops-mobile-toggle" type="button" aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={mobileOpen} onClick={() => setMobileOpen(value => !value)}><span className="ops-toggle-lines">{mobileOpen ? '×' : '☰'}</span><span>{settings.title || 'AHBA Workspace'}</span></button>
     {mobileOpen && <button className="ops-mobile-scrim" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
     <aside className={`ops-sidebar${mobileOpen ? ' is-open' : ''}`}>
