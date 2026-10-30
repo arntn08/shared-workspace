@@ -265,6 +265,7 @@ export default function People() {
               <div className="actions">
                 <select className="small" value={p.role} onChange={(e) => changeRole(p, e.target.value)}>
                   <option value="employee">Employee</option>
+                  <option value="ar_encoder">AR Encoder (AR Generator only)</option>
                   <option value="hr">HR</option>
                   <option value="editor">Editor</option>
                 </select>
