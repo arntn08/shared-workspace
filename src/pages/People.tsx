@@ -144,9 +144,18 @@ export default function People() {
   }
 
   async function changeRole(p: Profile, r: string) {
-    const res = await call({ action: 'set_role', userId: p.id, role: r })
-    if (!res.ok) setMsg({ text: res.error ?? 'Could not change the role.', err: true })
-    load()
+    setMsg(null)
+    const { error } = await supabase.rpc('set_workspace_user_role', {
+      p_user_id: p.id,
+      p_role: r
+    })
+    if (error) {
+      setMsg({ text: error.message || 'Could not change the role.', err: true })
+      await load()
+      return
+    }
+    setMsg({ text: `Role updated: ${p.full_name || p.email} is now ${r.replace('_', ' ')}.`, err: false })
+    await load()
   }
 
   async function resetPw(p: Profile) {
