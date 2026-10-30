@@ -51,28 +51,36 @@ const blankDraft = (): ARDraft => ({
 
 const clean = (s: string) => s.replace(/\s+/g, ' ').trim()
 const JO_LABELS = [
-  'Job Order No', 'Job Order Number', 'JO No', 'Account No', 'Account Number',
+  'Job Order Number', 'Job Order No', 'JO No', 'Account Number', 'Account No',
   'Subscriber Name', 'Subscriber', 'Complete Address', 'Address',
-  'Package Name', 'Package', 'Transaction Type', 'Jo Date', 'JO Date',
-  'Job Order Date', 'Nap Code', 'Serial No', 'Serial Number',
-  'Division Code', 'Company Code'
+  'Package Name', 'Package', 'Transaction Type', 'Job Order Date', 'JO Date', 'Jo Date',
+  'NAP Code', 'Nap Code', 'Serial Number', 'Serial No', 'Division Code', 'Company Code'
 ]
 
 function afterLabel(text: string, labels: string[]) {
   const lines = text.split(/\r?\n/).map(clean).filter(Boolean)
-  const isAnotherLabel = (value: string) => JO_LABELS.some((label) =>
-    new RegExp('^' + label.replace(/[.*+?^${}()|[\]\\]/g, '\\function afterLabel(text: string, labels: string[]) {
-  const lines = text.split(/\r?\n/).map(clean).filter(Boolean)
+  const normalize = (value: string) => value.toLowerCase().replace(/[:：]\s*$/, '').trim()
+  const isLabel = (value: string) => JO_LABELS.some(label => {
+    const current = normalize(value)
+    const candidate = normalize(label)
+    return current === candidate || current.startsWith(candidate + ':')
+  })
+
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
+    const current = lines[i]
     for (const label of labels) {
-      const re = new RegExp('^' + label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*[:：]?\\s*(.*)$', 'i')
-      const match = line.match(re)
-      if (match) return clean(match[1]) || clean(lines[i + 1] || '')
+      const prefix = normalize(label)
+      const normalizedLine = normalize(current)
+      if (normalizedLine === prefix || normalizedLine.startsWith(prefix + ':')) {
+        const value = clean(current.slice(label.length).replace(/^\\s*[:：]?\\s*/, ''))
+        if (value) return value
+        const next = clean(lines[i + 1] || '')
+        return next && !isLabel(next) ? next : ''
+      }
     }
   }
   return ''
-}') + '\\s*[:：]?\\s*
+}
 function extractJobOrder(text: string, fileName: string): Partial<ARDraft> {
   const find = (labels: string[]) => afterLabel(text, labels)
   const jo = find(['Job Order No', 'Job Order Number', 'JO No'])
