@@ -59,11 +59,11 @@ const JO_LABELS = [
 
 function afterLabel(text: string, labels: string[]) {
   const lines = text.split(/\r?\n/).map(clean).filter(Boolean)
-  const normalize = (value: string) => value.toLowerCase().replace(/[:：]\s*$/, '').trim()
+  const normalize = (value: string) => value.toLowerCase().replace(/[:：.]\s*$/, '').trim()
   const isLabel = (value: string) => JO_LABELS.some(label => {
     const current = normalize(value)
     const candidate = normalize(label)
-    return current === candidate || current.startsWith(candidate + ':')
+    return current === candidate || current.startsWith(candidate + ' ') || current.startsWith(candidate + ':')
   })
 
   for (let i = 0; i < lines.length; i++) {
@@ -71,8 +71,8 @@ function afterLabel(text: string, labels: string[]) {
     for (const label of labels) {
       const prefix = normalize(label)
       const normalizedLine = normalize(current)
-      if (normalizedLine === prefix || normalizedLine.startsWith(prefix + ':')) {
-        const value = clean(current.slice(label.length).replace(/^\\s*[:：]?\\s*/, ''))
+      if (normalizedLine === prefix || normalizedLine.startsWith(prefix + ' ') || normalizedLine.startsWith(prefix + ':')) {
+        const value = clean(current.slice(label.length).replace(/^\s*[:：.]?\s*/, ''))
         if (value) return value
         const next = clean(lines[i + 1] || '')
         return next && !isLabel(next) ? next : ''
