@@ -1035,6 +1035,25 @@ export default function Tally() {
         </div>
       </div>
 
+      <section className="card" style={{marginBottom:'1rem',padding:'1rem'}}>
+        <div style={{display:'flex',justifyContent:'space-between',gap:'.75rem',alignItems:'center',flexWrap:'wrap'}}>
+          <div><h2 style={{margin:0,fontSize:'1.05rem'}}>Monthly team quota</h2><p className="muted" style={{margin:'.2rem 0 0'}}>Target: 50 installations per team · {month}</p></div>
+          <strong>{activeTeams.filter(team=>getMTD(team.id)>=50).length} / {activeTeams.length} teams at quota</strong>
+        </div>
+        <div style={{overflowX:'auto',marginTop:'.8rem'}}>
+          <table style={{width:'100%',borderCollapse:'collapse',fontSize:'.9rem'}}>
+            <thead><tr><th style={{textAlign:'left',padding:'.55rem'}}>Team</th><th style={{textAlign:'right',padding:'.55rem'}}>Team Total</th><th style={{textAlign:'right',padding:'.55rem'}}>Shortfall</th><th style={{textAlign:'left',padding:'.55rem'}}>Status</th></tr></thead>
+            <tbody>{activeTeams.map(team=>{const total=getMTD(team.id);const shortfall=Math.max(0,50-total);const critical=total<=20;const nte=total<=30;const below=total<50;return <tr key={team.id} style={{background:critical?'rgba(220,38,38,.16)':nte?'rgba(220,38,38,.10)':below?'rgba(217,119,6,.08)':'rgba(22,163,74,.07)',borderTop:'1px solid var(--border)'}}>
+              <th scope="row" style={{textAlign:'left',padding:'.65rem',fontWeight:800}}>{team.code} · {team.name}</th>
+              <td style={{textAlign:'right',padding:'.65rem',fontWeight:900,fontVariantNumeric:'tabular-nums'}}>{total}</td>
+              <td style={{textAlign:'right',padding:'.65rem',fontVariantNumeric:'tabular-nums'}}>{shortfall}</td>
+              <td style={{padding:'.65rem',fontWeight:800,color:critical?'#dc2626':nte?'#dc2626':below?'#b7791f':'#16834a'}}>{critical?'NTE + Disciplinary Action':nte?'Subject for NTE':below?'Below quota':'Quota'}</td>
+            </tr>})}</tbody>
+          </table>
+        </div>
+        <p className="muted" style={{fontSize:'.76rem',margin:'.65rem 0 0'}}>Red: 30 or fewer installations (shortfall 20+). 20 or fewer (shortfall 30+) receives the higher-priority NTE and disciplinary-action indicator. This is a monitoring flag, not an automatic sanction.</p>
+      </section>
+
       {error && <div className="notice error">{error}</div>}
       {message && <div className="notice">{message}</div>}
 
