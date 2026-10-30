@@ -91,12 +91,14 @@ function extractJobOrder(text: string, fileName: string): Partial<ARDraft> {
 
   // OCR sometimes drops a field label or merges it with a neighboring column.
   // Use conservative shape-based fallbacks for names and Philippine addresses.
-  const nameFallback = lines.find(line =>
-    /^[A-Z][A-Z .,'-]{5,}$/i.test(line) &&
-    line.includes(',') &&
-    !/^(TRANSACTION|PACKAGE|DIVISION|COMPANY|MAINLINE|REASSIGN|CREW)/i.test(line) &&
-    !/\b(?:APPLICATION|FIBER|SKY)\b/i.test(line)
-  ) || ''
+  const nameFallback =
+    text.match(/\b([A-Z][A-Z.'-]{2,},\s*[A-Z][A-Z .'-]{2,})\b/)?.[1] ||
+    lines.find(line =>
+      /^[A-Z][A-Z .,'-]{5,}$/i.test(line) &&
+      line.includes(',') &&
+      !/^(TRANSACTION|PACKAGE|DIVISION|COMPANY|MAINLINE|REASSIGN|CREW)/i.test(line) &&
+      !/\b(?:APPLICATION|FIBER|SKY)\b/i.test(line)
+    ) || ''
   const addressFallback = lines
     .filter(line => /\b(?:LOT|BLOCK|BLK|PUROK|PHASE|UNIT|ROOM|HOUSE|STREET|ST|BRGY|BARANGAY|QUEZON CITY|MANILA|CALOOCAN|PASIG|TAGUIG|MAKATI|MARIKINA|NAGKAISANG)\b/i.test(line))
     .sort((a,b) => b.length-a.length)[0] || ''
@@ -286,11 +288,12 @@ export default function ARGenerator() {
       {!drafts.length&&<div className="card ar-empty"><strong>No AR drafts yet</strong><p>Upload job-order screenshots or add an AR manually to begin.</p></div>}
       {drafts.map((d,index)=><section className="card ar-draft" key={d.id}>
         <div className="ar-draft-head"><div><span className="ar-draft-number">AR DRAFT {index+1}</span><h2>{d.subscriberName||'New subscriber'}</h2><p>{d.joNo||'No job order number'} {d.sourceName?' • '+d.sourceName:''}</p></div><span className={'ar-status '+d.status}>{d.status==='saved'?'Saved':'Needs review'}</span></div>
-        {d.sourcePreview&&<details className="ar-source-preview">
-          <summary>Preview uploaded screenshot</summary>
-          <div className="ar-source-preview-body"><img src={d.sourcePreview} alt="Uploaded job order screenshot preview" /><p>Compare this original image with the extracted fields below. You can keep the image open while correcting the draft.</p></div>
-        </details>}
-        <div className="ar-fields">
+        <div className="ar-draft-workspace">
+          {d.sourcePreview&&<details className="ar-source-preview" open>
+            <summary>Uploaded screenshot</summary>
+            <div className="ar-source-preview-body"><img src={d.sourcePreview} alt="Uploaded job order screenshot preview" /><p>Keep this source visible while reviewing and correcting the extracted details.</p></div>
+          </details>}
+          <div className="ar-fields">
           <Field label="Job Order No." value={d.joNo} onChange={v=>update(d.id,{joNo:v})}/>
           <Field label="JO Date" value={d.joDate} onChange={v=>update(d.id,{joDate:v})}/>
           <Field label="Subscriber Name" value={d.subscriberName} onChange={v=>update(d.id,{subscriberName:v})}/>
@@ -316,6 +319,7 @@ export default function ARGenerator() {
           <Field label="VAT Amount" value={d.vatAmount} onChange={v=>update(d.id,{vatAmount:v})}/>
           <Field label="VAT Exempt" value={d.vatExempt} onChange={v=>update(d.id,{vatExempt:v})}/>
           <Field label="Total Amount Payable" value={d.totalPayable} onChange={v=>update(d.id,{totalPayable:v})}/>
+          </div>
         </div>
         <div className="ar-template-note">Receipt output follows the supplied SKY AR layout. Verify VAT values, printed authorization details and current company-approved receipt format with Accounting before official use.</div>
         <div className="ar-draft-actions"><button className="secondary" onClick={()=>exportOne(d)}>Download this AR PDF</button><button onClick={()=>saveDraft(d)} disabled={d.status==='saved'}>{d.status==='saved'?'Saved to history':'Verify & save AR'}</button><button className="danger" onClick={()=>setDrafts(prev=>prev.filter(x=>x.id!==d.id))}>Remove</button></div>
