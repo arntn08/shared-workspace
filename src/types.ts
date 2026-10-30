@@ -9,6 +9,7 @@ export interface Profile {
   active: boolean
   teams?: string[] 
   created_at: string
+  ar_signature?: string | null
 }
 
 export interface FileRow {
