@@ -2022,3 +2022,98 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .ops-sidebar { transition: none; }
 }
+
+
+/* ===== Role-based workspace palettes ===== */
+/* HR + AR Encoder: pearl white, blush pink and soft lavender */
+.ops-shell.role-theme-hr {
+  --ops-bg: #fbf8fc;
+  --ops-panel: rgba(255,255,255,.94);
+  --ops-panel-soft: #f7f0fa;
+  --ops-text: #392d3d;
+  --ops-muted: #897b90;
+  --ops-border: #eaddec;
+  --ops-accent: #d77cae;
+  --ops-accent-soft: #f8e8f2;
+  --ops-shadow: 0 14px 36px rgba(145,91,139,.09);
+  background:
+    radial-gradient(900px 520px at 88% -12%, rgba(221,190,239,.42), transparent 62%),
+    radial-gradient(760px 500px at 0% 0%, rgba(255,205,226,.38), transparent 62%),
+    linear-gradient(135deg,#fffafd 0%,#fff 48%,#f8f3fc 100%);
+  color: var(--ops-text);
+}
+.ops-shell.role-theme-hr .ops-sidebar {
+  background: linear-gradient(180deg,rgba(255,255,255,.98),rgba(252,246,253,.96));
+  border-color: var(--ops-border);
+}
+.ops-shell.role-theme-hr .ops-brand-mark {
+  background: linear-gradient(145deg,#f3b7d2,#c69bdc);
+  box-shadow: 0 5px 15px rgba(202,132,180,.2);
+}
+.ops-shell.role-theme-hr .ops-topbar {
+  background: rgba(255,252,255,.86);
+  border-color: var(--ops-border);
+}
+.ops-shell.role-theme-hr .ops-page .card {
+  background: rgba(255,255,255,.88);
+  border-color: var(--ops-border);
+  box-shadow: var(--ops-shadow);
+}
+.ops-shell.role-theme-hr .ops-nav-link.active {
+  background: linear-gradient(110deg,#fbe5ef,#eee4f8);
+  border-color: #ebd4e9;
+  color: #a64e86;
+}
+.ops-shell.role-theme-hr .ops-help-card {
+  background: linear-gradient(120deg,#fff0f6,#f2eafa);
+  border-color: #ead9ed;
+}
+
+/* Owner + Editor: deep navy surfaces with clear blue accents */
+.ops-shell.role-theme-blue {
+  --ops-bg: #0b1220;
+  --ops-panel: #111c2e;
+  --ops-panel-soft: #17263d;
+  --ops-text: #e8f0ff;
+  --ops-muted: #9aacc7;
+  --ops-border: rgba(132,166,215,.18);
+  --ops-accent: #70aaff;
+  --ops-accent-soft: rgba(75,139,230,.16);
+  --ops-shadow: 0 16px 40px rgba(0,0,0,.24);
+  background:
+    radial-gradient(900px 520px at 90% -12%,rgba(45,105,190,.22),transparent 62%),
+    radial-gradient(760px 500px at 0% 0%,rgba(39,91,153,.16),transparent 62%),
+    #0b1220;
+  color: var(--ops-text);
+}
+.ops-shell.role-theme-blue .ops-sidebar {
+  background: linear-gradient(180deg,#111d30,#0e192a);
+  border-color: var(--ops-border);
+}
+.ops-shell.role-theme-blue .ops-brand-mark {
+  background: linear-gradient(145deg,#5d9ff4,#315eaa);
+  box-shadow: 0 5px 16px rgba(61,126,216,.24);
+}
+.ops-shell.role-theme-blue .ops-topbar {
+  background: rgba(13,24,41,.88);
+  border-color: var(--ops-border);
+}
+.ops-shell.role-theme-blue .ops-page .card {
+  background: linear-gradient(145deg,rgba(24,39,62,.96),rgba(16,29,48,.98));
+  border-color: var(--ops-border);
+  box-shadow: var(--ops-shadow);
+}
+.ops-shell.role-theme-blue .ops-nav-link.active {
+  background: linear-gradient(110deg,rgba(56,117,198,.25),rgba(93,143,214,.13));
+  border-color: rgba(112,170,255,.25);
+  color: #9bc5ff;
+}
+.ops-shell.role-theme-blue .ops-help-card {
+  background: linear-gradient(120deg,#172a45,#14243b);
+  border-color: var(--ops-border);
+}
+.ops-shell.role-theme-blue .ops-profile .icon-btn:hover,
+.ops-shell.role-theme-blue .ops-icon-button:hover {
+  background: var(--ops-accent-soft);
+  color: #9bc5ff;
+}
