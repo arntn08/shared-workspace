@@ -171,12 +171,17 @@ function numberWords(value: string) {
 }
 
 function packageAmountWords(packageName: string) {
-  const match = packageName.match(/(?:SKY\s*FIBER|SKYFIBER)\s*([0-9,]+(?:\.\d{1,2})?)/i)
-  if (!match) return ''
-  const words = numberWords(match[1].replace(/,/g, '')).replace(/ pesos(?: and .*?)? only$/i, '')
+  // The receipt's "the sum of" line reflects the package tier, not the
+  // cash received. Example: SKYFIBER 999 -> Nine-Hundred Ninety Nine.
+  const match = packageName.match(/SKY\s*FIBER\s*([0-9,]+)|SKYFIBER\s*([0-9,]+)/i)
+  const rawAmount = (match?.[1] || match?.[2] || '').replace(/,/g, '')
+  if (!rawAmount) return ''
+  const words = numberWords(rawAmount).replace(/ pesos(?: and .*?)? only$/i, '')
   if (!words) return ''
-  return words.split(' ').map((word, index) => index === 1 && word.toLowerCase() === 'hundred'
-    ? 'Hundred' : word.charAt(0).toUpperCase() + word.slice(1)).join(' ').replace(/Nine Hundred/i, 'Nine-Hundred')
+  return words.split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+    .replace(/\bNine Hundred\b/, 'Nine-Hundred')
 }
 
 function drawReceipt(doc: jsPDF, d: ARDraft) {
@@ -199,7 +204,7 @@ function drawReceipt(doc: jsPDF, d: ARDraft) {
   label('with',698,240)
   label('Address/TIN',20,286); line(98,288,430); val([d.address,d.tin].filter(Boolean).join(' / '),102,284,325,8.5)
   label('engaged in Business Style of',438,286,10); line(657,288,W-28); val(d.businessStyle,660,284,170,8.5)
-  label('the sum of',20,326); line(86,328,W-28); val(d.amountWords || packageAmountWords(d.packageName) || numberWords(d.amount),90,324,730,9.5)
+  label('the sum of',20,326); line(86,328,W-28); val(packageAmountWords(d.packageName) || d.amountWords || numberWords(d.amount),90,324,730,9.5)
   label('Pesos (P',20,367); line(74,369,384); val(d.amount ? peso(d.amount) : '',79,365,290)
   label(') as (' + (d.paymentType === 'OMA' ? 'OMA / One-Month-Advance' : d.paymentType) + ') payment of',391,367,10); line(610,369,W-28); val(d.paymentDescription || d.packageName,614,365,210,9)
   label('SA No.',20,405); line(75,407,340); val(d.saNo,80,403,255)
@@ -272,7 +277,7 @@ export default function ARGenerator() {
     if(!d.receiptNo.trim()){setError('Enter the official receipt number from the authorized company receipt sequence.');return}
     const {data:duplicate}=await supabase.from('ar_records').select('id').eq('jo_no',d.joNo).limit(1)
     if(duplicate?.length){setError('This Job Order No. already has an AR record. Check History before creating another.');return}
-    const payload={created_by:profile?.id,jo_no:d.joNo,jo_date:d.joDate||null,receipt_no:d.receiptNo,receipt_date:d.receiptDate,subscriber_name:d.subscriberName,address:d.address,account_no:d.accountNo,transaction_type:d.transactionType,package_name:d.packageName,payment_type:d.paymentType,amount,amount_words:d.amountWords||packageAmountWords(d.packageName)||numberWords(d.amount),payment_description:d.paymentDescription||d.packageName,sa_no:d.saNo,business_style:d.businessStyle,tin:d.tin,bank_check_no:d.bankCheckNo,vatable:d.vatable?Number(d.vatable):null,vat_amount:d.vatAmount?Number(d.vatAmount):null,vat_exempt:d.vatExempt?Number(d.vatExempt):null,total_payable:d.totalPayable?Number(d.totalPayable):amount,ocr_text:d.ocrText}
+    const payload={created_by:profile?.id,jo_no:d.joNo,jo_date:d.joDate||null,receipt_no:d.receiptNo,receipt_date:d.receiptDate,subscriber_name:d.subscriberName,address:d.address,account_no:d.accountNo,transaction_type:d.transactionType,package_name:d.packageName,payment_type:d.paymentType,amount,amount_words:packageAmountWords(d.packageName)||d.amountWords||numberWords(d.amount),payment_description:d.paymentDescription||d.packageName,sa_no:d.saNo,business_style:d.businessStyle,tin:d.tin,bank_check_no:d.bankCheckNo,vatable:d.vatable?Number(d.vatable):null,vat_amount:d.vatAmount?Number(d.vatAmount):null,vat_exempt:d.vatExempt?Number(d.vatExempt):null,total_payable:d.totalPayable?Number(d.totalPayable):amount,ocr_text:d.ocrText}
     const {error}=await supabase.from('ar_records').insert(payload)
     if(error){setError(error.message);return}
     update(d.id,{status:'saved'});await loadHistory()
