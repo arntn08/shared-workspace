@@ -49,7 +49,7 @@ const blankDraft = (): ARDraft => ({
   totalPayable: '', ocrText: '', status: 'draft'
 })
 
-const clean = (s: string) => s.replace(/\\s+/g, ' ').trim()
+const clean = (s: string) => s.replace(/\s+/g, ' ').trim()
 
 // Labels that can appear on the JO reassignment screen. Keeping this list
 // centralized prevents a blank field from consuming the next field's label.
@@ -61,7 +61,7 @@ const JO_LABELS = [
 ]
 
 function extractJobOrder(text: string, fileName: string): Partial<ARDraft> {
-  const lines = text.split(/\\r?\\n/).map(clean).filter(Boolean)
+  const lines = text.split(/\r?\n/).map(clean).filter(Boolean)
   const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
   const isLabel = (s: string) => {
     const value = normalize(s)
@@ -75,7 +75,7 @@ function extractJobOrder(text: string, fileName: string): Partial<ARDraft> {
       const normalized = normalize(line)
       const label = labels.find(candidate => normalized === normalize(candidate) || normalized.startsWith(normalize(candidate) + ' '))
       if (!label || !wanted.includes(normalize(label))) continue
-      const tail = clean(line.slice(line.toLowerCase().indexOf(label.toLowerCase()) + label.length).replace(/^\\s*[:：-]?\\s*/, ''))
+      const tail = clean(line.slice(line.toLowerCase().indexOf(label.toLowerCase()) + label.length).replace(/^\s*[:：-]?\s*/, ''))
       if (tail && normalize(tail) !== normalize(label)) return tail
       const next = lines[i + 1] || ''
       if (next && !isLabel(next)) return next
@@ -90,24 +90,24 @@ function extractJobOrder(text: string, fileName: string): Partial<ARDraft> {
 
   // Stable identifiers are safer to recognize by their visible format than
   // by OCR line order, especially when the form uses two columns.
-  const joNo = findPattern(/\\b(R\\d{6,})\\b/i) || byLabel(['Job Order No', 'Job Order Number', 'JO No'])
-  const accountNo = findPattern(/(?:Account\\s*(?:No\\.?|Number)\\s*[:：]?\\s*)(\\d{8,})/i) ||
-    findPattern(/\\b(\\d{10,14})\\b/) || byLabel(['Account No', 'Account Number'])
-  const joDate = findPattern(/\\b(20\\d{2}-\\d{2}-\\d{2})(?:T[0-9:.]+Z?)?/i) ||
+  const joNo = findPattern(/\b(R\d{6,})\b/i) || byLabel(['Job Order No', 'Job Order Number', 'JO No'])
+  const accountNo = findPattern(/(?:Account\s*(?:No\.?|Number)\s*[:：]?\s*)(\d{8,})/i) ||
+    findPattern(/\b(\d{10,14})\b/) || byLabel(['Account No', 'Account Number'])
+  const joDate = findPattern(/\b(20\d{2}-\d{2}-\d{2})(?:T[0-9:.]+Z?)?/i) ||
     byLabel(['JO Date', 'Job Order Date'])
-  const transactionType = /MAINLINE\\s+APPLICATION/i.test(text) ? 'MAINLINE APPLICATION' : byLabel(['Transaction Type'])
-  const subscriberName = findPattern(/(?:Subscriber\\s*Name\\s*[:：]?\\s*)([A-Z][A-Z ,.'-]{5,})/i) ||
+  const transactionType = /MAINLINE\s+APPLICATION/i.test(text) ? 'MAINLINE APPLICATION' : byLabel(['Transaction Type'])
+  const subscriberName = findPattern(/(?:Subscriber\s*Name\s*[:：]?\s*)([A-Z][A-Z ,.'-]{5,})/i) ||
     byLabel(['Subscriber Name'])
-  const packageName = findPattern(/\\b(SKY\\s+FIBER\\s+\\d+)\\b/i) || byLabel(['Package Name', 'Package'])
-  const divisionCode = findPattern(/(?:Division\\s*Code\\s*[:：]?\\s*)([A-Z0-9-]+)/i) ||
-    findPattern(/\\b(SKYNC)\\b/i) || byLabel(['Division Code'])
-  const companyCode = findPattern(/(?:Company\\s*Code\\s*[:：]?\\s*)([A-Z0-9-]+)/i) ||
-    findPattern(/\\b(COMCL)\\b/i) || byLabel(['Company Code'])
+  const packageName = findPattern(/\b(SKY\s+FIBER\s+\d+)\b/i) || byLabel(['Package Name', 'Package'])
+  const divisionCode = findPattern(/(?:Division\s*Code\s*[:：]?\s*)([A-Z0-9-]+)/i) ||
+    findPattern(/\b(SKYNC)\b/i) || byLabel(['Division Code'])
+  const companyCode = findPattern(/(?:Company\s*Code\s*[:：]?\s*)([A-Z0-9-]+)/i) ||
+    findPattern(/\b(COMCL)\b/i) || byLabel(['Company Code'])
 
-  const crewHeader = lines.findIndex(line => /REASSIGN\\s+JO\\s+TO\\s+CREW/i.test(line))
+  const crewHeader = lines.findIndex(line => /REASSIGN\s+JO\s+TO\s+CREW/i.test(line))
   const crewCandidate = crewHeader >= 0
     ? (lines.slice(crewHeader + 1).find(line => /[A-Z]{2,}.*-.*[A-Z0-9]+/i.test(line)) || '')
-    : (text.match(/\\b([A-Z][A-Z .'-]+\\s*-\\s*[A-Z]{1,4}\\d{2,})\\b/)?.[1] || '')
+    : (text.match(/\b([A-Z][A-Z .'-]+\s*-\s*[A-Z]{1,4}\d{2,})\b/)?.[1] || '')
   const businessStyle = crewCandidate ? 'CREW: ' + clean(crewCandidate) : ''
 
   // Do not infer NAP/serial from adjacent labels, and never infer money from
@@ -122,7 +122,7 @@ function extractJobOrder(text: string, fileName: string): Partial<ARDraft> {
     joNo,
     joDate,
     accountNo,
-    subscriberName: clean(subscriberName).replace(/^Subscriber\\s*Name\\s*/i, ''),
+    subscriberName: clean(subscriberName).replace(/^Subscriber\s*Name\s*/i, ''),
     address,
     packageName,
     napCode,
