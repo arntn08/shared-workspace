@@ -27,7 +27,7 @@ export default function HrLayout() {
   const navigate = useNavigate()
   const current = links.find(([to]) => to === '/' ? location.pathname === '/' : location.pathname.startsWith(to))?.[1] ?? 'HR portal'
 
-  return <div className="ops-shell employee-ops-shell">
+  return <div className="ops-shell employee-ops-shell role-theme-hr">
     <aside className="ops-sidebar">
       <div className="ops-brand"><div className="ops-brand-mark">A</div><div className="ops-brand-copy"><strong>AHBA</strong><span>{settings.title || 'Development Workspace'}</span></div></div>
       <div className="ops-workspace-label">HR PORTAL</div>
