@@ -147,30 +147,105 @@ export default function HrTeamSchedule() {
 
       @media(max-width:640px){.hr-schedule-page.hr-schedule-hr .schedule-hero{padding:1rem}.hr-schedule-page.hr-schedule-hr .schedule-hero:after{font-size:3rem;right:.7rem}.hr-schedule-page.hr-schedule-hr .schedule-grid{grid-template-columns:1fr}}
 
+      /* Refined schedule layout */
+      .hr-schedule-page .schedule-hero{display:flex;align-items:center;justify-content:space-between;gap:1.5rem;padding:1.65rem 1.8rem!important;border-radius:24px!important;margin-bottom:1rem!important;min-height:150px}
+      .hr-schedule-page .schedule-hero-copy{position:relative;z-index:1}
+      .hr-schedule-page .schedule-kicker{display:flex;align-items:center;gap:.5rem;font-size:.67rem!important;letter-spacing:.14em!important;margin-bottom:.65rem!important}
+      .hr-schedule-page .schedule-kicker-mark{font-size:1rem}
+      .hr-schedule-page .schedule-kicker-divider{opacity:.45}
+      .hr-schedule-page .schedule-hero h1{font-size:clamp(1.65rem,3vw,2.25rem)!important;line-height:1.08;letter-spacing:-.055em!important;margin-bottom:.5rem!important}
+      .hr-schedule-page .schedule-hero p{font-size:.91rem;line-height:1.55;margin:0!important;max-width:540px}
+      .hr-schedule-page .schedule-hero:after{font-size:6rem!important;right:8.5rem!important;top:1.1rem!important;opacity:.22!important}
+      .hr-schedule-page .schedule-refresh{position:relative;z-index:1;display:inline-flex;align-items:center;justify-content:center;gap:.55rem;white-space:nowrap;font-weight:750;font-size:.8rem;padding:.75rem 1rem!important;border-radius:13px!important;transition:transform .18s ease,box-shadow .18s ease}
+      .hr-schedule-page .schedule-refresh:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(50,90,145,.18)}
+      .hr-schedule-page .schedule-refresh:disabled{opacity:.72;cursor:wait}
+      .schedule-refresh-icon{font-size:1.1rem;line-height:1}
+      .schedule-refresh-icon.is-spinning{animation:schedule-spin .8s linear infinite}
+      @keyframes schedule-spin{to{transform:rotate(360deg)}}
+      .schedule-overview-strip{display:flex;align-items:center;gap:1.1rem;padding:.85rem 1.05rem;margin-bottom:.8rem;border:1px solid var(--line,rgba(130,145,170,.18));border-radius:17px;background:var(--card,rgba(255,255,255,.72));box-shadow:0 5px 18px rgba(30,50,80,.035)}
+      .schedule-stat{display:flex;align-items:center;gap:.7rem;min-width:132px}
+      .schedule-stat-icon{width:37px;height:37px;display:grid;place-items:center;border-radius:12px;font-size:1.1rem;background:rgba(120,150,190,.12);color:var(--accent,#5478a8)}
+      .schedule-stat div{display:grid;gap:.05rem}
+      .schedule-stat strong{font-size:1.12rem;line-height:1.1;color:var(--text);font-variant-numeric:tabular-nums}
+      .schedule-stat div span{font-size:.69rem;color:var(--muted);font-weight:600}
+      .schedule-stat-divider{width:1px;height:32px;background:var(--line,rgba(130,145,170,.2))}
+      .schedule-stat-note{margin-left:auto;font-size:.72rem;color:var(--muted)}
+      .schedule-stat-note span{padding:0 .3rem}
+      .hr-schedule-page .schedule-tools{display:flex;align-items:center;gap:.75rem;padding:.75rem!important;margin-bottom:1rem!important;border-radius:17px!important}
+      .schedule-search-wrap{position:relative;display:flex;align-items:center;flex:1 1 260px;min-width:180px}
+      .schedule-search-icon{position:absolute;left:.85rem;font-size:1.2rem;color:var(--muted);pointer-events:none}
+      .schedule-search-wrap input{width:100%;min-width:0;padding:.68rem 2.2rem .68rem 2.45rem;border:1px solid var(--line);border-radius:12px;outline:none;font:inherit;font-size:.79rem;min-height:42px}
+      .schedule-search-wrap input:focus{border-color:var(--accent,#7395c2);box-shadow:0 0 0 3px rgba(100,145,205,.12)}
+      .schedule-clear-search{position:absolute;right:.5rem;border:0;background:transparent;color:var(--muted);font-size:1.2rem;cursor:pointer}
+      .schedule-filter-group{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap}
+      .schedule-filter{display:grid;gap:.2rem;min-width:120px}
+      .schedule-filter>span{font-size:.61rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-left:.15rem}
+      .schedule-filter select{min-width:120px;max-width:210px;padding:.58rem 2rem .58rem .7rem;border:1px solid var(--line);border-radius:11px;font:inherit;font-size:.75rem;min-height:42px}
+      .hr-schedule-page .schedule-grid{gap:1rem!important}
+      .hr-schedule-page .schedule-column{padding:1rem!important;border-radius:19px!important}
+      .schedule-column-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:0 0 .8rem;margin-bottom:.8rem;border-bottom:1px solid var(--line,rgba(130,145,170,.18))}
+      .schedule-section-label{display:block;font-size:.58rem;font-weight:800;letter-spacing:.13em;color:var(--muted);margin-bottom:.25rem}
+      .schedule-column-head h2{font-size:.96rem!important;font-weight:800;letter-spacing:-.02em;margin:0!important}
+      .schedule-count{display:flex!important;flex-direction:column;align-items:center;justify-content:center;min-width:42px!important;height:42px!important;border-radius:13px!important;font-size:.95rem!important;line-height:1.05}
+      .schedule-count small{font-size:.52rem;font-weight:700;opacity:.75;margin-top:.18rem}
+      .schedule-people-list{display:grid;gap:.55rem}
+      .hr-schedule-page button.schedule-person{padding:.75rem!important;border-radius:14px!important;text-align:left}
+      .schedule-person-name{display:flex;align-items:center;gap:.6rem!important;min-width:0;margin-bottom:.55rem!important}
+      .schedule-person-avatar{display:grid;place-items:center;flex:0 0 31px;width:31px;height:31px;border-radius:10px;font-size:.72rem;font-weight:850;background:rgba(205,130,165,.14);color:var(--accent,#9e4e72)}
+      .schedule-person-name strong{min-width:0;flex:1;font-size:.8rem;line-height:1.35}
+      .schedule-person-open{font-size:.62rem;font-weight:700;opacity:.55;white-space:nowrap}
+      .hr-schedule-page .schedule-chip{font-size:.65rem;padding:.25rem .45rem!important;border-radius:8px!important}
+      .hr-schedule-page:not(.hr-schedule-hr) .schedule-person-avatar{background:#dce9fa;color:#315f9b}
+      [data-theme="dark"] .schedule-overview-strip{background:rgba(20,32,49,.82);border-color:rgba(130,160,200,.2)}
+      [data-theme="dark"] .schedule-search-wrap input,[data-theme="dark"] .schedule-filter select{background:#172437;color:#e5efff;border-color:#344b69}
+      [data-theme="dark"] .schedule-stat strong{color:#e5efff}
+      [data-theme="dark"] .hr-schedule-page.hr-schedule-hr .schedule-overview-strip{background:rgba(39,31,43,.88);border-color:#594052}
+      [data-theme="dark"] .hr-schedule-page.hr-schedule-hr .schedule-search-wrap input,[data-theme="dark"] .hr-schedule-page.hr-schedule-hr .schedule-filter select{background:#2b2430;color:#f5eaf0;border-color:#594052}
+      [data-theme="dark"] .hr-schedule-page.hr-schedule-hr .schedule-stat strong{color:#f5eaf0}
+      @media(max-width:760px){
+        .hr-schedule-page .schedule-hero{align-items:flex-start;padding:1.2rem!important;min-height:unset}
+        .hr-schedule-page .schedule-hero:after{right:.8rem!important;top:.3rem!important;font-size:4rem!important}
+        .hr-schedule-page .schedule-refresh{font-size:0;padding:.65rem!important;width:42px;height:42px;flex:0 0 42px}
+        .hr-schedule-page .schedule-refresh-icon{font-size:1.25rem}
+        .schedule-overview-strip{gap:.7rem;padding:.7rem}
+        .schedule-stat{min-width:0;gap:.45rem}
+        .schedule-stat-icon{width:31px;height:31px}
+        .schedule-stat strong{font-size:1rem}
+        .schedule-stat div span{font-size:.61rem}
+        .schedule-stat-note{display:none}
+        .hr-schedule-page .schedule-tools{align-items:stretch;flex-direction:column}
+        .schedule-search-wrap{flex:1 1 auto;width:100%}
+        .schedule-filter-group{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));width:100%}
+        .schedule-filter select{width:100%;max-width:none}
+      }
+      @media(max-width:420px){.schedule-overview-strip{gap:.5rem}.schedule-stat-divider{height:26px}.schedule-stat-icon{display:none}.schedule-stat{flex:1}}
+
     `}
 </style>
     <div className={`hr-schedule-page${isHr ? ' hr-schedule-hr' : ''}`}>
-    <div className="schedule-hero"><div className="schedule-kicker">♡ People • Planning • Progress</div><div className="page-head"><div><h1>Team schedules</h1><p className="muted" style={{margin:0}}>All shared team schedules in a compact calendar-style overview.</p></div><button className="schedule-refresh" onClick={()=>fileId&&void load(fileId,tab)}>↻ Refresh</button></div></div>
-    <div className="row schedule-tools" style={{gap:'.55rem',marginBottom:'.75rem',flexWrap:'wrap'}}>
-      {files.length>1&&<select aria-label="Schedule spreadsheet" value={fileId} onChange={e=>setFileId(e.target.value)} style={{flex:'1 1 220px'}}>{files.map(f=><option key={f.id} value={f.id}>{f.title}</option>)}</select>}
-      {tabs.length>1&&<select aria-label="Schedule tab" value={tab} onChange={e=>void load(fileId,e.target.value)} style={{flex:'1 1 160px'}}>{tabs.map(t=><option key={t} value={t}>{t}</option>)}</select>}
-      <select aria-label="Filter schedule date" value={dateFilter} onChange={e=>setDateFilter(e.target.value)} style={{flex:'1 1 150px'}}><option value="all">All dates</option>{dates.map(d=><option key={d} value={d}>{d}</option>)}</select>
-      <input aria-label="Search schedules" placeholder="Search team, employee, or date…" value={search} onChange={e=>setSearch(e.target.value)} style={{flex:'2 1 220px'}}/>
+    <div className="schedule-hero"><div className="schedule-hero-copy"><div className="schedule-kicker"><span className="schedule-kicker-mark">✦</span> PEOPLE OPERATIONS <span className="schedule-kicker-divider">/</span> PLANNING</div><h1>Team schedules</h1><p>One clear view of shared team plans, dates, and assignments.</p></div><button className="schedule-refresh" onClick={()=>fileId&&void load(fileId,tab)} disabled={busy}><span className={busy ? 'schedule-refresh-icon is-spinning' : 'schedule-refresh-icon'}>↻</span>{busy ? 'Refreshing' : 'Refresh schedule'}</button></div>
+    <div className="schedule-overview-strip"><div className="schedule-stat"><span className="schedule-stat-icon">▤</span><div><strong>{count}</strong><span>Schedule entries</span></div></div><div className="schedule-stat-divider"/><div className="schedule-stat"><span className="schedule-stat-icon">▦</span><div><strong>{visible.length}</strong><span>Visible sections</span></div></div><div className="schedule-stat-note">Shared team planning <span>•</span> Updated from workspace files</div></div>
+    <div className="schedule-tools">
+      <div className="schedule-search-wrap"><span className="schedule-search-icon">⌕</span><input aria-label="Search schedules" placeholder="Search people, teams, or dates…" value={search} onChange={e=>setSearch(e.target.value)}/>{search&&<button type="button" className="schedule-clear-search" onClick={()=>setSearch('')} aria-label="Clear search">×</button>}</div>
+      <div className="schedule-filter-group">
+        {files.length>1&&<label className="schedule-filter"><span>Spreadsheet</span><select aria-label="Schedule spreadsheet" value={fileId} onChange={e=>setFileId(e.target.value)}>{files.map(f=><option key={f.id} value={f.id}>{f.title}</option>)}</select></label>}
+        {tabs.length>1&&<label className="schedule-filter"><span>Sheet tab</span><select aria-label="Schedule tab" value={tab} onChange={e=>void load(fileId,e.target.value)}>{tabs.map(t=><option key={t} value={t}>{t}</option>)}</select></label>}
+        <label className="schedule-filter"><span>Date range</span><select aria-label="Filter schedule date" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}><option value="all">All dates</option>{dates.map(d=><option key={d} value={d}>{d}</option>)}</select></label>
+      </div>
     </div>
-    <div className="schedule-meta">♡ {count} schedule rows <span style={{padding:"0 .35rem"}}>·</span> {visible.length} date / team sections</div>
     {busy&&<p className="muted">Loading schedules…</p>}
     {error&&<p className="error">{error}</p>}
     {!busy&&!error&&!files.length&&<section className="card"><p className="muted">No shared schedule spreadsheets found. Ask the owner to share a Google Sheet from Files & resources.</p></section>}
     {!busy&&!error&&files.length>0&&!visible.length&&<p className="muted">No schedule rows match these filters.</p>}
     <div className="schedule-grid">
       {visible.map((section,si)=><section className="card schedule-column" key={section.title+'-'+si}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'.5rem',marginBottom:'.5rem'}}><h2 style={{fontSize:'.98rem',margin:0}}>{section.title}</h2><span className="schedule-count">{section.rows.length}</span></div>
-        <div style={{display:'grid',gap:'.35rem'}}>
+        <div className="schedule-column-head"><div><span className="schedule-section-label">SCHEDULE GROUP</span><h2>{section.title}</h2></div><span className="schedule-count">{section.rows.length}<small>items</small></span></div>
+        <div className="schedule-people-list">
           {section.rows.map((r,ri)=>{
             const cells=r.map((v,i)=>({v,i})).filter(x=>filled(x.v))
             const nameCell=cells.find(x=>/[a-z]/i.test(x.v)&&!NUM.test(x.v))
             return <button type="button" key={ri} className="schedule-person" onClick={()=>setSelectedRow({section:section.title,headers:section.headers,cells:r})} aria-label={`View schedule details for ${nameCell?.v || cells[0]?.v || 'schedule row'}`}>
-              <div className="schedule-person-name"><span>♡</span><strong style={{overflowWrap:"anywhere"}}>{nameCell?.v || cells[0]?.v || 'Schedule row'}</strong></div>
+              <div className="schedule-person-name"><span className="schedule-person-avatar">{(nameCell?.v || cells[0]?.v || 'S').trim().charAt(0).toUpperCase()}</span><strong>{nameCell?.v || cells[0]?.v || 'Schedule row'}</strong><span className="schedule-person-open">View details ↗</span></div>
               <div style={{display:'flex',gap:'.25rem',flexWrap:'wrap'}}>{cells.filter(x=>x!==nameCell).map(x=><span key={x.i} className="schedule-chip"><span className="schedule-chip-label">{section.headers[x.i] ? section.headers[x.i]+': ' : ''}</span>{x.v}</span>)}</div>
             </button>
           })}
