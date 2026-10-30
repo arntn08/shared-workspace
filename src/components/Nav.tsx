@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../lib/auth'
 import { applyPrefs, loadPrefs, savePrefs } from '../lib/prefs'
 import type { Prefs } from '../types'
@@ -45,6 +45,15 @@ export function Avatar({ name, email, large }: { name?: string | null; email?: s
 export function ThemeButton() {
   const { profile } = useAuth()
   const [dark, setDark] = useState(document.documentElement.dataset.theme !== 'light')
+
+  useEffect(() => {
+    let alive = true
+    if (!profile?.id) return
+    loadPrefs(profile.id).then(prefs => {
+      if (alive) setDark(prefs.theme === 'dark')
+    })
+    return () => { alive = false }
+  }, [profile?.id])
 
   async function toggle() {
     if (!profile) return
