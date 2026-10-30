@@ -196,6 +196,7 @@ function drawReceipt(doc: jsPDF, d: ARDraft) {
   doc.text('VAT Reg. TIN: 000-443-507-00000',35,91)
   doc.setFillColor(16,22,18); doc.roundedRect(20,111,212,42,20,20,'F')
   doc.setTextColor(255,255,255); doc.setFontSize(16); doc.text('OFFICIAL RECEIPT',126,138,{align:'center'})
+  doc.setTextColor(0,0,0); doc.setFont('helvetica','normal') // Reset body text to black; keep the A marker removed.
   const label=(s:string,x:number,y:number,size=11)=>{doc.setFont('helvetica','bold');doc.setFontSize(size);doc.text(s,x,y)}
   const line=(x:number,y:number,x2:number)=>doc.line(x,y,x2,y)
   const val=(s:string,x:number,y:number,max=400,size=10)=>{if(s){doc.setFont('helvetica','normal');doc.setFontSize(size);doc.text(s,x,y,{maxWidth:max})}}
