@@ -92,13 +92,13 @@ function extractJobOrder(text: string, fileName: string): Partial<ARDraft> {
   // OCR sometimes drops a field label or merges it with a neighboring column.
   // Use conservative shape-based fallbacks for names and Philippine addresses.
   const nameFallback = lines.find(line =>
-    /^[A-Z][A-Z .,'-]{5,}$/.test(line) &&
+    /^[A-Z][A-Z .,'-]{5,}$/i.test(line) &&
     line.includes(',') &&
     !/^(TRANSACTION|PACKAGE|DIVISION|COMPANY|MAINLINE|REASSIGN|CREW)/i.test(line) &&
-    !/\\b(?:APPLICATION|FIBER|SKY)\\b/i.test(line)
+    !/\b(?:APPLICATION|FIBER|SKY)\b/i.test(line)
   ) || ''
   const addressFallback = lines
-    .filter(line => /\\b(?:LOT|BLOCK|BLK|PUROK|PHASE|UNIT|ROOM|HOUSE|STREET|ST|BRGY|BARANGAY|QUEZON CITY|MANILA|CALOOCAN|PASIG|TAGUIG|MAKATI|MARIKINA|NAGKAISANG)\\b/i.test(line))
+    .filter(line => /\b(?:LOT|BLOCK|BLK|PUROK|PHASE|UNIT|ROOM|HOUSE|STREET|ST|BRGY|BARANGAY|QUEZON CITY|MANILA|CALOOCAN|PASIG|TAGUIG|MAKATI|MARIKINA|NAGKAISANG)\b/i.test(line))
     .sort((a,b) => b.length-a.length)[0] || ''
 
   // Stable identifiers are safer to recognize by their visible format than
@@ -110,7 +110,7 @@ function extractJobOrder(text: string, fileName: string): Partial<ARDraft> {
     byLabel(['JO Date', 'Job Order Date'])
   const transactionType = /MAINLINE\s+APPLICATION/i.test(text) ? 'MAINLINE APPLICATION' : byLabel(['Transaction Type'])
   const subscriberName = findPattern(/(?:Subscriber\s*Name\s*[:：]?\s*)([A-Z][A-Z ,.'-]{5,})/i) ||
-    byLabel(['Subscriber Name'])
+    byLabel(['Subscriber Name']) || nameFallback
   const packageName = findPattern(/\b(SKY\s+FIBER\s+\d+)\b/i) || byLabel(['Package Name', 'Package'])
   const divisionCode = findPattern(/(?:Division\s*Code\s*[:：]?\s*)([A-Z0-9-]+)/i) ||
     findPattern(/\b(SKYNC)\b/i) || byLabel(['Division Code'])
@@ -144,7 +144,7 @@ function extractJobOrder(text: string, fileName: string): Partial<ARDraft> {
     companyCode,
     paymentDescription: packageName || transactionType,
     businessStyle,
-    amount: '',
+    amount: findPattern(/(?:Amount\\s*(?:Received|Paid)|Payment\\s*Amount|Cash\\s*Received)\\s*[:：]?\\s*(?:PHP|₱)?\\s*([0-9,]+(?:\\.\\d{1,2})?)/i).replace(/,/g, ''),
     totalPayable: '',
     ocrText: text
   }
