@@ -9,7 +9,7 @@ export default function ProjectCoordinatorLayout() {
   const [settings] = useSettings()
   const navigate = useNavigate()
 
-  return <div className="ops-shell employee-ops-shell role-theme-hr">
+  return <div className="ops-shell employee-ops-shell role-theme-coordinator">
     <aside className="ops-sidebar">
       <div className="ops-brand"><div className="ops-brand-mark">A</div><div className="ops-brand-copy"><strong>AHBA</strong><span>{settings.title || 'Development Workspace'}</span></div></div>
       <div className="ops-workspace-label">PROJECT OPERATIONS</div>
