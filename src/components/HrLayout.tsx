@@ -9,12 +9,14 @@ import EmployeeFiles from '../pages/EmployeeFiles'
 import FileViewer from '../pages/FileViewer'
 import Tally from '../pages/Tally'
 import ARGenerator from '../pages/ARGenerator'
+import LeaveRequests from '../pages/LeaveRequests'
 
 const links = [
   ['/','HR overview','home'],
   ['/schedule','Team schedules','schedule'],
   ['/ar','AR Generator','receipt'],
   ['/ntes','Notices to Explain','file-text'],
+  ['/leave','Leave requests','calendar'],
   ['/tally','Installation Tally','tally'],
   ['/files','Files & resources','files'],
   ['/settings','Settings','settings']
@@ -47,6 +49,7 @@ export default function HrLayout() {
           <Route path="/schedule" element={<HrTeamSchedule/>}/>
           <Route path="/ar" element={<ARGenerator/>}/>
           <Route path="/ntes" element={<HrNtes/>}/>
+          <Route path="/leave" element={<LeaveRequests/>}/>
           <Route path="/tally" element={<Tally/>}/>
           <Route path="/files" element={<EmployeeFiles settings={settings} />}/>
           <Route path="/file/:id" element={<FileViewer/>}/>
