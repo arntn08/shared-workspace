@@ -40,7 +40,7 @@ export default function Files() {
   async function load() {
     const [f, p, a, t] = await Promise.all([
       supabase.from('files').select('*').order('created_at', { ascending: false }),
-      supabase.from('profiles').select('*').in('role', ['employee', 'hr']).eq('active', true).order('email'),
+      supabase.from('profiles').select('*').in('role', ['employee', 'hr', 'ar_encoder']).eq('active', true).order('email'),
       supabase.from('assignments').select('file_id,user_id').limit(10000),
       supabase.from('teams').select('name').order('sort').order('name')
     ])
