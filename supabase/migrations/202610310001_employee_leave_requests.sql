@@ -55,6 +55,12 @@ with check (
   and reviewed_at is not null
 );
 
+
+drop policy if exists "Employees remove own pending leave request" on public.employee_leave_requests;
+create policy "Employees remove own pending leave request"
+on public.employee_leave_requests for delete to authenticated
+using (employee_id = (select auth.uid()) and status = 'pending');
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('leave-attachments','leave-attachments',false,10485760,array['application/pdf','image/jpeg','image/png','image/webp'])
 on conflict (id) do update set public=false,file_size_limit=10485760,allowed_mime_types=array['application/pdf','image/jpeg','image/png','image/webp'];
