@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth'
 type Leader = { user_id: string; team_leader_name: string; district: string; team_code: string }
 type Proposal = { id: string; team_leader_id: string; activity_type: string; proposed_date: string | null; end_date: string | null; barangay: string | null; streets: string | null; location: string | null; details: string; remarks: string | null; status: string; coordinator_note: string | null; created_at: string }
 type Booth = { id: string; team_leader_id: string; booth_location: string; barangay: string | null; deployment_start: string | null; deployment_end: string | null; remarks: string | null; status: string; coordinator_note: string | null }
+type CalendarAssignment = { id: string; team_leader_id: string; scheduled_date: string; assignment_details: string; source_sheet: string }
 type Schedule = { id: string; team_leader_id: string; activity_type: string; scheduled_date: string; end_date: string | null; barangay: string | null; streets: string | null; location: string | null; details: string; remarks: string | null }
 
 export default function ProjectActivities({ coordinator = false }: { coordinator?: boolean }) {
@@ -14,6 +15,8 @@ export default function ProjectActivities({ coordinator = false }: { coordinator
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [booths, setBooths] = useState<Booth[]>([])
   const [schedule, setSchedule] = useState<Schedule[]>([])
+  const [calendarAssignments, setCalendarAssignments] = useState<CalendarAssignment[]>([])
+  const [calendarMonth, setCalendarMonth] = useState('2026-10')
   const [tab, setTab] = useState<'overview'|'proposals'|'booths'|'calendar'>('overview')
   const [kind, setKind] = useState('Saturation')
   const [date, setDate] = useState('')
@@ -34,23 +37,25 @@ export default function ProjectActivities({ coordinator = false }: { coordinator
   async function load() {
     if (!profile) return
     if (coordinator) {
-      const [l,p,b,s] = await Promise.all([
+      const [l,p,b,s,cal] = await Promise.all([
         supabase.from('sales_team_leaders').select('*').eq('active',true).order('district'),
         supabase.from('sales_activity_proposals').select('*').order('created_at',{ascending:false}),
         supabase.from('sales_booth_deployments').select('*').order('created_at',{ascending:false}),
-        supabase.from('sales_activity_schedule').select('*').order('scheduled_date')
+        supabase.from('sales_activity_schedule').select('*').order('scheduled_date'),
+        supabase.from('sales_calendar_assignments').select('*').order('scheduled_date')
       ])
-      if (l.error || p.error || b.error || s.error) { setMessage([l.error,p.error,b.error,s.error].find(Boolean)?.message || 'Unable to load module. Apply the SQL migration first.'); return }
-      setLeaders(l.data || []); setProposals(p.data || []); setBooths(b.data || []); setSchedule(s.data || [])
+      if (l.error || p.error || b.error || s.error || cal.error) { setMessage([l.error,p.error,b.error,s.error,cal.error].find(Boolean)?.message || 'Unable to load module. Apply the SQL migration first.'); return }
+      setLeaders(l.data || []); setProposals(p.data || []); setBooths(b.data || []); setSchedule(s.data || []); setCalendarAssignments(cal.data || [])
     } else {
-      const [l,p,b,s] = await Promise.all([
+      const [l,p,b,s,cal] = await Promise.all([
         supabase.from('sales_team_leaders').select('*').eq('user_id',profile.id).eq('active',true).maybeSingle(),
         supabase.from('sales_activity_proposals').select('*').order('created_at',{ascending:false}),
         supabase.from('sales_booth_deployments').select('*').order('created_at',{ascending:false}),
-        supabase.from('sales_activity_schedule').select('*').order('scheduled_date')
+        supabase.from('sales_activity_schedule').select('*').order('scheduled_date'),
+        supabase.from('sales_calendar_assignments').select('*').order('scheduled_date')
       ])
-      if (l.error || p.error || b.error || s.error) { setMessage([l.error,p.error,b.error,s.error].find(Boolean)?.message || 'Unable to load module.'); return }
-      setLeader(l.data); setProposals(p.data || []); setBooths(b.data || []); setSchedule(s.data || [])
+      if (l.error || p.error || b.error || s.error || cal.error) { setMessage([l.error,p.error,b.error,s.error,cal.error].find(Boolean)?.message || 'Unable to load module.'); return }
+      setLeader(l.data); setProposals(p.data || []); setBooths(b.data || []); setSchedule(s.data || []); setCalendarAssignments(cal.data || [])
     }
   }
   useEffect(() => { void load() }, [profile?.id, coordinator])
@@ -86,6 +91,10 @@ export default function ProjectActivities({ coordinator = false }: { coordinator
   }
   const pending = proposals.filter(p=>p.status==='pending').length + booths.filter(b=>b.status==='pending').length
   const title = coordinator ? 'Project Coordinator' : 'Team Leader Portal'
+  const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+  const todayAssignments = calendarAssignments.filter(a => a.scheduled_date === todayKey)
+  const monthAssignments = calendarAssignments.filter(a => a.scheduled_date.startsWith(calendarMonth))
+  const monthLabel = new Date(calendarMonth + '-01T00:00:00').toLocaleDateString('en-PH',{month:'long',year:'numeric'})
   return <div className="project-activities-page">
     <style>{`
       .project-activities-page{display:grid;gap:1rem;color:var(--text)}
@@ -109,19 +118,22 @@ export default function ProjectActivities({ coordinator = false }: { coordinator
       .pa-form textarea{min-height:90px;resize:vertical}
       .pa-full{grid-column:1/-1}
       .pa-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+      .pa-today-grid{display:grid;gap:.7rem}.pa-today-row{display:grid;grid-template-columns:minmax(130px,.7fr) minmax(0,2fr);gap:.8rem;padding:.9rem;border:1px solid var(--border);border-radius:13px;background:var(--surface)}.pa-today-row strong{color:var(--text)}.pa-today-row pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:inherit;color:var(--muted);font-size:.88rem}.pa-month-head{display:flex;align-items:center;justify-content:space-between;gap:.7rem;flex-wrap:wrap}.pa-month-head input{padding:.55rem;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text)}
       .pa-note{padding:.75rem 1rem;border-radius:12px;background:rgba(25,145,95,.09);border:1px solid rgba(25,145,95,.2)}
       @media(max-width:620px){.pa-form{grid-template-columns:1fr}.pa-full{grid-column:auto}}
     `}</style>
-    <header className="pa-hero"><span style={{fontSize:'.7rem',fontWeight:800,letterSpacing:'.14em',color:'#16865b'}}>AHBA DEVELOPMENT · FIELD OPERATIONS</span><h1>{title}</h1><p>{coordinator ? 'Manage team proposals, publish approved plans, and coordinate booth deployments.' : (leader ? leader.team_leader_name+' · District '+leader.district : 'Your dedicated sales team workspace')}</p></header>
+    <header className="pa-hero"><span style={{fontSize:'.7rem',fontWeight:800,letterSpacing:'.14em',color:'#16865b'}}>AHBA DEVELOPMENT · FIELD OPERATIONS</span><h1>{title}</h1><p>{coordinator ? 'Today’s field assignments, monthly saturation plans, team proposals, and booth deployments.' : (leader ? leader.team_leader_name+' · District '+leader.district : 'Your dedicated sales team workspace')}</p></header>
     {message && <div className="pa-note">{message}</div>}
     <nav className="pa-tabs">{(['overview','proposals','booths','calendar'] as const).map(t=><button key={t} className={tab===t?'active':''} onClick={()=>setTab(t)}>{t==='overview'?'Overview':t==='proposals'?'Activity proposals':t==='booths'?'Booth proposals':'Approved calendar'}</button>)}</nav>
     {tab==='overview' && <><div className="pa-grid"><div className="pa-card"><strong>{proposals.length}</strong><span>Activity proposals</span></div><div className="pa-card"><strong>{booths.length}</strong><span>Booth proposals</span></div><div className="pa-card"><strong>{pending}</strong><span>Awaiting review</span></div><div className="pa-card"><strong>{schedule.length}</strong><span>Approved activities</span></div></div>
       {!coordinator && <div className="pa-grid"><section className="pa-card"><h3>Propose an activity</h3><form className="pa-form" onSubmit={submitProposal}><label>Activity type<select value={kind} onChange={e=>setKind(e.target.value)}>{['Saturation','Event','Other'].map(x=><option key={x}>{x}</option>)}</select></label><label>Proposed date<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><label>End date (optional)<input type="date" value={endDate} onChange={e=>setEndDate(e.target.value)}/></label><label>Barangay<input value={barangay} onChange={e=>setBarangay(e.target.value)}/></label><label className="pa-full">Streets / coverage<input value={streets} onChange={e=>setStreets(e.target.value)}/></label><label className="pa-full">Activity details<textarea value={details} onChange={e=>setDetails(e.target.value)} required/></label><label className="pa-full">Remarks<textarea value={remarks} onChange={e=>setRemarks(e.target.value)}/></label><div className="pa-full"><button className="pa-btn primary" disabled={busy}>{busy?'Submitting…':'Submit activity proposal'}</button></div></form></section>
       <section className="pa-card"><h3>Propose a booth deployment</h3><form className="pa-form" onSubmit={submitBooth}><label className="pa-full">Booth location<input value={boothLocation} onChange={e=>setBoothLocation(e.target.value)} required/></label><label>Barangay<input value={boothBarangay} onChange={e=>setBoothBarangay(e.target.value)}/></label><label>Start date<input type="date" value={boothStart} onChange={e=>setBoothStart(e.target.value)}/></label><label>End date<input type="date" value={boothEnd} onChange={e=>setBoothEnd(e.target.value)}/></label><label className="pa-full">Remarks<textarea value={boothRemarks} onChange={e=>setBoothRemarks(e.target.value)}/></label><div className="pa-full"><button className="pa-btn primary" disabled={busy}>{busy?'Submitting…':'Submit booth proposal'}</button></div></form></section></div>}
+      {coordinator && <section className="pa-card"><div className="pa-item-head"><h3>Today's sales calendar</h3><span className="pa-status">{new Date(todayKey+'T00:00:00').toLocaleDateString('en-PH',{weekday:'long',month:'short',day:'numeric'})}</span></div>{todayAssignments.length ? <div className="pa-today-grid">{todayAssignments.map(a=><div className="pa-today-row" key={a.id}><strong>{leaders.find(l=>l.user_id===a.team_leader_id)?.team_leader_name || 'Team leader'}<small style={{display:'block',color:'var(--muted)'}}>{leaders.find(l=>l.user_id===a.team_leader_id)?.district || ''}</small></strong><pre>{a.assignment_details}</pre></div>)}</div> : <p>No spreadsheet assignments recorded for today.</p>}</section>}
       {coordinator && <section className="pa-card"><h3>Sales teams</h3><div className="pa-list">{leaders.map(l=><div key={l.user_id} className="pa-item"><div className="pa-item-head"><strong>{l.team_leader_name}</strong><span className="pa-status">{l.district} · {l.team_code}</span></div></div>)}</div></section>}
     </>}
     {tab==='proposals' && <div className="pa-list">{proposals.map(p=><article className="pa-item" key={p.id}><div className="pa-item-head"><strong>{coordinator ? leaders.find(l=>l.user_id===p.team_leader_id)?.team_leader_name||'Team leader' : 'Your team'} · {p.activity_type}</strong><span className="pa-status">{p.status.replace('_',' ')}</span></div><div>{p.details}</div><div style={{color:'var(--muted)',fontSize:'.85rem'}}>{p.proposed_date||'Date not set'} {p.end_date?'– '+p.end_date:''} · {p.barangay||'No barangay'} · {p.streets||'No street details'}</div>{p.coordinator_note&&<p>Coordinator: {p.coordinator_note}</p>}{coordinator&&p.status==='pending'&&<div className="pa-actions"><button className="pa-btn primary" onClick={()=>void reviewProposal(p,'approved')}>Approve & publish</button><button className="pa-btn" onClick={()=>void reviewProposal(p,'changes_requested')}>Request changes</button><button className="pa-btn" onClick={()=>void reviewProposal(p,'rejected')}>Reject</button></div>}</article>)}{!proposals.length&&<p>No proposals yet.</p>}</div>}
     {tab==='booths' && <div className="pa-list">{booths.map(b=><article className="pa-item" key={b.id}><div className="pa-item-head"><strong>{coordinator?leaders.find(l=>l.user_id===b.team_leader_id)?.team_leader_name||'Team leader':'Your team'} · {b.booth_location}</strong><span className="pa-status">{b.status}</span></div><div>{b.barangay||'Barangay not specified'} · {b.deployment_start||'Date TBD'} {b.deployment_end?'– '+b.deployment_end:''}</div>{b.remarks&&<p>{b.remarks}</p>}{b.coordinator_note&&<p>Coordinator: {b.coordinator_note}</p>}{coordinator&&b.status==='pending'&&<div className="pa-actions"><button className="pa-btn primary" onClick={()=>void reviewBooth(b,'approved')}>Approve</button><button className="pa-btn" onClick={()=>void reviewBooth(b,'changes_requested')}>Request changes</button><button className="pa-btn" onClick={()=>void reviewBooth(b,'rejected')}>Reject</button></div>}</article>)}{!booths.length&&<p>No booth proposals yet.</p>}</div>}
-    {tab==='calendar' && <div className="pa-list">{schedule.map(s=><article className="pa-item" key={s.id}><div className="pa-item-head"><strong>{coordinator?leaders.find(l=>l.user_id===s.team_leader_id)?.team_leader_name||'Team leader':'Your team'} · {s.activity_type}</strong><span className="pa-status">{s.scheduled_date}</span></div><div>{s.details}</div><div style={{color:'var(--muted)',fontSize:'.85rem'}}>{s.barangay||''} · {s.streets||''} · {s.location||''}</div></article>)}{!schedule.length&&<p>No approved activities yet.</p>}</div>}
+    {tab==='calendar' && coordinator && <section className="pa-card"><div className="pa-month-head"><div><h3>Monthly saturation calendar</h3><p style={{color:'var(--muted)',margin:0}}>Imported from SALES CALENDAR SATURATION 2026.xlsx</p></div><input aria-label="Calendar month" type="month" value={calendarMonth} onChange={e=>setCalendarMonth(e.target.value)}/></div><h2 style={{margin:'1rem 0',color:'var(--text)'}}>{monthLabel}</h2><div className="pa-list">{monthAssignments.map(a=><article className="pa-item" key={a.id}><div className="pa-item-head"><strong>{new Date(a.scheduled_date+'T00:00:00').toLocaleDateString('en-PH',{weekday:'short',month:'short',day:'numeric'})} · {leaders.find(l=>l.user_id===a.team_leader_id)?.team_leader_name || 'Team leader'}</strong><span className="pa-status">{leaders.find(l=>l.user_id===a.team_leader_id)?.district || 'Assigned'}</span></div><pre style={{whiteSpace:'pre-wrap',font:'inherit',color:'var(--muted)',margin:0}}>{a.assignment_details}</pre></article>)}{!monthAssignments.length&&<p>No spreadsheet assignments for this month.</p>}</div></section>}
+    {tab==='calendar' && !coordinator && <div className="pa-list">{schedule.map(s=><article className="pa-item" key={s.id}><div className="pa-item-head"><strong>{coordinator?leaders.find(l=>l.user_id===s.team_leader_id)?.team_leader_name||'Team leader':'Your team'} · {s.activity_type}</strong><span className="pa-status">{s.scheduled_date}</span></div><div>{s.details}</div><div style={{color:'var(--muted)',fontSize:'.85rem'}}>{s.barangay||''} · {s.streets||''} · {s.location||''}</div></article>)}{!schedule.length&&<p>No approved activities yet.</p>}</div>}
   </div>
 }
