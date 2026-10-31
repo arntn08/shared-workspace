@@ -55,11 +55,11 @@ export default function ProjectActivities({ coordinator = false }: { coordinator
       workbook.SheetNames.forEach(name => {
         const ws=workbook.Sheets[name]; const rows=XLSX.utils.sheet_to_json<any[]>(ws,{header:1,defval:null,raw:true})
         if (/^SATURATION/i.test(name)) {
-          for(let r=1;r<rows.length;r++){ const row=rows[r]; const leaderName=clean(row[0]).replace(/\\s+-\\s+D\\d+$/i,'').toLowerCase(); const leaderId=leaderByName.get(leaderName); if(!leaderId) continue; for(let col=1;col<(rows[0]||[]).length;col++){ const assignment=clean(row[col]); const scheduled_date=dateKey(rows[0][col]); if(assignment&&scheduled_date)saturationRows.push({team_leader_id:leaderId,scheduled_date,assignment_details:assignment,source_sheet:name}) } }
+          for(let r=1;r<rows.length;r++){ const row=rows[r]; const leaderName=clean(row[0]).replace(/\s+-\s+D\d+$/i,'').toLowerCase(); const leaderId=leaderByName.get(leaderName); if(!leaderId) continue; for(let col=1;col<(rows[0]||[]).length;col++){ const assignment=clean(row[col]); const scheduled_date=dateKey(rows[0][col]); if(assignment&&scheduled_date)saturationRows.push({team_leader_id:leaderId,scheduled_date,assignment_details:assignment,source_sheet:name}) } }
         } else if (/^Booth$/i.test(name)) {
           for(let r=1;r<rows.length;r++){ const row=rows[r]||[]; if(row.some((v:any)=>clean(v))) boothRows.push({team_leader:clean(row[0]),booth_location:clean(row[1]),barangay:clean(row[2]),deployment_date:clean(row[3]),remarks:clean(row[4])}) }
         } else if (/^Area$/i.test(name)) {
-          (rows[0]||[]).forEach((h:any,col:number)=>{ const header=clean(h); if(!header)return; const match=header.match(/^(.*?)\\s*\\/\\s*(D\\d+)\\s*$/i); const area=match?.[1]?.trim()||header; const district=match?.[2]?.toUpperCase()||''; const tl=clean(rows[2]?.[col]); for(let r=3;r<rows.length;r++){ const street=clean(rows[r]?.[col]); if(street)areaRows.push({area_district:area,district,team_leader_reference:tl,street_name:street}) } })
+          (rows[0]||[]).forEach((h:any,col:number)=>{ const header=clean(h); if(!header)return; const match=header.match(/^(.*?)\s*\/\s*(D\d+)\s*$/i); const area=match?.[1]?.trim()||header; const district=match?.[2]?.toUpperCase()||''; const tl=clean(rows[2]?.[col]); for(let r=3;r<rows.length;r++){ const street=clean(rows[r]?.[col]); if(street)areaRows.push({area_district:area,district,team_leader_reference:tl,street_name:street}) } })
         }
       })
       if(!saturationRows.length&&!boothRows.length&&!areaRows.length) throw new Error('No recognized workbook records found. Expected SATURATION, Booth and Area worksheets.')
