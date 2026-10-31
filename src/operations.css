@@ -2163,3 +2163,46 @@ body {
   background: var(--ops-accent-soft);
   color: #315f9b;
 }
+
+
+/* AHBA Project Coordinator — dedicated Green + Blue theme */
+.ops-shell.role-theme-coordinator{--ops-bg:#edf7f8;--ops-panel:#fff;--ops-panel-soft:#e7f4f5;--ops-text:#12384e;--ops-muted:#668397;--ops-border:rgba(34,105,130,.18);--ops-accent:#0aa879;--ops-accent-soft:rgba(10,168,121,.12);--ops-shadow:0 14px 36px rgba(12,77,103,.10);background:radial-gradient(900px 520px at 92% -10%,rgba(51,157,224,.22),transparent 62%),radial-gradient(760px 500px at 0% 0%,rgba(37,190,139,.18),transparent 62%),linear-gradient(135deg,#f3fbfa,#e8f3fb);color:var(--ops-text)}
+.ops-shell.role-theme-coordinator .ops-sidebar{background:linear-gradient(180deg,#073b4b,#082e45 58%,#064b52);border-color:rgba(112,213,202,.22);color:#e9fbff}
+.ops-shell.role-theme-coordinator .ops-brand-mark{color:#fff;background:linear-gradient(145deg,#20d39a,#168bd0);box-shadow:0 6px 20px rgba(22,184,158,.28)}
+.ops-shell.role-theme-coordinator .ops-brand-copy strong,.ops-shell.role-theme-coordinator .ops-brand-copy span,.ops-shell.role-theme-coordinator .ops-workspace-label,.ops-shell.role-theme-coordinator .ops-nav-heading,.ops-shell.role-theme-coordinator .ops-nav-link,.ops-shell.role-theme-coordinator .ops-profile-copy strong,.ops-shell.role-theme-coordinator .ops-profile-copy span{color:#e5f8ff}
+.ops-shell.role-theme-coordinator .ops-nav-link:hover,.ops-shell.role-theme-coordinator .ops-nav-link.active{color:#fff;background:linear-gradient(105deg,rgba(19,194,137,.30),rgba(30,151,220,.25));border-color:rgba(94,224,207,.35);box-shadow:inset 3px 0 #25d69a,0 8px 24px rgba(0,0,0,.12)}
+.ops-shell.role-theme-coordinator .ops-topbar{background:rgba(244,251,253,.88);border-color:var(--ops-border);color:#153b54}
+.ops-shell.role-theme-coordinator .ops-help-card{background:linear-gradient(120deg,rgba(18,177,129,.22),rgba(28,143,204,.22));border-color:rgba(108,219,209,.24);color:#efffff}
+.ops-shell.role-theme-coordinator .ops-help-card strong,.ops-shell.role-theme-coordinator .ops-help-card span,.ops-shell.role-theme-coordinator .ops-icon-button{color:#efffff}
+.ops-shell.role-theme-coordinator .ops-role-pill{color:#087c70;background:#d9f7ee;border-color:#b4eadb}
+.ops-shell.role-theme-coordinator .project-activities-page{color:#14384e;gap:1.15rem}
+.ops-shell.role-theme-coordinator .pa-hero{padding:clamp(1.4rem,3vw,2.3rem);border:1px solid rgba(56,164,174,.24);border-radius:24px;background:radial-gradient(500px 180px at 92% 20%,rgba(66,177,236,.24),transparent 70%),linear-gradient(112deg,rgba(12,153,111,.16),rgba(20,130,190,.14) 72%,rgba(255,255,255,.55));box-shadow:0 14px 34px rgba(23,111,137,.09)}
+.ops-shell.role-theme-coordinator .pa-hero h1{color:#103c56;font-size:clamp(1.8rem,3.4vw,2.65rem);letter-spacing:-.045em}
+.ops-shell.role-theme-coordinator .pa-hero p{color:#52778b;font-size:1rem}
+.ops-shell.role-theme-coordinator .pa-tabs{gap:.65rem}
+.ops-shell.role-theme-coordinator .pa-tabs button,.ops-shell.role-theme-coordinator .pa-btn{border:1px solid #c9e1e8;border-radius:13px;padding:.75rem 1rem;background:rgba(255,255,255,.86);color:#1d526c;font-weight:650;box-shadow:0 4px 14px rgba(25,92,117,.05);transition:transform .18s ease,box-shadow .18s ease}
+.ops-shell.role-theme-coordinator .pa-tabs button:hover,.ops-shell.role-theme-coordinator .pa-btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(25,92,117,.12)}
+.ops-shell.role-theme-coordinator .pa-tabs button.active,.ops-shell.role-theme-coordinator .pa-btn.primary{color:#fff;border-color:transparent;background:linear-gradient(110deg,#0aa977,#087fb5);box-shadow:0 8px 20px rgba(8,143,133,.2)}
+.ops-shell.role-theme-coordinator .pa-card{border:1px solid rgba(64,143,169,.2);border-radius:18px;padding:1.15rem;background:linear-gradient(145deg,#fff,#eaf5f8);box-shadow:0 10px 26px rgba(16,91,119,.08)}
+.ops-shell.role-theme-coordinator .pa-grid>.pa-card{min-height:94px;border-top:3px solid #13b77e}
+.ops-shell.role-theme-coordinator .pa-grid>.pa-card:nth-child(2){border-top-color:#198ed0}.ops-shell.role-theme-coordinator .pa-grid>.pa-card:nth-child(3){border-top-color:#12b8bd}.ops-shell.role-theme-coordinator .pa-grid>.pa-card:nth-child(4){border-top-color:#637ce0}
+.ops-shell.role-theme-coordinator .pa-card strong{color:#123d57;font-size:1.8rem}.ops-shell.role-theme-coordinator .pa-card span{color:#668397}.ops-shell.role-theme-coordinator .pa-card h3{color:#16445d}
+.ops-shell.role-theme-coordinator .pa-item{border:1px solid #cfe3e9;border-radius:15px;background:linear-gradient(110deg,#fff,#f0f8fa);box-shadow:0 5px 16px rgba(15,85,110,.05);transition:border-color .18s ease,transform .18s ease}
+.ops-shell.role-theme-coordinator .pa-item:hover{border-color:#76cdbb;transform:translateY(-1px)}
+.ops-shell.role-theme-coordinator .pa-item-head strong{color:#173f57}
+.ops-shell.role-theme-coordinator .pa-status{color:#087d75;background:#ddf7ee;border:1px solid #c1ecdf;border-radius:999px;padding:.28rem .65rem}
+.ops-shell.role-theme-coordinator .pa-note{color:#12614f;background:#e2f8ef;border:1px solid #bcebd8}
+.ops-shell.role-theme-coordinator .pa-form input,.ops-shell.role-theme-coordinator .pa-form select,.ops-shell.role-theme-coordinator .pa-form textarea{color:#163e55;background:#fff;border-color:#c8e0e7}
+.ops-shell.role-theme-coordinator .pa-form input:focus,.ops-shell.role-theme-coordinator .pa-form select:focus,.ops-shell.role-theme-coordinator .pa-form textarea:focus{outline:3px solid rgba(14,169,139,.14);border-color:#16a98e}
+[data-theme="dark"] .ops-shell.role-theme-coordinator{--ops-bg:#071d2b;--ops-panel:#0d2b3d;--ops-panel-soft:#12384b;--ops-text:#e7f7ff;--ops-muted:#9ab9c8;--ops-border:rgba(115,190,209,.2);--ops-accent:#28d3a0;background:radial-gradient(900px 520px at 92% -10%,rgba(23,119,184,.24),transparent 62%),radial-gradient(760px 500px at 0% 0%,rgba(13,154,113,.18),transparent 62%),#071d2b;color:#e7f7ff}
+[data-theme="dark"] .ops-shell.role-theme-coordinator .ops-topbar{background:rgba(7,29,43,.9);color:#e7f7ff}
+[data-theme="dark"] .ops-shell.role-theme-coordinator .project-activities-page{color:#e7f7ff}
+[data-theme="dark"] .ops-shell.role-theme-coordinator .pa-hero{background:linear-gradient(112deg,rgba(7,129,91,.45),rgba(12,91,148,.5));border-color:rgba(65,191,181,.25)}
+[data-theme="dark"] .ops-shell.role-theme-coordinator .pa-hero h1,[data-theme="dark"] .ops-shell.role-theme-coordinator .pa-card h3,[data-theme="dark"] .ops-shell.role-theme-coordinator .pa-item-head strong{color:#e8f8ff}
+[data-theme="dark"] .ops-shell.role-theme-coordinator .pa-hero p,[data-theme="dark"] .ops-shell.role-theme-coordinator .pa-card span{color:#a9c5d2}
+[data-theme="dark"] .ops-shell.role-theme-coordinator .pa-tabs button,[data-theme="dark"] .ops-shell.role-theme-coordinator .pa-btn{color:#dff6ff;background:#10354a;border-color:#28556a}
+[data-theme="dark"] .ops-shell.role-theme-coordinator .pa-tabs button.active,[data-theme="dark"] .ops-shell.role-theme-coordinator .pa-btn.primary{background:linear-gradient(110deg,#0aa977,#087fb5);color:#fff}
+[data-theme="dark"] .ops-shell.role-theme-coordinator .pa-card,[data-theme="dark"] .ops-shell.role-theme-coordinator .pa-item{background:linear-gradient(145deg,#10364a,#0c2b3d);border-color:#28566b}
+[data-theme="dark"] .ops-shell.role-theme-coordinator .pa-card strong{color:#e7f7ff}
+[data-theme="dark"] .ops-shell.role-theme-coordinator .pa-form input,[data-theme="dark"] .ops-shell.role-theme-coordinator .pa-form select,[data-theme="dark"] .ops-shell.role-theme-coordinator .pa-form textarea{color:#e7f7ff;background:#092536;border-color:#315b6d}
+@media(max-width:760px){.ops-shell.role-theme-coordinator .pa-hero{border-radius:18px;padding:1.15rem}.ops-shell.role-theme-coordinator .pa-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.ops-shell.role-theme-coordinator .pa-tabs button{min-width:0;font-size:.84rem;padding:.7rem .55rem}}
