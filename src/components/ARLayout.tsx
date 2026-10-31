@@ -4,8 +4,9 @@ import { useSettings } from '../lib/settings'
 import { Avatar, Icon, ThemeButton } from './Nav'
 import ARGenerator from '../pages/ARGenerator'
 import Tally from '../pages/Tally'
+import HrTeamSchedule from '../pages/HrTeamSchedule'
 
-const links = [['/','AR Generator','receipt'],['/tally','Installation Tally','tally']] as const
+const links = [['/','AR Generator','receipt'],['/tally','Installation Tally','tally'],['/schedule','Team schedules','schedule']] as const
 
 export default function ARLayout() {
   const { profile, signOut } = useAuth()
@@ -25,7 +26,7 @@ export default function ARLayout() {
       </div>
     </aside>
     <main className="ops-main"><header className="ops-topbar"><div className="ops-breadcrumb"><span>AHBA WORKSPACE</span><span className="ops-breadcrumb-divider">/</span><strong>{current}</strong></div><div className="ops-topbar-right"><span className="ops-status-dot"/><span className="ops-status-label">Workspace connected</span><span className="ops-role-pill">AR Encoder</span></div></header>
-      <div className="ops-page employee-ops-page"><Routes><Route path="/" element={<ARGenerator/>}/><Route path="/tally" element={<Tally/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes><footer className="emp-footer"><span>AHBA Development</span><span>Shared Workspace · AR Portal</span></footer></div>
+      <div className="ops-page employee-ops-page"><Routes><Route path="/" element={<ARGenerator/>}/><Route path="/tally" element={<Tally/>}/><Route path="/schedule" element={<HrTeamSchedule/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes><footer className="emp-footer"><span>AHBA Development</span><span>Shared Workspace · AR Portal</span></footer></div>
     </main>
   </div>
 }
