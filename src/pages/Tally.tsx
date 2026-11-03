@@ -544,7 +544,7 @@ export default function Tally() {
           .upsert(importPreview.workOrders.map(row => ({
             ...row,
             imported_by: profile?.id ?? null
-          })), { onConflict: 'wo_id', ignoreDuplicates: true })
+          })), { onConflict: 'wo_id' })
         if (recordsError) throw recordsError
       }
 
