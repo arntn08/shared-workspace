@@ -151,6 +151,18 @@ export default function HrTeamSchedule() {
 
       @media(max-width:640px){.hr-schedule-page.hr-schedule-hr .schedule-hero{padding:1rem}.hr-schedule-page.hr-schedule-hr .schedule-hero:after{font-size:3rem;right:.7rem}.hr-schedule-page.hr-schedule-hr .schedule-grid{grid-template-columns:1fr}}
 
+
+      /* Prevent long spreadsheet values from colliding inside schedule cards */
+      .hr-schedule-page .schedule-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));align-items:start}
+      .hr-schedule-page .schedule-column{min-width:0;overflow:hidden}
+      .hr-schedule-page .schedule-people-list{min-width:0}
+      .hr-schedule-page button.schedule-person{box-sizing:border-box!important;display:grid!important;grid-template-columns:minmax(0,1fr);gap:.65rem!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;white-space:normal!important;overflow-wrap:anywhere!important}
+      .hr-schedule-page .schedule-person-name{display:flex!important;align-items:center!important;gap:.55rem!important;width:100%;min-width:0;margin:0!important}
+      .hr-schedule-page .schedule-person-name strong{display:block;flex:1 1 auto;min-width:0;max-width:100%;white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word;line-height:1.35}
+      .hr-schedule-page .schedule-person-open{flex:0 0 auto;margin-left:auto}
+      .hr-schedule-page .schedule-person-fields{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));gap:.35rem!important;min-width:0;width:100%}
+      .hr-schedule-page .schedule-chip{display:block!important;box-sizing:border-box;min-width:0;max-width:100%;white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word;line-height:1.4!important}
+      .hr-schedule-page .schedule-chip-label{overflow-wrap:anywhere;word-break:break-word}
       /* Refined schedule layout */
       .hr-schedule-page .schedule-hero{display:flex;align-items:center;justify-content:space-between;gap:1.5rem;padding:1.65rem 1.8rem!important;border-radius:24px!important;margin-bottom:1rem!important;min-height:150px}
       .hr-schedule-page .schedule-hero-copy{position:relative;z-index:1}
@@ -250,7 +262,7 @@ export default function HrTeamSchedule() {
             const nameCell=cells.find(x=>/[a-z]/i.test(x.v)&&!NUM.test(x.v))
             return <button type="button" key={ri} className="schedule-person" onClick={()=>setSelectedRow({section:section.title,headers:section.headers,cells:r})} aria-label={`View schedule details for ${nameCell?.v || cells[0]?.v || 'schedule row'}`}>
               <div className="schedule-person-name"><span className="schedule-person-avatar">{(nameCell?.v || cells[0]?.v || 'S').trim().charAt(0).toUpperCase()}</span><strong>{nameCell?.v || cells[0]?.v || 'Schedule row'}</strong><span className="schedule-person-open">View details ↗</span></div>
-              <div style={{display:'flex',gap:'.25rem',flexWrap:'wrap'}}>{cells.filter(x=>x!==nameCell).map(x=><span key={x.i} className="schedule-chip"><span className="schedule-chip-label">{section.headers[x.i] ? section.headers[x.i]+': ' : ''}</span>{x.v}</span>)}</div>
+              <div className="schedule-person-fields">{cells.filter(x=>x!==nameCell).map(x=><span key={x.i} className="schedule-chip"><span className="schedule-chip-label">{section.headers[x.i] ? section.headers[x.i]+': ' : ''}</span>{x.v}</span>)}</div>
             </button>
           })}
         </div>
