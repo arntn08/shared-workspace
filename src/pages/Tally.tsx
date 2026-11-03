@@ -72,6 +72,26 @@ const getMonthDates = (month: string) => {
 
 const dailyKey = (teamId: string, date: string) => `${teamId}|${date}`
 
+type ImportedWorkOrderRow = { work_date: string; team_id: string | null; department_id: string | null; status: string; wo_id: string }
+
+async function fetchImportedWorkOrders(start: string, end: string): Promise<ImportedWorkOrderRow[]> {
+  const pageSize = 1000
+  const allRows: ImportedWorkOrderRow[] = []
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase
+      .from('installation_imported_work_orders')
+      .select('work_date,team_id,department_id,status,wo_id')
+      .gte('work_date', start)
+      .lte('work_date', end)
+      .order('wo_id')
+      .range(offset, offset + pageSize - 1)
+    if (error) throw error
+    const page = (data ?? []) as ImportedWorkOrderRow[]
+    allRows.push(...page)
+    if (page.length < pageSize) return allRows
+  }
+}
+
 const formatDate = (date: Date) => {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -227,21 +247,17 @@ export default function Tally() {
       })
 
       setDailyCounts(nextDaily)
-      const loadResult = await supabase
-        .from('installation_imported_work_orders')
-        .select('work_date,team_id,department_id,status,wo_id')
-        .gte('work_date', monthStart)
-        .lte('work_date', monthEnd)
-      if (loadResult.error) {
+      try {
+        setImportedLoads(await fetchImportedWorkOrders(monthStart, monthEnd))
+        setLoadBreakdownError('')
+      } catch (loadError) {
+        const message = loadError instanceof Error ? loadError.message : 'Unknown database error'
         setImportedLoads([])
         setLoadBreakdownError(
-          loadResult.error.code === '42P01' || loadResult.error.code === 'PGRST205'
+          message.includes('installation_imported_work_orders')
             ? 'The imported-work-orders table is not available yet. Run the supplied Supabase SQL, then refresh.'
-            : `Could not load imported status totals: ${loadResult.error.message}`
+            : `Could not load imported status totals: ${message}`
         )
-      } else {
-        setImportedLoads((loadResult.data ?? []) as Array<{work_date:string; team_id:string|null; department_id:string|null; status:string; wo_id:string}>)
-        setLoadBreakdownError('')
       }
 
     } catch (err) {
@@ -265,14 +281,11 @@ export default function Tally() {
       const [year, monthNumber] = month.split('-').map(Number)
       const start = `${month}-01`
       const end = `${month}-${String(new Date(year, monthNumber, 0).getDate()).padStart(2, '0')}`
-      const result = await supabase
-        .from('installation_imported_work_orders')
-        .select('work_date,team_id,department_id,status,wo_id')
-        .gte('work_date', start)
-        .lte('work_date', end)
-      if (!result.error) {
-        setImportedLoads((result.data ?? []) as Array<{work_date:string; team_id:string|null; department_id:string|null; status:string; wo_id:string}>)
+      try {
+        setImportedLoads(await fetchImportedWorkOrders(start, end))
         setLoadBreakdownError('')
+      } catch (loadError) {
+        setLoadBreakdownError(loadError instanceof Error ? loadError.message : 'Could not refresh imported status totals.')
       }
     }
     const timer = window.setInterval(() => { void refreshImportedLoads() }, 30000)
