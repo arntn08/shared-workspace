@@ -286,8 +286,15 @@ export default function Tally() {
     // new month's view of that same calendar week. This reveals any dates
     // at the start of the month (for example, Sunday, Nov 1, 2026).
     const entersNextMonth = offset > 0 && nextMonth !== month && dates.includes(monthEnd)
-    const targetWeekStart = entersNextMonth ? weekStart : adjacentWeekStart
-    const targetMonth = entersNextMonth ? nextMonth : adjacentWeekStart.slice(0, 7)
+    const returnsToPreviousMonth = offset < 0 && adjacentWeekStart.slice(0, 7) !== month &&
+      weekStart < monthStart && dates.includes(monthStart)
+    const keepBoundaryWeek = entersNextMonth || returnsToPreviousMonth
+    const targetWeekStart = keepBoundaryWeek ? weekStart : adjacentWeekStart
+    const targetMonth = entersNextMonth
+      ? nextMonth
+      : returnsToPreviousMonth
+        ? weekStart.slice(0, 7)
+        : adjacentWeekStart.slice(0, 7)
     const targetMonthFirstWeek = getWeekStart(`${targetMonth}-01`)
     const targetOffset = Math.round(
       (new Date(`${targetWeekStart}T12:00:00`).getTime() -
