@@ -110,7 +110,16 @@ export default function Tally() {
   const [teams, setTeams] = useState<Team[]>([])
   const [departmentId, setDepartmentId] = useState('')
   const [month, setMonth] = useState(getCurrentMonth)
-  const [weekOffset, setWeekOffset] = useState(0)
+  const [weekOffset, setWeekOffset] = useState(() => {
+    const initialMonth = getCurrentMonth()
+    const firstWeekStart = getWeekStart(`${initialMonth}-01`)
+    const currentWeekStart = getWeekStart(formatDate(new Date()))
+    return Math.round(
+      (new Date(`${currentWeekStart}T12:00:00`).getTime() -
+        new Date(`${firstWeekStart}T12:00:00`).getTime()) /
+        (7 * 24 * 60 * 60 * 1000)
+    )
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -135,9 +144,11 @@ export default function Tally() {
   const monthDates = useMemo(() => getMonthDates(month), [month])
   const monthStart = `${month}-01`
   const monthEnd = monthDates[monthDates.length - 1]
-  const currentWeekStart = getWeekStart(formatDate(new Date()))
-  const weekStart = addDays(currentWeekStart, weekOffset * 7)
-  // Keep every visible date and every tally query inside the selected month.
+  // Anchor navigation to the first Monday-based reporting week that touches
+  // the selected month. This keeps month boundaries continuous: November 2026
+  // starts with Sunday, Nov 1, even though that week's Monday is Oct 26.
+  const firstMonthWeekStart = getWeekStart(monthStart)
+  const weekStart = addDays(firstMonthWeekStart, weekOffset * 7)
   const dates = useMemo(
     () => getWeekDates(weekStart).filter(date => date >= monthStart && date <= monthEnd),
     [weekStart, monthStart, monthEnd]
@@ -269,8 +280,15 @@ export default function Tally() {
 
   function changeWeek(offset: number) {
     const nextWeekStart = addDays(weekStart, offset * 7)
-    setWeekOffset(current => current + offset)
-    setMonth(nextWeekStart.slice(0, 7))
+    const nextMonth = nextWeekStart.slice(0, 7)
+    const nextMonthFirstWeek = getWeekStart(`${nextMonth}-01`)
+    const nextOffset = Math.round(
+      (new Date(`${nextWeekStart}T12:00:00`).getTime() -
+        new Date(`${nextMonthFirstWeek}T12:00:00`).getTime()) /
+        (7 * 24 * 60 * 60 * 1000)
+    )
+    setMonth(nextMonth)
+    setWeekOffset(nextOffset)
   }
 
   function normalizeHeader(value: unknown) {
