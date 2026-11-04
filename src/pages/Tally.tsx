@@ -1,6 +1,5 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { CSSProperties, KeyboardEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import * as XLSX from 'xlsx'
@@ -21,12 +20,6 @@ type Team = {
 }
 
 type RosterRow = { team?: string | null; code?: string | null; team_code?: string | null; jo_mob?: string | null }
-
-type DailyRecord = {
-  team_id: string
-  work_date: string
-  daily_count: number
-}
 
 type ImportPreviewRow = {
   date: string
@@ -69,8 +62,6 @@ const getMonthDates = (month: string) => {
     `${month}-${String(index + 1).padStart(2, '0')}`
   )
 }
-
-const dailyKey = (teamId: string, date: string) => `${teamId}|${date}`
 
 type ImportedWorkOrderRow = { work_date: string; team_id: string | null; department_id: string | null; status: string; wo_id: string }
 
@@ -120,9 +111,7 @@ export default function Tally() {
   const [departmentId, setDepartmentId] = useState('')
   const [month, setMonth] = useState(getCurrentMonth)
   const [weekOffset, setWeekOffset] = useState(0)
-  const [dailyCounts, setDailyCounts] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null)
@@ -152,6 +141,8 @@ export default function Tally() {
   const weekEnd = dates[dates.length - 1]
   const nowDate = formatDate(new Date())
   const reportDate = weekStart > nowDate ? weekStart : weekEnd < nowDate ? weekEnd : nowDate
+  const importedStart = monthStart < weekStart ? monthStart : weekStart
+  const importedEnd = monthEnd > weekEnd ? monthEnd : weekEnd
 
   const activeTeams = useMemo(
     () =>
@@ -230,25 +221,8 @@ export default function Tally() {
       const queryStart = monthQueryStart < weekStart ? monthQueryStart : weekStart
       const queryEnd = monthEnd > weekEnd ? monthEnd : weekEnd
 
-      const dailyResult = await supabase
-        .from('installation_daily_counts')
-        .select('team_id,work_date,daily_count')
-        .in('team_id', teamIds)
-        .gte('work_date', queryStart)
-        .lte('work_date', queryEnd)
-
-      if (dailyResult.error) throw dailyResult.error
-
-      const nextDaily: Record<string, string> = {}
-
-      ;((dailyResult.data ?? []) as DailyRecord[]).forEach(row => {
-        nextDaily[dailyKey(row.team_id, row.work_date)] =
-          String(row.daily_count)
-      })
-
-      setDailyCounts(nextDaily)
       try {
-        setImportedLoads(await fetchImportedWorkOrders(monthStart, monthEnd))
+        setImportedLoads(await fetchImportedWorkOrders(importedStart, importedEnd))
         setLoadBreakdownError('')
       } catch (loadError) {
         const message = loadError instanceof Error ? loadError.message : 'Unknown database error'
@@ -269,20 +243,17 @@ export default function Tally() {
     } finally {
       setLoading(false)
     }
-  }, [departmentId, month, monthEnd, monthStart, weekStart, weekEnd])
+  }, [departmentId, importedEnd, importedStart, monthEnd, monthStart, weekStart, weekEnd])
 
   useEffect(() => {
     void loadBoard()
   }, [loadBoard])
 
-  // Keep shared completed totals fresh for every signed-in account.
+  // Keep the selected month and reporting-week work orders fresh.
   useEffect(() => {
     const refreshImportedLoads = async () => {
-      const [year, monthNumber] = month.split('-').map(Number)
-      const start = `${month}-01`
-      const end = `${month}-${String(new Date(year, monthNumber, 0).getDate()).padStart(2, '0')}`
       try {
-        setImportedLoads(await fetchImportedWorkOrders(start, end))
+        setImportedLoads(await fetchImportedWorkOrders(importedStart, importedEnd))
         setLoadBreakdownError('')
       } catch (loadError) {
         setLoadBreakdownError(loadError instanceof Error ? loadError.message : 'Could not refresh imported status totals.')
@@ -290,78 +261,13 @@ export default function Tally() {
     }
     const timer = window.setInterval(() => { void refreshImportedLoads() }, 30000)
     return () => window.clearInterval(timer)
-  }, [month])
+  }, [importedEnd, importedStart])
 
   function changeWeek(offset: number) {
     const nextWeekStart = addDays(weekStart, offset * 7)
     setWeekOffset(current => current + offset)
     setMonth(nextWeekStart.slice(0, 7))
   }
-
-  function updateDaily(teamId: string, date: string, value: string) {
-    if (
-      value !== '' &&
-      (!/^\d+$/.test(value) ||
-        !Number.isSafeInteger(Number(value)))
-    ) {
-      return
-    }
-
-    setDailyCounts(current => ({
-      ...current,
-      [dailyKey(teamId, date)]: value
-    }))
-  }
-
-  async function saveDaily(teamId: string, date: string) {
-    if (!canEdit) return
-
-    const key = dailyKey(teamId, date)
-    const raw = dailyCounts[key] ?? ''
-    const count = raw === '' ? 0 : Number(raw)
-
-    if (!Number.isSafeInteger(count) || count < 0) {
-      setError('Daily counts must be whole numbers of zero or more.')
-      return
-    }
-
-    setSaving(key)
-    setError('')
-    setMessage('')
-
-    try {
-      const { error: saveError } = await supabase
-        .from('installation_daily_counts')
-        .upsert(
-          {
-            team_id: teamId,
-            work_date: date,
-            daily_count: count,
-            updated_at: new Date().toISOString(),
-            updated_by: profile?.id
-          },
-          { onConflict: 'team_id,work_date' }
-        )
-
-      if (saveError) throw saveError
-
-      setDailyCounts(current => ({
-        ...current,
-        [key]: String(count)
-      }))
-
-      setMessage(`Saved ${date}. WTD and MTD have been recalculated.`)
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : `Could not save ${date}.`
-      )
-    } finally {
-      setSaving(null)
-    }
-  }
-
 
   function normalizeHeader(value: unknown) {
     return String(value ?? '').trim().toUpperCase().replace(/\s+/g, ' ')
@@ -561,19 +467,7 @@ export default function Tally() {
         if (recordsError) throw recordsError
       }
 
-      const payload = importPreview.rows.map(row => ({
-        team_id: row.teamId,
-        work_date: row.date,
-        daily_count: row.count,
-        updated_at: new Date().toISOString(),
-        updated_by: profile?.id
-      }))
-      const { error: importError } = await supabase
-        .from('installation_daily_counts')
-        .upsert(payload, { onConflict: 'team_id,work_date' })
-      if (importError) throw importError
-
-      setMessage(`Processed ${importPreview.workOrders.length.toLocaleString()} work-order rows and updated completed tally groups. Existing WO IDs are skipped; status totals refreshed.`)
+      setMessage(`Imported ${importPreview.workOrders.length.toLocaleString()} work-order rows. WTD/MTD and Total Loads now recalculate from unique imported work orders.`)
       setImportPreview(null)
       await loadBoard()
     } catch (err) {
@@ -583,51 +477,57 @@ export default function Tally() {
     }
   }
 
+  // Count each WO ID once, regardless of duplicate imports.
+  const uniqueImportedLoads = useMemo(() => {
+    const seen = new Set<string>()
+    return importedLoads.filter(row => {
+      const woId = String(row.wo_id ?? '').trim().toUpperCase()
+      if (!woId || seen.has(woId)) return false
+      seen.add(woId)
+      return true
+    })
+  }, [importedLoads])
+
+  const departmentTeamIds = useMemo(
+    () => new Set(teams.filter(team => team.department_id === departmentId).map(team => team.id)),
+    [teams, departmentId]
+  )
+
+  const monthLoads = useMemo(
+    () => uniqueImportedLoads.filter(row =>
+      row.work_date >= monthStart &&
+      row.work_date <= monthEnd &&
+      Boolean(row.team_id && departmentTeamIds.has(row.team_id)) &&
+      ['COMPLETED', 'INCOMPLETE', 'CANCELED'].includes(String(row.status).trim().toUpperCase())
+    ),
+    [uniqueImportedLoads, monthStart, monthEnd, departmentTeamIds]
+  )
+
   function getCount(teamId: string, date: string) {
-    return Number(dailyCounts[dailyKey(teamId, date)] || 0)
+    return uniqueImportedLoads.filter(row =>
+      row.team_id === teamId && row.work_date === date &&
+      String(row.status).trim().toUpperCase() === 'COMPLETED'
+    ).length
   }
 
   function getWTD(teamId: string) {
-    return dates
-      .filter(date => date >= weekStart && date <= reportDate)
-      .reduce((sum, date) => sum + getCount(teamId, date), 0)
-      // Include days from the preceding month if this reporting week
-      // crosses a month boundary.
-      + Object.entries(dailyCounts).reduce((sum, [key, value]) => {
-        const separator = key.lastIndexOf('|')
-        const id = key.slice(0, separator)
-        const date = key.slice(separator + 1)
-
-        if (
-          id === teamId &&
-          date >= weekStart &&
-          date < monthStart &&
-          date <= reportDate
-        ) {
-          return sum + Number(value || 0)
-        }
-
-        return sum
-      }, 0)
+    return uniqueImportedLoads.filter(row =>
+      row.team_id === teamId && row.work_date >= weekStart && row.work_date <= reportDate &&
+      String(row.status).trim().toUpperCase() === 'COMPLETED'
+    ).length
   }
 
   function getMTD(teamId: string) {
-    return monthDates
-      .filter(date => date >= monthStart && date <= reportDate)
-      .reduce((sum, date) => sum + getCount(teamId, date), 0)
+    const monthReportEnd = reportDate < monthEnd ? reportDate : monthEnd
+    return uniqueImportedLoads.filter(row =>
+      row.team_id === teamId && row.work_date >= monthStart && row.work_date <= monthReportEnd &&
+      String(row.status).trim().toUpperCase() === 'COMPLETED'
+    ).length
   }
 
-  const departmentWTD = activeTeams.reduce(
-    (sum, team) => sum + getWTD(team.id),
-    0
-  )
-
-  const departmentMTD = activeTeams.reduce(
-    (sum, team) => sum + getMTD(team.id),
-    0
-  )
-
-  const completedInstalled = importedLoads.filter(row => row.status === 'COMPLETED').length
+  const departmentWTD = activeTeams.reduce((sum, team) => sum + getWTD(team.id), 0)
+  const departmentMTD = activeTeams.reduce((sum, team) => sum + getMTD(team.id), 0)
+  const completedInstalled = monthLoads.filter(row => String(row.status).trim().toUpperCase() === 'COMPLETED').length
   const daysRemaining = month === getCurrentMonth()
     ? Math.max(0, Number(monthEnd.slice(-2)) - Number(nowDate.slice(-2)))
     : month > getCurrentMonth() ? Number(monthEnd.slice(-2)) : 0
@@ -640,7 +540,7 @@ export default function Tally() {
           0
         )
       ),
-    [dates, activeTeams, dailyCounts]
+    [dates, activeTeams, uniqueImportedLoads]
   )
 
   function exportCsv() {
@@ -671,49 +571,6 @@ export default function Tally() {
       `installation-tally-${month}-${departments.find(item => item.id === departmentId)?.code ?? 'department'}.csv`
     anchor.click()
     URL.revokeObjectURL(url)
-  }
-
-  const cellInputStyle: CSSProperties = {
-    width: '100%',
-    minWidth: 0,
-    minHeight: '54px',
-    boxSizing: 'border-box',
-    padding: '0.65rem 0.4rem',
-    textAlign: 'center',
-    border: '1px solid #e0d0b3',
-    borderRadius: '10px',
-    background: '#fffdf8',
-    color: '#30291e',
-    fontSize: '1.1rem',
-    fontWeight: 600,
-    outlineOffset: '-1px'
-  }
-
-  function handleCellKeyDown(
-    event: KeyboardEvent<HTMLInputElement>,
-    teamIndex: number,
-    dateIndex: number
-  ) {
-    if (!['Enter', 'ArrowDown', 'ArrowUp'].includes(event.key)) return
-
-    event.preventDefault()
-
-    const nextTeamIndex =
-      event.key === 'ArrowUp'
-        ? Math.max(0, teamIndex - 1)
-        : Math.min(activeTeams.length - 1, teamIndex + 1)
-
-    const nextTeam = activeTeams[nextTeamIndex]
-    const nextDate = dates[dateIndex]
-
-    if (!nextTeam) return
-
-    const nextInput = document.querySelector<HTMLInputElement>(
-      `[data-tally-key="${dailyKey(nextTeam.id, nextDate)}"]`
-    )
-
-    nextInput?.focus()
-    nextInput?.select()
   }
 
   return (
@@ -1119,13 +976,12 @@ export default function Tally() {
             <div className="tally-summary-card">
               <div className="muted">Excluded from completed total</div>
               <p style={{ margin: '0.45rem 0 0', lineHeight: 1.5 }}>
-                Incomplete, canceled, and other statuses are not included in this completed-only import. Unmatched team codes and invalid dates are excluded and shown below when detected.
+                Incomplete and canceled rows are retained for Total Loads, but do not contribute to WTD/MTD. Other statuses are excluded from Total Loads. Unmatched team codes and invalid dates are excluded and shown below when detected.
               </p>
             </div>
           </div>
           <p className="tally-note">
-            Only rows whose STATUS is exactly COMPLETED are counted. All other statuses are ignored.
-            Import replaces the saved daily count for each team/date listed below; team/date pairs not in this file stay unchanged.
+            WTD/MTD count only rows with STATUS = COMPLETED. Completed, incomplete, and canceled work orders are saved individually for their Total Loads breakdown. Other statuses are excluded from Total Loads.
           </p>
           {importPreview.unmatched.length > 0 && (
             <div className="notice error" style={{ marginBottom: '1rem' }}>
@@ -1238,13 +1094,13 @@ export default function Tally() {
         {loadBreakdownError && <div className="notice error">{loadBreakdownError}</div>}
         <div className="tally-summary" style={{ marginBottom: '1rem' }}>
           {([
-            ['Total load', ['COMPLETED','INCOMPLETE','CANCELED','OTHER']],
+            ['Total load', ['COMPLETED','INCOMPLETE','CANCELED']],
             ['Completed', ['COMPLETED']],
             ['Incomplete', ['INCOMPLETE']],
             ['Canceled', ['CANCELED']]
           ] as Array<[string,string[]]>).map(([label,statuses]) => {
-            const count = importedLoads.filter(row =>
-              row.department_id === departmentId && statuses.includes(String(row.status).toUpperCase())
+            const count = monthLoads.filter(row =>
+              statuses.includes(String(row.status).trim().toUpperCase())
             ).length
             return <div className="tally-summary-card" key={label}>
               <div className="muted">{label}</div>
@@ -1258,8 +1114,8 @@ export default function Tally() {
             <thead><tr><th>Team</th><th>Total load</th><th>Completed</th><th>Incomplete</th><th>Canceled</th></tr></thead>
             <tbody>
               {activeTeams.map(team => {
-                const rows = importedLoads.filter(row => row.team_id === team.id)
-                const countStatus = (status: string) => rows.filter(row => String(row.status).toUpperCase() === status).length
+                const rows = monthLoads.filter(row => row.team_id === team.id)
+                const countStatus = (status: string) => rows.filter(row => String(row.status).trim().toUpperCase() === status).length
                 return <tr key={team.id}>
                   <th scope="row" title={team.code} style={{ fontSize: '.72rem', whiteSpace: 'nowrap', letterSpacing: '-0.03em', paddingLeft: '.45rem', paddingRight: '.45rem' }}>{team.code}</th>
                   <td><strong>{rows.length.toLocaleString()}</strong></td>
@@ -1271,7 +1127,7 @@ export default function Tally() {
             </tbody>
           </table>
         </div>}
-        <p className="tally-note">These status totals are separate from the manual WTD/MTD daily-count board. They update after a successful import and when the board reloads.</p>
+        <p className="tally-note">Total Loads includes unique work orders marked COMPLETED, INCOMPLETE, or CANCELED. WTD/MTD count only COMPLETED work orders.</p>
       </div>
       )}
 
@@ -1359,39 +1215,13 @@ export default function Tally() {
                   <tr key={team.id}>
                     <th scope="row">{team.code}</th>
 
-                    {dates.map((date, dateIndex) => {
-                      const key = dailyKey(team.id, date)
-
-                      return (
-                        <td key={date}>
-                          <input
-                            data-tally-key={key}
-                            aria-label={`${team.code} count for ${date}`}
-                            title={`${team.code} · ${date}`}
-                            type="number"
-                            min="0"
-                            step="1"
-                            inputMode="numeric"
-                            disabled={!canEdit}
-                            value={dailyCounts[key] ?? ''}
-                            placeholder="0"
-                            onChange={event =>
-                              updateDaily(team.id, date, event.target.value)
-                            }
-                            onBlur={() => void saveDaily(team.id, date)}
-                            onKeyDown={event =>
-                              handleCellKeyDown(event, teamIndex, dateIndex)
-                            }
-                            style={cellInputStyle}
-                          />
-                          {saving === key && (
-                            <span style={{ fontSize: '0.75rem' }}>
-                              Saving…
-                            </span>
-                          )}
-                        </td>
-                      )
-                    })}
+                    {dates.map(date => (
+                      <td key={date}>
+                        <strong title={`${team.code} · ${date} · completed work orders`}>
+                          {getCount(team.id, date).toLocaleString()}
+                        </strong>
+                      </td>
+                    ))}
 
                     <td>
                       <strong
@@ -1449,13 +1279,12 @@ export default function Tally() {
                   </span>
                 </summary>
                 {expandedTeams[team.id] && <div className="tally-mobile-days">
-                  {dates.map(date => {
-                    const key = dailyKey(team.id, date)
-                    return <label className="tally-mobile-day" key={date}>
+                  {dates.map(date => (
+                    <div className="tally-mobile-day" key={date}>
                       <span><strong>{new Date(`${date}T12:00:00`).toLocaleDateString('en-US',{weekday:'short'})}</strong><small className="muted" style={{display:'block'}}>{Number(date.slice(8))}</small></span>
-                      {canEdit ? <input aria-label={`${team.code} count for ${date}`} type="number" min="0" step="1" inputMode="numeric" value={dailyCounts[key] ?? ''} placeholder="0" onChange={event => updateDaily(team.id,date,event.target.value)} onBlur={() => void saveDaily(team.id,date)} /> : <strong>{getCount(team.id,date).toLocaleString()}</strong>}
-                    </label>
-                  })}
+                      <strong>{getCount(team.id,date).toLocaleString()}</strong>
+                    </div>
+                  ))}
                 </div>}
               </details>
             ))}
@@ -1466,7 +1295,7 @@ export default function Tally() {
           WTD means Week-to-Date (Monday through the reporting date). MTD means
           Month-to-Date (the first day of the month through the reporting date).
           Historical weeks use Sunday as the reporting date. Totals are
-          calculated per team from daily counts; no separate WID/MID entry is needed.
+          calculated from unique imported work orders marked COMPLETED. Incomplete and canceled work orders are shown only in Total Loads.
         </p>
       </div>
       <div className="card">
