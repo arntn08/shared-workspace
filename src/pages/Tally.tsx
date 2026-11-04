@@ -518,8 +518,9 @@ export default function Tally() {
   }
 
   function getMTD(teamId: string) {
+    const monthReportEnd = reportDate < monthEnd ? reportDate : monthEnd
     return uniqueImportedLoads.filter(row =>
-      row.team_id === teamId && row.work_date >= monthStart && row.work_date <= reportDate &&
+      row.team_id === teamId && row.work_date >= monthStart && row.work_date <= monthReportEnd &&
       String(row.status).trim().toUpperCase() === 'COMPLETED'
     ).length
   }
@@ -1108,7 +1109,7 @@ export default function Tally() {
             </div>
           })}
         </div>
-        {<div className="tally-scroll" style={{ maxHeight: '320px' }}>
+        {canEdit && <div className="tally-scroll" style={{ maxHeight: '320px' }}>
           <table className="tally-table">
             <thead><tr><th>Team</th><th>Total load</th><th>Completed</th><th>Incomplete</th><th>Canceled</th></tr></thead>
             <tbody>
