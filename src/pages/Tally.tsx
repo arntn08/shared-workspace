@@ -279,16 +279,23 @@ export default function Tally() {
   }, [importedEnd, importedStart])
 
   function changeWeek(offset: number) {
-    const nextWeekStart = addDays(weekStart, offset * 7)
-    const nextMonth = nextWeekStart.slice(0, 7)
-    const nextMonthFirstWeek = getWeekStart(`${nextMonth}-01`)
-    const nextOffset = Math.round(
-      (new Date(`${nextWeekStart}T12:00:00`).getTime() -
-        new Date(`${nextMonthFirstWeek}T12:00:00`).getTime()) /
+    const adjacentWeekStart = addDays(weekStart, offset * 7)
+    const nextMonth = adjacentWeekStart.slice(0, 7)
+
+    // When moving forward from the final week of a month, first open the
+    // new month's view of that same calendar week. This reveals any dates
+    // at the start of the month (for example, Sunday, Nov 1, 2026).
+    const entersNextMonth = offset > 0 && nextMonth !== month && dates.includes(monthEnd)
+    const targetWeekStart = entersNextMonth ? weekStart : adjacentWeekStart
+    const targetMonth = entersNextMonth ? nextMonth : adjacentWeekStart.slice(0, 7)
+    const targetMonthFirstWeek = getWeekStart(`${targetMonth}-01`)
+    const targetOffset = Math.round(
+      (new Date(`${targetWeekStart}T12:00:00`).getTime() -
+        new Date(`${targetMonthFirstWeek}T12:00:00`).getTime()) /
         (7 * 24 * 60 * 60 * 1000)
     )
-    setMonth(nextMonth)
-    setWeekOffset(nextOffset)
+    setMonth(targetMonth)
+    setWeekOffset(targetOffset)
   }
 
   function normalizeHeader(value: unknown) {
