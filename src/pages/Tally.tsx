@@ -92,8 +92,9 @@ const formatDate = (date: Date) => {
 
 const getWeekStart = (dateString: string) => {
   const date = new Date(`${dateString}T12:00:00`)
-  const day = date.getDay()
-  date.setDate(date.getDate() - (day === 0 ? 6 : day - 1))
+  // Reporting weeks run Sunday through Saturday. Month clipping then makes
+  // the final October week Oct 26–31 and the first November week Nov 1–7.
+  date.setDate(date.getDate() - date.getDay())
   return formatDate(date)
 }
 
@@ -144,9 +145,8 @@ export default function Tally() {
   const monthDates = useMemo(() => getMonthDates(month), [month])
   const monthStart = `${month}-01`
   const monthEnd = monthDates[monthDates.length - 1]
-  // Anchor navigation to the first Monday-based reporting week that touches
-  // the selected month. This keeps month boundaries continuous: November 2026
-  // starts with Sunday, Nov 1, even though that week's Monday is Oct 26.
+  // Anchor navigation to the first Sunday-based reporting week that touches
+  // the selected month. The month filter below excludes dates outside it.
   const firstMonthWeekStart = getWeekStart(monthStart)
   const weekStart = addDays(firstMonthWeekStart, weekOffset * 7)
   const dates = useMemo(
@@ -279,22 +279,10 @@ export default function Tally() {
   }, [importedEnd, importedStart])
 
   function changeWeek(offset: number) {
-    const adjacentWeekStart = addDays(weekStart, offset * 7)
-    const nextMonth = adjacentWeekStart.slice(0, 7)
-
-    // When moving forward from the final week of a month, first open the
-    // new month's view of that same calendar week. This reveals any dates
-    // at the start of the month (for example, Sunday, Nov 1, 2026).
-    const entersNextMonth = offset > 0 && nextMonth !== month && dates.includes(monthEnd)
-    const returnsToPreviousMonth = offset < 0 && adjacentWeekStart.slice(0, 7) !== month &&
-      weekStart < monthStart && dates.includes(monthStart)
-    const keepBoundaryWeek = entersNextMonth || returnsToPreviousMonth
-    const targetWeekStart = keepBoundaryWeek ? weekStart : adjacentWeekStart
-    const targetMonth = entersNextMonth
-      ? nextMonth
-      : returnsToPreviousMonth
-        ? weekStart.slice(0, 7)
-        : adjacentWeekStart.slice(0, 7)
+    // Advance by complete Sunday–Saturday weeks. If that crosses a month,
+    // switch to that month and show only the dates belonging to it.
+    const targetWeekStart = addDays(weekStart, offset * 7)
+    const targetMonth = targetWeekStart.slice(0, 7)
     const targetMonthFirstWeek = getWeekStart(`${targetMonth}-01`)
     const targetOffset = Math.round(
       (new Date(`${targetWeekStart}T12:00:00`).getTime() -
@@ -1212,7 +1200,7 @@ export default function Tally() {
               })}
             </h2>
             <p className="muted" style={{ margin: '0.35rem 0 0' }}>
-              Daily counts by team · Monday–Sunday · WTD and MTD calculated automatically
+              Daily counts by team · Sunday–Saturday · WTD and MTD calculated automatically
             </p>
           </div>
 
@@ -1328,7 +1316,7 @@ export default function Tally() {
         )}
 
         <p className="tally-note">
-          WTD means Week-to-Date (Monday through the reporting date). MTD means
+          WTD means Week-to-Date (Sunday through the reporting date). MTD means
           Month-to-Date (the first day of the month through the reporting date).
           Historical weeks use Sunday as the reporting date. Totals are
           calculated from unique imported work orders marked COMPLETED. Incomplete and canceled work orders are shown only in Total Loads.
