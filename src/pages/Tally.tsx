@@ -137,12 +137,17 @@ export default function Tally() {
   const monthEnd = monthDates[monthDates.length - 1]
   const currentWeekStart = getWeekStart(formatDate(new Date()))
   const weekStart = addDays(currentWeekStart, weekOffset * 7)
-  const dates = useMemo(() => getWeekDates(weekStart), [weekStart])
-  const weekEnd = dates[dates.length - 1]
+  // Keep every visible date and every tally query inside the selected month.
+  const dates = useMemo(
+    () => getWeekDates(weekStart).filter(date => date >= monthStart && date <= monthEnd),
+    [weekStart, monthStart, monthEnd]
+  )
+  const weekEnd = dates[dates.length - 1] ?? monthEnd
   const nowDate = formatDate(new Date())
-  const reportDate = weekStart > nowDate ? weekStart : weekEnd < nowDate ? weekEnd : nowDate
-  const importedStart = monthStart < weekStart ? monthStart : weekStart
-  const importedEnd = monthEnd > weekEnd ? monthEnd : weekEnd
+  const rawReportDate = weekStart > nowDate ? weekStart : weekEnd < nowDate ? weekEnd : nowDate
+  const reportDate = rawReportDate > monthEnd ? monthEnd : rawReportDate
+  const importedStart = monthStart
+  const importedEnd = monthEnd
 
   const activeTeams = useMemo(
     () =>
