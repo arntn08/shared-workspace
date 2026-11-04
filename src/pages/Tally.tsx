@@ -189,7 +189,6 @@ export default function Tally() {
 
       if (!selectedDepartment) {
         setDepartmentId('')
-        setDailyCounts({})
         return
       }
 
@@ -206,7 +205,7 @@ export default function Tally() {
         .map(team => team.id)
 
       if (teamIds.length === 0) {
-        setDailyCounts({})
+        setImportedLoads([])
         return
       }
 
