@@ -10,6 +10,7 @@ export default function HrNtes() {
   const [people,setPeople] = useState<Person[]>([])
   const [items,setItems] = useState<Nte[]>([])
   const [employee,setEmployee] = useState('')
+  const [personSearch,setPersonSearch] = useState('')
   const [title,setTitle] = useState('')
   const [details,setDetails] = useState('')
   const [due,setDue] = useState('')
@@ -81,7 +82,8 @@ export default function HrNtes() {
     <div className="page-head"><div><h1>Notices to Explain</h1><p className="muted" style={{margin:0}}>Issue a private notice to one employee and review their response.</p></div></div>
     <section className="card" style={{marginBottom:'1rem'}}><h2>Issue a new NTE</h2>
       <form onSubmit={issue} className="stack">
-        <label>Employee<select value={employee} onChange={e=>setEmployee(e.target.value)} required><option value="">Choose employee</option>{people.map(p=><option key={p.id} value={p.id}>{p.full_name || p.email}{p.teams?.length ? ' · '+p.teams.join(', ') : ''}</option>)}</select></label>
+        <label>Search employee<input type="search" value={personSearch} onChange={e=>setPersonSearch(e.target.value)} placeholder="Search name, email, or team…" autoComplete="off"/></label>
+        <label>Employee<select value={employee} onChange={e=>setEmployee(e.target.value)} required><option value="">Choose employee</option>{people.filter(p=>{const q=personSearch.trim().toLocaleLowerCase();return !q || [p.full_name || '',p.email || '',...(p.teams || [])].some(v=>v.toLocaleLowerCase().includes(q))}).map(p=><option key={p.id} value={p.id}>{p.full_name || p.email}{p.teams?.length ? ' · '+p.teams.join(', ') : ''}</option>)}</select>{personSearch.trim() && !people.some(p=>[p.full_name || '',p.email || '',...(p.teams || [])].some(v=>v.toLocaleLowerCase().includes(personSearch.trim().toLocaleLowerCase()))) && <small className="muted">No active employees match that search.</small>}</label>
         <label>Subject<input value={title} onChange={e=>setTitle(e.target.value)} maxLength={160} required placeholder="e.g. Attendance clarification"/></label>
         <label>Details<textarea value={details} onChange={e=>setDetails(e.target.value)} rows={5} required placeholder="Explain the concern and what response is requested."/></label>
         <label>Attach document or picture <span className="muted">(optional · PDF, JPG, PNG, WebP · max 10 MB)</span><input id="nte-attachment" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={e=>setAttachment(e.target.files?.[0] ?? null)}/></label>
