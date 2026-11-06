@@ -127,7 +127,7 @@ function HrOverviewPanel(){
  </section>
 }
 
-function HrWeeklyTeamReports(){
+export function HrWeeklyTeamReports(){
  const [depts,setDepts]=useState<HrDept[]>([])
  const [teams,setTeams]=useState<HrTeam[]>([])
  const [orders,setOrders]=useState<HrOrder[]>([])
