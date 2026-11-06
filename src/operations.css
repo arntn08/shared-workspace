@@ -2206,3 +2206,19 @@ body {
 [data-theme="dark"] .ops-shell.role-theme-coordinator .pa-card strong{color:#e7f7ff}
 [data-theme="dark"] .ops-shell.role-theme-coordinator .pa-form input,[data-theme="dark"] .ops-shell.role-theme-coordinator .pa-form select,[data-theme="dark"] .ops-shell.role-theme-coordinator .pa-form textarea{color:#e7f7ff;background:#092536;border-color:#315b6d}
 @media(max-width:760px){.ops-shell.role-theme-coordinator .pa-hero{border-radius:18px;padding:1.15rem}.ops-shell.role-theme-coordinator .pa-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.ops-shell.role-theme-coordinator .pa-tabs button{min-width:0;font-size:.84rem;padding:.7rem .55rem}}
+
+
+/* Keep full installation team codes readable in the weekly WTD/MTD board. */
+@media (min-width: 761px) {
+  .ops-page .tally-page .tally-desktop-table .tally-table thead th:first-child,
+  .ops-page .tally-page .tally-desktop-table .tally-table tbody th:first-child {
+    width: 138px;
+    min-width: 138px;
+    max-width: 150px;
+    padding-inline: 7px;
+    font-size: 10.5px;
+    line-height: 1.15;
+    letter-spacing: -0.035em;
+    text-overflow: clip;
+  }
+}
