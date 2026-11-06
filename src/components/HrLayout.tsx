@@ -68,6 +68,7 @@ export default function HrLayout() {
 type HrDept={id:string;code:string;name:string;active:boolean}
 type HrTeam={id:string;department_id:string;code:string;name:string;active:boolean}
 type HrOrder={work_date:string;team_id:string|null;department_id:string|null;status:string;wo_id:string}
+type HrEmployee={id:string;full_name:string|null;email:string;teams:string[]|null}
 const hrDate=(d:Date)=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')
 const hrWeek=(d:Date)=>{const x=new Date(d);x.setDate(x.getDate()-x.getDay());return hrDate(x)}
 function HrMetric({label,value,note}:{label:string;value:number;note:string}){return <article className="card" style={{padding:'1rem'}}><span className="muted">{label}</span><strong style={{display:'block',fontSize:'1.8rem',margin:'.25rem 0'}}>{value.toLocaleString()}</strong><small className="muted">{note}</small></article>}
@@ -130,6 +131,7 @@ function HrWeeklyTeamReports(){
  const [depts,setDepts]=useState<HrDept[]>([])
  const [teams,setTeams]=useState<HrTeam[]>([])
  const [orders,setOrders]=useState<HrOrder[]>([])
+ const [employees,setEmployees]=useState<HrEmployee[]>([])
  const [weekOffset,setWeekOffset]=useState(0)
  const [loading,setLoading]=useState(true)
  const [error,setError]=useState('')
@@ -138,18 +140,19 @@ function HrWeeklyTeamReports(){
  const selectedWeekEnd=(()=>{const d=new Date(selectedWeekStart+'T12:00:00');d.setDate(d.getDate()+6);return hrDate(d)})()
  async function load(){
   setLoading(true);setError('')
-  const [d,t]=await Promise.all([
+  const [d,t,p]=await Promise.all([
    supabase.from('installation_departments').select('id,code,name,active').order('code'),
-   supabase.from('installation_teams').select('id,department_id,code,name,active').order('code')
+   supabase.from('installation_teams').select('id,department_id,code,name,active').order('code'),
+   supabase.from('profiles').select('id,full_name,email,teams').eq('role','employee').eq('active',true).order('full_name')
   ])
-  if(d.error||t.error){setError([d.error?.message,t.error?.message].filter(Boolean).join(' · '));setLoading(false);return}
+  if(d.error||t.error||p.error){setError([d.error?.message,t.error?.message,p.error?.message].filter(Boolean).join(' · '));setLoading(false);return}
   const all:HrOrder[]=[];let offset=0,problem=''
   while(true){
    const q=await supabase.from('installation_imported_work_orders').select('work_date,team_id,department_id,status,wo_id').gte('work_date',selectedWeekStart).lte('work_date',selectedWeekEnd).order('work_date').order('wo_id').range(offset,offset+999)
    if(q.error){problem=q.error.message;break}
    const rows=(q.data??[]) as HrOrder[];all.push(...rows);if(rows.length<1000)break;offset+=1000
   }
-  setDepts((d.data??[]) as HrDept[]);setTeams((t.data??[]) as HrTeam[])
+  setDepts((d.data??[]) as HrDept[]);setTeams((t.data??[]) as HrTeam[]);setEmployees((p.data??[]) as HrEmployee[])
   if(problem)setError(problem);else setOrders(all.filter(x=>x.status.trim().toUpperCase()==='COMPLETED'))
   setUpdated(new Date());setLoading(false)
  }
