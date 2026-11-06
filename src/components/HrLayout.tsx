@@ -20,6 +20,7 @@ const links = [
   ['/ntes','Notices to Explain','file-text'],
   ['/leave','Leave requests','calendar'],
   ['/tally','Installation Tally','tally'],
+  ['/weekly-reports','Weekly Team Reports','chart'],
   ['/files','Files & resources','files'],
   ['/settings','Settings','settings']
 ] as const
@@ -53,6 +54,7 @@ export default function HrLayout() {
           <Route path="/ntes" element={<HrNtes/>}/>
           <Route path="/leave" element={<LeaveRequests/>}/>
           <Route path="/tally" element={<Tally/>}/>
+          <Route path="/weekly-reports" element={<HrWeeklyTeamReports/>}/>
           <Route path="/files" element={<EmployeeFiles settings={settings} />}/>
           <Route path="/file/:id" element={<FileViewer/>}/>
           <Route path="/settings" element={<Settings/>}/>
@@ -123,4 +125,48 @@ function HrOverviewPanel(){
   <p className="muted" style={{fontSize:'.75rem',textAlign:'right'}}>Auto-refreshes every minute{updated?' · Last updated '+updated.toLocaleTimeString('en-PH'):''}</p>
  </section>
 }
+
+function HrWeeklyTeamReports(){
+ const [depts,setDepts]=useState<HrDept[]>([])
+ const [teams,setTeams]=useState<HrTeam[]>([])
+ const [orders,setOrders]=useState<HrOrder[]>([])
+ const [weekOffset,setWeekOffset]=useState(0)
+ const [loading,setLoading]=useState(true)
+ const [error,setError]=useState('')
+ const [updated,setUpdated]=useState<Date|null>(null)
+ const selectedWeekStart=(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()-(weekOffset*7));return hrDate(d)})()
+ const selectedWeekEnd=(()=>{const d=new Date(selectedWeekStart+'T12:00:00');d.setDate(d.getDate()+6);return hrDate(d)})()
+ async function load(){
+  setLoading(true);setError('')
+  const [d,t]=await Promise.all([
+   supabase.from('installation_departments').select('id,code,name,active').order('code'),
+   supabase.from('installation_teams').select('id,department_id,code,name,active').order('code')
+  ])
+  if(d.error||t.error){setError([d.error?.message,t.error?.message].filter(Boolean).join(' · '));setLoading(false);return}
+  const all:HrOrder[]=[];let offset=0,problem=''
+  while(true){
+   const q=await supabase.from('installation_imported_work_orders').select('work_date,team_id,department_id,status,wo_id').gte('work_date',selectedWeekStart).lte('work_date',selectedWeekEnd).order('work_date').order('wo_id').range(offset,offset+999)
+   if(q.error){problem=q.error.message;break}
+   const rows=(q.data??[]) as HrOrder[];all.push(...rows);if(rows.length<1000)break;offset+=1000
+  }
+  setDepts((d.data??[]) as HrDept[]);setTeams((t.data??[]) as HrTeam[])
+  if(problem)setError(problem);else setOrders(all.filter(x=>x.status.trim().toUpperCase()==='COMPLETED'))
+  setUpdated(new Date());setLoading(false)
+ }
+ useEffect(()=>{void load()},[selectedWeekStart,selectedWeekEnd])
+ const activeTeams=teams.filter(t=>t.active)
+ const weeklyRows=activeTeams.map(t=>({ ...t,department:depts.find(d=>d.id===t.department_id)?.code??'—',records:orders.filter(o=>o.team_id===t.id),count:orders.filter(o=>o.team_id===t.id).length })).sort((a,b)=>b.count-a.count||a.code.localeCompare(b.code))
+ const exportRows=()=>{const quote=(v:string)=>'"'+String(v??'').replace(/"/g,'""')+'"';const deptById=new Map(depts.map(d=>[d.id,d]));const teamById=new Map(teams.map(t=>[t.id,t]));const rows=[['Work date','Department','Team','WO ID','Status'],...orders.map(o=>[o.work_date,deptById.get(o.department_id??'')?.code??'',teamById.get(o.team_id??'')?.code??'Unassigned',o.wo_id,o.status])];const csv='\uFEFF'+rows.map(row=>row.map(v=>quote(String(v??''))).join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));const a=document.createElement('a');a.href=url;a.download='AHBA-Weekly-Completed-Work-Orders-'+selectedWeekStart+'-to-'+selectedWeekEnd+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)}
+ return <section className="ops-overview" style={{display:'grid',gap:'1rem'}}>
+  <div className="ops-overview-heading"><div><span className="ops-eyebrow">HR REPORTING</span><h1>Weekly Team Reports</h1><p>Completed work orders by team · Sunday–Saturday</p></div><button className="small" onClick={()=>void load()}>↻ Refresh</button></div>
+  {error&&<div className="notice error">{error}</div>}
+  <section className="ops-panel"><div className="ops-panel-heading"><div><h2>Reporting week</h2><p>{selectedWeekStart} through {selectedWeekEnd}</p></div><div className="row" style={{gap:'.5rem',flexWrap:'wrap'}}><button className="small" onClick={()=>setWeekOffset(x=>x+1)}>← Previous week</button><button className="small" disabled={weekOffset===0} onClick={()=>setWeekOffset(x=>Math.max(0,x-1))}>Next week →</button><button className="small" disabled={loading||orders.length===0} onClick={exportRows}>↓ Export CSV</button></div></div>
+   {loading?<p className="muted">Loading weekly records…</p>:<><div className="grid cols-3"><HrMetric label="Completed work orders" value={orders.length} note="Selected Sunday–Saturday week"/><HrMetric label="Active teams" value={activeTeams.length} note="Configured active teams"/><HrMetric label="Teams with completions" value={weeklyRows.filter(t=>t.count>0).length} note="At least one completed order"/></div>
+   <div style={{overflowX:'auto',marginTop:'1rem'}}><table className="tally-table"><thead><tr><th>Team</th><th>Department</th><th>Completed this week</th></tr></thead><tbody>{weeklyRows.map(t=><tr key={t.id}><th>{t.code}</th><td>{t.department}</td><td><strong>{t.count}</strong></td></tr>)}</tbody><tfoot><tr><th colSpan={2}>All teams</th><td><strong>{orders.length}</strong></td></tr></tfoot></table></div>
+   <details style={{marginTop:'1rem'}} open><summary style={{cursor:'pointer',fontWeight:700}}>Completed work-order rows ({orders.length})</summary><div style={{overflowX:'auto',marginTop:'.75rem'}}><table className="tally-table"><thead><tr><th>Work date</th><th>Department</th><th>Team</th><th>WO ID</th><th>Status</th></tr></thead><tbody>{orders.map((o,i)=><tr key={o.wo_id||i}><td>{o.work_date}</td><td>{depts.find(d=>d.id===o.department_id)?.code??'—'}</td><td>{teams.find(t=>t.id===o.team_id)?.code??'Unassigned'}</td><td>{o.wo_id}</td><td>{o.status}</td></tr>)}</tbody></table></div></details></>}
+  </section>
+  <p className="muted" style={{fontSize:'.75rem',textAlign:'right'}}>Only COMPLETED records are included{updated?' · Updated '+updated.toLocaleTimeString('en-PH'):''}</p>
+ </section>
+}
+
 function nowMonthLabel(){return new Date().toLocaleDateString('en-PH',{month:'long',year:'numeric'})}
