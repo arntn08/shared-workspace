@@ -169,6 +169,7 @@ function WorkforceLeafletMap({ locations, profiles, onSelect }: {
   const map = useRef<any>(null)
   const markers = useRef<any[]>([])
   const [mapError, setMapError] = useState('')
+  const [mapReady, setMapReady] = useState(false)
   useEffect(() => {
     let alive = true
     loadLeaflet().then(L => {
@@ -179,6 +180,7 @@ function WorkforceLeafletMap({ locations, profiles, onSelect }: {
         attribution: '&copy; OpenStreetMap contributors'
       }).addTo(instance)
       map.current = instance
+      setMapReady(true)
     }).catch(error => { if (alive) setMapError(error.message || 'Map unavailable.') })
     return () => {
       alive = false
@@ -201,7 +203,7 @@ function WorkforceLeafletMap({ locations, profiles, onSelect }: {
     })
     if (points.length === 1) instance.setView([points[0].latitude, points[0].longitude], 14)
     else if (points.length > 1) instance.fitBounds(L.latLngBounds(points.map(row => [row.latitude, row.longitude])), { padding: [28, 28], maxZoom: 14 })
-  }, [locations, profiles, onSelect])
+  }, [locations, profiles, onSelect, mapReady])
   return <div style={{ position: 'relative' }}>
     <div ref={element} style={{ width: '100%', height: 420, borderRadius: 12, zIndex: 0, background: '#e8eee9' }} />
     {mapError && <div className="notice" style={{ marginTop: 8 }}>{mapError} Employee list and last-known timestamps are still available.</div>}
