@@ -48,7 +48,8 @@ export default function HrNtes() {
     const statusMatch=noticeFilter==='all'||(noticeFilter==='awaiting'&&isAwaiting)||(noticeFilter==='responded'&&isResponded)||(noticeFilter==='closed'&&n.status==='closed')||(noticeFilter==='overdue'&&isOverdue)
     return matches&&statusMatch
   })
-\n  async function issue(e: FormEvent) {
+
+  async function issue(e: FormEvent) {
     e.preventDefault()
     if (!profile || !employee) return
     if (attachment && attachment.size > 10 * 1024 * 1024) { setError('Attachment must be 10 MB or smaller.'); return }
