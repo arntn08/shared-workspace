@@ -26,6 +26,7 @@ function Gate() {
     setTeamLeader(false)
     setProjectCoordinator(false)
     if (!profile || !profile.active) { setLeaderCheck(true); return }
+    if (!navigator.onLine || profile.role === 'owner' || profile.role === 'editor' || profile.role === 'hr') { setLeaderCheck(true); return }
     setLeaderCheck(false)
     Promise.all([
       supabase.from('sales_team_leaders').select('user_id').eq('user_id', profile.id).eq('active', true).maybeSingle(),
