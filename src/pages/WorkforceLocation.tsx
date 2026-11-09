@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import { fetchWorkforceLocations, localConsent, queuePosition, queuedPositions, saveLocalConsent, syncLocationQueue, type WorkforceLocationRow } from '../lib/workforceLocation'
@@ -128,10 +128,91 @@ export function EmployeeLocationSharing() {
   </section>
 }
 
+declare global {
+  interface Window { L?: any }
+}
+
+let leafletLoader: Promise<any> | null = null
+function loadLeaflet(): Promise<any> {
+  if (window.L) return Promise.resolve(window.L)
+  if (!leafletLoader) leafletLoader = new Promise((resolve, reject) => {
+    if (!document.querySelector('link[data-ahba-leaflet]')) {
+      const link = document.createElement('link')
+      link.rel = 'stylesheet'
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+      link.dataset.ahbaLeaflet = 'true'
+      document.head.appendChild(link)
+    }
+    const existing = document.querySelector<HTMLScriptElement>('script[data-ahba-leaflet]')
+    if (existing) {
+      existing.addEventListener('load', () => resolve(window.L))
+      existing.addEventListener('error', () => reject(new Error('Map library could not be loaded.')))
+      return
+    }
+    const script = document.createElement('script')
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+    script.async = true
+    script.dataset.ahbaLeaflet = 'true'
+    script.onload = () => window.L ? resolve(window.L) : reject(new Error('Map library did not initialize.'))
+    script.onerror = () => reject(new Error('Map library could not be loaded.'))
+    document.head.appendChild(script)
+  })
+  return leafletLoader
+}
+
+function WorkforceLeafletMap({ locations, profiles, onSelect }: {
+  locations: WorkforceLocationRow[]
+  profiles: Record<string, { full_name: string | null; email: string; teams: string[] | null }>
+  onSelect: (id: string) => void
+}) {
+  const element = useRef<HTMLDivElement | null>(null)
+  const map = useRef<any>(null)
+  const markers = useRef<any[]>([])
+  const [mapError, setMapError] = useState('')
+  useEffect(() => {
+    let alive = true
+    loadLeaflet().then(L => {
+      if (!alive || !element.current) return
+      const instance = L.map(element.current, { scrollWheelZoom: true }).setView([12.8797, 121.774], 5)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(instance)
+      map.current = instance
+    }).catch(error => { if (alive) setMapError(error.message || 'Map unavailable.') })
+    return () => {
+      alive = false
+      if (map.current) { map.current.remove(); map.current = null }
+    }
+  }, [])
+  useEffect(() => {
+    const instance = map.current
+    const L = window.L
+    if (!instance || !L) return
+    markers.current.forEach(marker => marker.remove())
+    markers.current = []
+    const points = locations.filter(row => row.latitude != null && row.longitude != null)
+    points.forEach(row => {
+      const person = profiles[row.user_id]
+      const marker = L.marker([row.latitude, row.longitude]).addTo(instance)
+      marker.bindPopup(`<strong>${(person?.full_name || person?.email || 'Employee').replace(/[<>&"]/g, '')}</strong><br>${(person?.teams?.join(', ') || 'No team').replace(/[<>&"]/g, '')}<br>Last sync: ${age(row.last_seen_at)}`)
+      marker.on('click', () => onSelect(row.user_id))
+      markers.current.push(marker)
+    })
+    if (points.length === 1) instance.setView([points[0].latitude, points[0].longitude], 14)
+    else if (points.length > 1) instance.fitBounds(L.latLngBounds(points.map(row => [row.latitude, row.longitude])), { padding: [28, 28], maxZoom: 14 })
+  }, [locations, profiles, onSelect])
+  return <div style={{ position: 'relative' }}>
+    <div ref={element} style={{ width: '100%', height: 420, borderRadius: 12, zIndex: 0, background: '#e8eee9' }} />
+    {mapError && <div className="notice" style={{ marginTop: 8 }}>{mapError} Employee list and last-known timestamps are still available.</div>}
+  </div>
+}
+
 export function WorkforceMap() {
   const [rows, setRows] = useState<WorkforceLocationRow[]>([])
   const [profiles, setProfiles] = useState<Record<string, { full_name: string | null; email: string; teams: string[] | null }>>({})
   const [selected, setSelected] = useState('')
+  const selectLocation = useCallback((id: string) => setSelected(id), [])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const load = useCallback(async () => {
@@ -153,7 +234,6 @@ export function WorkforceMap() {
   const active = rows.filter(r => r.sharing_enabled)
   const chosen = visible.find(r => r.user_id === selected) || visible[0]
   const person = chosen ? profiles[chosen.user_id] : undefined
-  const mapUrl = chosen ? `https://www.openstreetmap.org/export/embed.html?bbox=${chosen.longitude! - 0.02}%2C${chosen.latitude! - 0.02}%2C${chosen.longitude! + 0.02}%2C${chosen.latitude! + 0.02}&layer=mapnik&marker=${chosen.latitude}%2C${chosen.longitude}` : ''
   return <section style={{ display: 'grid', gap: 16 }}>
     <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', gap: 12, flexWrap: 'wrap' }}><div><span className="ops-eyebrow">AHBA PEOPLE OPERATIONS</span><h1>Live Workforce Map</h1><p className="muted">Locations shared by employees who have explicitly opted in.</p></div><button className="small" onClick={() => void load()}>↻ Refresh</button></header>
     <div className="grid cols-3"><article style={panel}><small className="muted">Sharing enabled</small><h2>{active.length}</h2></article><article style={panel}><small className="muted">With GPS location</small><h2>{visible.length}</h2></article><article style={panel}><small className="muted">No recent sync</small><h2>{active.filter(r => !isRecent(r.last_seen_at)).length}</h2></article></div>
@@ -164,9 +244,9 @@ export function WorkforceMap() {
         {!loading && rows.length === 0 && <p className="muted">No employee has enabled location sharing yet.</p>}
         {rows.map(r => { const p = profiles[r.user_id]; return <button key={r.user_id} onClick={() => setSelected(r.user_id)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: 12, marginTop: 8, borderRadius: 12, border: selected === r.user_id ? '2px solid #24845a' : '1px solid var(--border, #ddd)', background: selected === r.user_id ? 'rgba(36,132,90,.08)' : 'transparent', color: 'inherit', cursor: 'pointer' }}><strong>{p?.full_name || p?.email || 'Workspace employee'}</strong><small className="muted" style={{ display: 'block' }}>{p?.teams?.join(', ') || 'No team listed'}</small><small style={{ display: 'block', marginTop: 4 }}>{r.sharing_enabled ? (isRecent(r.last_seen_at) ? '● Recently connected' : '○ No recent sync') : 'Sharing off'} · {age(r.last_seen_at)}</small></button> }) }
       </article>
-      <article style={{ ...panel, minHeight: 390, padding: 8 }}><div style={{ padding: 10, display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}><strong>{person?.full_name || person?.email || 'Select an employee'}</strong>{chosen && <a href={`https://www.openstreetmap.org/?mlat=${chosen.latitude}&mlon=${chosen.longitude}#map=16/${chosen.latitude}/${chosen.longitude}`} target="_blank" rel="noreferrer">Open full map ↗</a>}</div>
-        {mapUrl ? <iframe title="Selected employee last known location" src={mapUrl} style={{ width: '100%', height: 340, border: 0, borderRadius: 12 }} loading="lazy" /> : <div style={{ minHeight: 340, display: 'grid', placeItems: 'center', textAlign: 'center', padding: 20 }}><p className="muted">No GPS coordinates have been synchronized yet. The employee's location will appear after they enable sharing and the device sends its first update.</p></div>}
-        {chosen && <div className="muted" style={{ padding: 10, fontSize: 13 }}>Last location captured: {fmt(chosen.captured_at)} · Last sync: {fmt(chosen.last_seen_at)}{chosen.accuracy_m != null ? ' · Accuracy ±' + Math.round(chosen.accuracy_m) + ' m' : ''}</div>}
+      <article style={{ ...panel, minHeight: 390, padding: 8 }}><div style={{ padding: 10, display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}><strong>{visible.length} employee location marker(s)</strong>{chosen && <a href={`https://www.openstreetmap.org/?mlat=${chosen.latitude}&mlon=${chosen.longitude}#map=16/${chosen.latitude}/${chosen.longitude}`} target="_blank" rel="noreferrer">Open selected location ↗</a>}</div>
+        <WorkforceLeafletMap locations={visible} profiles={profiles} onSelect={selectLocation} />
+        {chosen && <div className="muted" style={{ padding: 10, fontSize: 13 }}><strong>{person?.full_name || person?.email || 'Selected employee'}</strong> · Last location captured: {fmt(chosen.captured_at)} · Last sync: {fmt(chosen.last_seen_at)}{chosen.accuracy_m != null ? ' · Accuracy ±' + Math.round(chosen.accuracy_m) + ' m' : ''}</div>}
       </article>
     </div>
     <p className="muted" style={{ fontSize: 12 }}>A stale location does not prove an employee is offline; it means the device has not synchronized recently. Background tracking is not guaranteed by installed PWAs. The map uses internet map tiles and may not render while this management device is offline.</p>
