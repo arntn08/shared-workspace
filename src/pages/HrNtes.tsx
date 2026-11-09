@@ -18,6 +18,8 @@ export default function HrNtes() {
   const [busy,setBusy] = useState(false)
   const [error,setError] = useState('')
   const [message,setMessage] = useState('')
+  const [noticeSearch,setNoticeSearch] = useState('')
+  const [noticeFilter,setNoticeFilter] = useState<'all'|'awaiting'|'responded'|'closed'|'overdue'>('all')
 
   async function load() {
     setError('')
@@ -32,7 +34,21 @@ export default function HrNtes() {
   }
   useEffect(()=>{ void load() },[])
 
-  async function issue(e: FormEvent) {
+  const today = new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Manila'})
+  const awaiting = items.filter(n=>n.status!=='closed'&&!n.employee_response?.trim()).length
+  const responded = items.filter(n=>n.status!=='closed'&&!!n.employee_response?.trim()).length
+  const overdue = items.filter(n=>n.status!=='closed'&&!n.employee_response?.trim()&&!!n.due_date&&n.due_date<today).length
+  const visibleItems = items.filter(n=>{
+    const name=n.profiles?.full_name||n.profiles?.email||''
+    const q=noticeSearch.trim().toLocaleLowerCase()
+    const matches=!q||[name,n.title,n.details,n.profiles?.email||''].some(v=>v.toLocaleLowerCase().includes(q))
+    const isAwaiting=n.status!=='closed'&&!n.employee_response?.trim()
+    const isResponded=n.status!=='closed'&&!!n.employee_response?.trim()
+    const isOverdue=isAwaiting&&!!n.due_date&&n.due_date<today
+    const statusMatch=noticeFilter==='all'||(noticeFilter==='awaiting'&&isAwaiting)||(noticeFilter==='responded'&&isResponded)||(noticeFilter==='closed'&&n.status==='closed')||(noticeFilter==='overdue'&&isOverdue)
+    return matches&&statusMatch
+  })
+\n  async function issue(e: FormEvent) {
     e.preventDefault()
     if (!profile || !employee) return
     if (attachment && attachment.size > 10 * 1024 * 1024) { setError('Attachment must be 10 MB or smaller.'); return }
@@ -93,8 +109,10 @@ export default function HrNtes() {
         <div><button className="primary" disabled={busy}>{busy?'Issuing…':'Issue private NTE'}</button></div>
       </form>
     </section>
-    <div className="page-head"><div><h2>Issued notices</h2><p className="muted">Responses and attachments are only visible to HR/owner and the assigned employee.</p></div><button className="small" onClick={()=>void load()}>Refresh</button></div>
-    {items.map(n=><article className="card" key={n.id} style={{marginBottom:'.75rem'}}><div className="row between" style={{gap:'1rem',alignItems:'flex-start'}}><div><h3 style={{marginTop:0}}>{n.title}</h3><p className="muted">{n.profiles?.full_name || n.profiles?.email || 'Assigned employee'} · Issued {new Date(n.created_at).toLocaleDateString()}</p></div><span className="badge">{n.status}</span></div><p style={{whiteSpace:'pre-wrap'}}>{n.details}</p>{n.due_date && <p className="muted">Response due: {n.due_date}</p>}{n.attachment_path && <p><button className="small" onClick={()=>void openAttachment(n)}>View attachment: {n.attachment_name || 'Open file'}</button></p>}{n.employee_response && <div className="notice"><strong>Employee response</strong><p style={{whiteSpace:'pre-wrap'}}>{n.employee_response}</p></div>}{n.status!=='closed' && <button className="small" onClick={()=>void closeNte(n.id)}>Close notice</button>}</article>)}
-    {!items.length && !error && <p className="muted">No NTEs have been issued.</p>}
+    <div className="page-head"><div><h2>Issued notices</h2><p className="muted">Track employee responses, deadlines, and closed cases in one place.</p></div><button className="small" onClick={()=>void load()}>↻ Refresh</button></div>
+    <div className="grid cols-3" style={{marginBottom:'1rem'}}><article className="card"><span className="muted">Awaiting response</span><h2>{awaiting}</h2></article><article className="card"><span className="muted">Responded</span><h2>{responded}</h2></article><article className="card"><span className="muted">Overdue</span><h2>{overdue}</h2></article></div>
+    <section className="card" style={{padding:'1rem',marginBottom:'1rem'}}><div className="row" style={{gap:'.65rem',flexWrap:'wrap'}}><input type="search" aria-label="Search notices" value={noticeSearch} onChange={e=>setNoticeSearch(e.target.value)} placeholder="Search employee, subject, or details…" style={{flex:'1 1 260px',minWidth:0}}/><select aria-label="Filter notice status" value={noticeFilter} onChange={e=>setNoticeFilter(e.target.value as typeof noticeFilter)} style={{flex:'0 1 200px'}}><option value="all">All notices</option><option value="awaiting">Awaiting response</option><option value="responded">Responded</option><option value="overdue">Overdue</option><option value="closed">Closed</option></select><button type="button" className="small" onClick={()=>{setNoticeSearch('');setNoticeFilter('all')}}>Clear</button></div><p className="muted" style={{margin:'.6rem 0 0',fontSize:'.8rem'}}>Showing {visibleItems.length} of {items.length} notices · Overdue means the response deadline has passed and the notice is still awaiting a response.</p></section>
+    {visibleItems.map(n=><article className="card" key={n.id} style={{marginBottom:'.75rem'}}><div className="row between" style={{gap:'1rem',alignItems:'flex-start'}}><div><h3 style={{marginTop:0}}>{n.title}</h3><p className="muted">{n.profiles?.full_name || n.profiles?.email || 'Assigned employee'} · Issued {new Date(n.created_at).toLocaleDateString()}</p></div><span className="badge">{n.status}</span></div><p style={{whiteSpace:'pre-wrap'}}>{n.details}</p>{n.due_date && <p className={n.status!=='closed'&&!n.employee_response?.trim()&&n.due_date<today?'error':'muted'}>Response due: {n.due_date}{n.status!=='closed'&&!n.employee_response?.trim()&&n.due_date<today?' · OVERDUE':''}</p>}{n.attachment_path && <p><button className="small" onClick={()=>void openAttachment(n)}>View attachment: {n.attachment_name || 'Open file'}</button></p>}{n.employee_response && <div className="notice"><strong>Employee response · {n.status==='closed'?'Case closed':'Awaiting HR review'}</strong><p style={{whiteSpace:'pre-wrap'}}>{n.employee_response}</p></div>}{n.status!=='closed' && <button className="small" onClick={()=>void closeNte(n.id)}>Close notice</button>}</article>)}
+    {!visibleItems.length && !error && <section className="card"><h3>{items.length?'No matching notices':'No NTEs have been issued'}</h3><p className="muted">{items.length?'Try another search or filter.':'Issued notices will appear here.'}</p></section>}
   </>
 }
