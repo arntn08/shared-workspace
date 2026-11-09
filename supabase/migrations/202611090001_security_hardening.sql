@@ -188,3 +188,127 @@ revoke all on function public.guard_employee_nte_update() from public, anon;
 grant execute on function public.guard_employee_nte_update() to authenticated;
 revoke all on function public.guard_leave_request_update() from public, anon;
 grant execute on function public.guard_leave_request_update() to authenticated;
+
+
+-- Harden existing SECURITY DEFINER helpers against search_path shadowing.
+create or replace function public.is_active_hr()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.profiles p
+    where p.id = (select auth.uid())
+      and p.role = 'hr' and p.active = true
+  );
+$$;
+revoke all on function public.is_active_hr() from public, anon;
+grant execute on function public.is_active_hr() to authenticated;
+
+create or replace function public.set_workspace_user_role(p_user_id uuid, p_role text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if (select auth.uid()) is null then
+    raise exception 'You must be signed in.';
+  end if;
+  if not exists (
+    select 1 from public.profiles p
+    where p.id = (select auth.uid()) and p.role = 'owner' and p.active = true
+  ) then
+    raise exception 'Only an active workspace owner can change roles.';
+  end if;
+  if p_role is null or p_role not in ('employee','ar_encoder','hr','editor') then
+    raise exception 'Unsupported role: %', p_role;
+  end if;
+  if not exists (select 1 from public.profiles p where p.id = p_user_id) then
+    raise exception 'The selected account does not exist.';
+  end if;
+  if exists (select 1 from public.profiles p where p.id = p_user_id and p.role = 'owner') then
+    raise exception 'Owner accounts cannot be changed here.';
+  end if;
+  update public.profiles set role = p_role where id = p_user_id;
+end;
+$$;
+revoke all on function public.set_workspace_user_role(uuid,text) from public, anon;
+grant execute on function public.set_workspace_user_role(uuid,text) to authenticated;
+
+-- Inactive accounts must not retain access to private HR documents.
+drop policy if exists "HR uploads NTE attachments" on storage.objects;
+create policy "HR uploads NTE attachments" on storage.objects for insert to authenticated
+with check (
+  bucket_id = 'nte-attachments'
+  and (storage.foldername(name))[1] = 'nte'
+  and exists (
+    select 1 from public.employee_ntes n
+    where n.id::text = (storage.foldername(name))[2]
+      and n.created_by = (select auth.uid())
+      and exists (
+        select 1 from public.profiles p
+        where p.id = (select auth.uid()) and p.role in ('hr','owner') and p.active = true
+      )
+  )
+);
+
+drop policy if exists "Assigned users read NTE attachments" on storage.objects;
+create policy "Assigned users read NTE attachments" on storage.objects for select to authenticated
+using (
+  bucket_id = 'nte-attachments'
+  and (storage.foldername(name))[1] = 'nte'
+  and exists (
+    select 1 from public.employee_ntes n
+    where n.id::text = (storage.foldername(name))[2]
+      and (
+        (n.employee_id = (select auth.uid()) and exists (
+          select 1 from public.profiles p
+          where p.id = (select auth.uid()) and p.role = 'employee' and p.active = true
+        ))
+        or exists (
+          select 1 from public.profiles p
+          where p.id = (select auth.uid()) and p.role in ('hr','owner') and p.active = true
+        )
+      )
+  )
+);
+
+drop policy if exists "HR deletes NTE attachments" on storage.objects;
+create policy "HR deletes NTE attachments" on storage.objects for delete to authenticated
+using (
+  bucket_id = 'nte-attachments'
+  and (storage.foldername(name))[1] = 'nte'
+  and exists (
+    select 1 from public.employee_ntes n
+    where n.id::text = (storage.foldername(name))[2]
+      and n.created_by = (select auth.uid())
+      and exists (
+        select 1 from public.profiles p
+        where p.id = (select auth.uid()) and p.role in ('hr','owner') and p.active = true
+      )
+  )
+);
+
+drop policy if exists "Employee and HR read leave forms" on storage.objects;
+create policy "Employee and HR read leave forms" on storage.objects for select to authenticated
+using (
+  bucket_id = 'leave-attachments'
+  and (storage.foldername(name))[1] = 'leave'
+  and exists (
+    select 1 from public.employee_leave_requests r
+    where r.id::text = (storage.foldername(name))[2]
+      and (
+        (r.employee_id = (select auth.uid()) and exists (
+          select 1 from public.profiles p
+          where p.id = (select auth.uid()) and p.role = 'employee' and p.active = true
+        ))
+        or exists (
+          select 1 from public.profiles p
+          where p.id = (select auth.uid()) and p.role = 'hr' and p.active = true
+        )
+      )
+  )
+);
