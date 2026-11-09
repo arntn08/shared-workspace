@@ -168,3 +168,203 @@
 @media (prefers-reduced-motion:reduce) {
   .ops-page *, .ops-nav-link { scroll-behavior:auto !important; animation:none !important; transition:none !important; }
 }
+
+
+/* Live Workforce Map — premium AHBA people-operations surface */
+.workforce-map-page {
+  --wf-green:#168653;
+  --wf-ink:#15251c;
+  --wf-soft:rgba(22,134,83,.075);
+  max-width:1780px;
+}
+.workforce-map-page > header {
+  padding:clamp(17px,2vw,25px);
+  border:1px solid rgba(22,134,83,.16);
+  border-radius:22px;
+  background:linear-gradient(118deg,rgba(22,134,83,.105),rgba(22,134,83,.025) 52%,var(--card,#fff));
+  box-shadow:0 12px 34px rgba(14,42,27,.055);
+}
+.workforce-map-page > header h1 {
+  margin:5px 0 4px;
+  font-size:clamp(25px,2.5vw,34px);
+  letter-spacing:-.9px;
+  line-height:1.1;
+}
+.workforce-map-page > header p { margin:0; font-size:13px; }
+.workforce-map-page > header button {
+  border-radius:12px;
+  box-shadow:0 5px 14px rgba(18,91,56,.12);
+}
+.workforce-map-page .workforce-map-stats { gap:12px; }
+.workforce-map-page .workforce-stat {
+  position:relative;
+  overflow:hidden;
+  min-height:112px;
+  padding:17px 18px !important;
+  border-radius:18px;
+  background:linear-gradient(145deg,var(--card,#fff),rgba(22,134,83,.035));
+  box-shadow:0 8px 24px rgba(14,42,27,.055);
+}
+.workforce-map-page .workforce-stat:after {
+  content:"";
+  position:absolute;
+  width:78px;height:78px;
+  right:-23px;bottom:-29px;
+  border-radius:50%;
+  background:rgba(22,134,83,.075);
+}
+.workforce-map-page .workforce-stat small {
+  display:block;
+  font-size:11px;
+  font-weight:650;
+  letter-spacing:.025em;
+}
+.workforce-map-page .workforce-stat h2 {
+  margin:8px 0 0;
+  font-size:clamp(27px,3vw,36px);
+  line-height:1;
+  letter-spacing:-1px;
+  color:var(--wf-green);
+}
+.workforce-map-page > div[style*="minmax(260px"] {
+  align-items:start;
+  gap:16px !important;
+}
+.workforce-map-page .workforce-roster,
+.workforce-map-page .workforce-map-card {
+  border-radius:20px !important;
+  border:1px solid var(--border,rgba(30,60,40,.12)) !important;
+  box-shadow:0 9px 28px rgba(14,42,27,.055);
+  background:var(--card,#fff);
+}
+.workforce-map-page .workforce-roster {
+  padding:17px !important;
+  scrollbar-width:thin;
+}
+.workforce-map-page .workforce-roster > strong {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:14px;
+  letter-spacing:-.2px;
+  margin-bottom:10px;
+}
+.workforce-map-page .workforce-person-row {
+  position:relative;
+  min-height:70px;
+  padding:12px 13px !important;
+  margin-top:7px !important;
+  border:1px solid transparent !important;
+  border-radius:14px !important;
+  background:rgba(120,140,125,.045) !important;
+  transition:background .18s ease,border-color .18s ease,transform .18s ease;
+}
+.workforce-map-page .workforce-person-row:hover {
+  background:rgba(22,134,83,.07) !important;
+  border-color:rgba(22,134,83,.18) !important;
+  transform:translateX(2px);
+}
+.workforce-map-page .workforce-person-row.is-selected {
+  border:1px solid rgba(22,134,83,.48) !important;
+  background:rgba(22,134,83,.095) !important;
+  box-shadow:inset 3px 0 0 var(--wf-green);
+}
+.workforce-map-page .workforce-person-row strong {
+  display:block;
+  font-size:13px;
+  letter-spacing:-.15px;
+}
+.workforce-map-page .workforce-person-row small { font-size:11px; }
+.workforce-map-page .workforce-map-card {
+  overflow:hidden;
+  padding:10px !important;
+}
+.workforce-map-page .workforce-map-card > div:first-child {
+  padding:9px 10px 13px !important;
+  align-items:center;
+}
+.workforce-map-page .workforce-map-card > div:first-child strong {
+  font-size:13px;
+}
+.workforce-map-page .workforce-map-card a {
+  color:var(--wf-green);
+  font-size:12px;
+  font-weight:650;
+  text-decoration:none;
+}
+.workforce-map-page .workforce-leaflet {
+  height:clamp(360px,48vw,570px) !important;
+  border-radius:15px !important;
+  overflow:hidden;
+  box-shadow:inset 0 0 0 1px rgba(20,50,30,.08);
+}
+.workforce-map-page .leaflet-container {
+  font:12px/1.5 inherit;
+  background:#e8eee9;
+}
+.workforce-map-page .leaflet-control-zoom {
+  border:0 !important;
+  overflow:hidden;
+  border-radius:11px !important;
+  box-shadow:0 3px 14px rgba(0,0,0,.16) !important;
+}
+.workforce-map-page .leaflet-control-zoom a {
+  color:#20392b !important;
+}
+.workforce-map-page .leaflet-popup-content-wrapper {
+  border-radius:14px;
+  box-shadow:0 8px 28px rgba(0,0,0,.18);
+}
+.workforce-map-page .leaflet-popup-content { margin:13px 15px; }
+.workforce-map-page .workforce-selected-person {
+  margin:12px 2px 2px !important;
+  padding:17px !important;
+  border-radius:16px !important;
+  background:linear-gradient(135deg,rgba(22,134,83,.075),transparent 70%);
+}
+.workforce-map-page .workforce-selected-person > div:first-child strong {
+  font-size:16px !important;
+  letter-spacing:-.3px;
+}
+.workforce-map-page .workforce-selected-person .badge {
+  border-radius:999px;
+  padding:6px 10px;
+}
+.workforce-map-page .workforce-selected-person > div[style*="repeat(auto-fit"] > div {
+  padding:10px 11px;
+  border:1px solid var(--border,rgba(30,60,40,.1));
+  border-radius:12px;
+  background:var(--card,#fff);
+}
+.workforce-map-page > p:last-child {
+  padding:12px 15px;
+  border-radius:13px;
+  background:rgba(120,140,125,.055);
+  line-height:1.55;
+}
+@media (max-width:900px) {
+  .workforce-map-page > div[style*="minmax(260px"] {
+    grid-template-columns:minmax(0,1fr) !important;
+  }
+  .workforce-map-page .workforce-roster { max-height:350px !important; }
+  .workforce-map-page .workforce-leaflet { height:420px !important; }
+}
+@media (max-width:560px) {
+  .workforce-map-page { gap:12px !important; }
+  .workforce-map-page > header { padding:16px; border-radius:17px; }
+  .workforce-map-page > header h1 { font-size:24px; }
+  .workforce-map-page .workforce-map-stats { gap:8px; }
+  .workforce-map-page .workforce-stat {
+    min-height:88px;
+    padding:12px !important;
+    border-radius:14px;
+  }
+  .workforce-map-page .workforce-stat h2 { font-size:27px; }
+  .workforce-map-page .workforce-roster { padding:13px !important; }
+  .workforce-map-page .workforce-map-card { padding:7px !important; }
+  .workforce-map-page .workforce-leaflet { height:350px !important; }
+  .workforce-map-page .workforce-selected-person { padding:13px !important; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .workforce-map-page .workforce-person-row { transition:none; }
+}
