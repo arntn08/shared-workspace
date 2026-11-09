@@ -1,0 +1,170 @@
+/* AHBA Compact Workspace System — shared by every role and tab.
+   Visual-only overrides: no route, data, permission, or workflow changes. */
+:root {
+  --compact-gap: clamp(10px, 1.15vw, 16px);
+  --compact-radius: 16px;
+}
+.ops-page {
+  max-width: 1840px;
+  padding: clamp(14px, 1.65vw, 24px) clamp(12px, 2vw, 28px) 36px;
+}
+.ops-page > * { min-width: 0; }
+.ops-page > * + * { margin-top: 0; }
+.ops-page .page-head,
+.ops-page .ops-overview-heading {
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; margin:0 0 14px;
+}
+.ops-page .page-head h1,
+.ops-page .ops-overview-heading h1 {
+  font-size:clamp(22px,2vw,30px); line-height:1.15; letter-spacing:-.65px;
+}
+.ops-page .page-head p,
+.ops-page .ops-overview-heading p { margin:4px 0 0; font-size:12px; }
+.ops-page h2 { font-size:15px; margin:0 0 9px; }
+.ops-page h3 { font-size:13px; }
+.ops-page .card,
+.ops-page .ops-panel,
+.ops-page .pa-card,
+.ops-page .pa-item {
+  min-width:0; border-radius:var(--compact-radius);
+  box-shadow:0 5px 18px rgba(15,30,20,.045);
+}
+.ops-page .card { padding:14px; margin-bottom:var(--compact-gap); }
+.ops-page .grid { gap:var(--compact-gap); }
+.ops-page .grid.metrics,
+.ops-page .grid.cols-3,
+.ops-page .ops-overview .grid.cols-3 {
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,168px),1fr));
+  gap:var(--compact-gap);
+}
+.ops-page .grid.metrics .card,
+.ops-page .grid.cols-3 > .card,
+.ops-page .ops-overview .grid.cols-3 > .card {
+  min-height:94px; padding:13px 15px !important; margin:0;
+}
+.ops-page .metric-value { font-size:clamp(24px,2.3vw,32px); margin-top:5px; }
+.ops-page .grid.cols-2 { gap:var(--compact-gap); }
+.ops-page .hero,
+.ops-page .pa-hero {
+  min-height:0; padding:clamp(16px,2vw,24px); margin-bottom:var(--compact-gap);
+  border-radius:18px;
+}
+.ops-page .hero h1 { font-size:clamp(23px,2.4vw,32px); }
+.ops-page .hero p { font-size:13px; }
+.ops-page .ops-overview { gap:var(--compact-gap) !important; }
+.ops-page .ops-overview > section.card:first-of-type {
+  padding:15px 18px !important; margin:0;
+}
+.ops-page .ops-overview > section.card:first-of-type h2 { font-size:19px; }
+.ops-page .ops-overview > section.card:first-of-type p { font-size:12px; margin-bottom:9px; }
+.ops-page .ops-overview-columns { gap:var(--compact-gap); }
+.ops-page .ops-panel { padding:14px; }
+.ops-page .ops-panel-heading { margin-bottom:9px; }
+.ops-page .table-wrap,
+.ops-page .sheet-wrap,
+.ops-page .tally-scroll {
+  border-radius:13px; box-shadow:none; max-width:100%;
+}
+.ops-page table { font-size:12px; }
+.ops-page th, .ops-page td { padding:8px 10px; }
+.ops-page .table-wrap { max-height:65vh; }
+.ops-page input, .ops-page select, .ops-page textarea {
+  min-height:39px; padding:8px 11px; border-radius:11px; font-size:13px;
+}
+.ops-page textarea { min-height:88px; }
+.ops-page label { margin:9px 0 4px; font-size:12px; }
+.ops-page button, .ops-page .btn { min-height:38px; padding:8px 13px; font-size:12px; }
+.ops-page button.small, .ops-page .btn.small { min-height:32px; padding:6px 10px; }
+.ops-page .badge { font-size:10px; padding:4px 8px; }
+.ops-page .notice { padding:9px 12px; margin-bottom:10px; border-radius:12px; font-size:12px; }
+.ops-page .row { gap:8px; }
+.ops-page .file-item { min-height:54px; padding:11px 13px; margin-bottom:8px; border-radius:13px; }
+.ops-page .pa-grid { gap:10px; }
+.ops-page .pa-card { padding:13px; }
+.ops-page .pa-card strong { font-size:1.55rem; }
+.ops-page .pa-item { padding:12px; }
+.ops-page .pa-tabs { gap:7px; margin-bottom:12px; }
+.ops-page .pa-tabs button { min-height:36px; padding:7px 11px; font-size:12px; }
+.ops-page .tally-page .tally-scroll { max-height:68vh; }
+.ops-page .tally-page .tally-table td { height:54px; }
+.ops-page .tally-page .tally-table thead th { height:46px; }
+.ops-page .tally-page .tally-table input { min-height:39px; font-size:13px; }
+.ops-topbar { min-height:54px; padding:9px clamp(14px,2vw,28px); }
+.ops-sidebar { padding:17px 12px 12px; }
+.ops-brand { padding-bottom:15px; }
+.ops-nav-link { min-height:40px; padding:7px 10px; margin:2px 0; font-size:12px; }
+.ops-nav-group { margin-bottom:12px; }
+.ops-workspace-label { margin-top:15px; }
+.ops-help-card { padding:9px; margin-bottom:9px; }
+.ops-sidebar-clock { padding:10px 12px; margin:10px 0; }
+.ops-page .section-title { margin:12px 0 7px; }
+
+/* Consistent compact role surfaces while retaining each role's own palette. */
+.ops-shell.role-theme-blue .ops-page .card,
+.ops-shell.role-theme-coordinator .ops-page .card,
+.ops-shell.role-theme-hr .ops-page .card {
+  border-radius:16px;
+}
+.ops-page :focus-visible { outline-offset:2px; }
+@media (min-width:1200px) {
+  .ops-page .grid.cols-3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media (max-width:1050px) {
+  .ops-page { padding:16px 15px 30px; }
+  .ops-page .grid.metrics,
+  .ops-page .grid.cols-3,
+  .ops-page .ops-overview .grid.cols-3 {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media (max-width:760px) {
+  .ops-topbar { min-height:46px; padding:7px 12px; }
+  .ops-breadcrumb > span:first-child { display:none; }
+  .ops-breadcrumb-divider { display:none; }
+  .ops-page { padding:13px 11px 28px; }
+  .ops-page .page-head,
+  .ops-page .ops-overview-heading { align-items:flex-start; margin-bottom:11px; }
+  .ops-page .page-head h1,
+  .ops-page .ops-overview-heading h1 { font-size:22px; }
+  .ops-page .card, .ops-page .ops-panel { padding:12px; }
+  .ops-page .grid.metrics,
+  .ops-page .grid.cols-3,
+  .ops-page .ops-overview .grid.cols-3 { grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+  .ops-page .grid.metrics .card,
+  .ops-page .grid.cols-3 > .card,
+  .ops-page .ops-overview .grid.cols-3 > .card { min-height:82px; padding:11px !important; }
+  .ops-page .metric-value { font-size:25px; }
+  .ops-page .ops-overview-columns { grid-template-columns:minmax(0,1fr); }
+  .ops-page .ops-overview > section.card:first-of-type { padding:13px !important; }
+  .ops-page .ops-overview > section.card:first-of-type h2 { font-size:17px; }
+  .ops-page .table-wrap { max-height:58vh; }
+  .ops-page .tally-page .tally-scroll { max-height:62vh; }
+  .ops-page .hero, .ops-page .pa-hero { padding:14px; }
+  .ops-page .row { gap:6px; }
+}
+@media (max-width:430px) {
+  .ops-page .grid.metrics,
+  .ops-page .grid.cols-3,
+  .ops-page .ops-overview .grid.cols-3 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .ops-page .page-head { flex-wrap:wrap; }
+  .ops-page .page-head > .row { width:100%; }
+  .ops-page .page-head button,
+  .ops-page .page-head .btn { flex:1 1 auto; }
+  .ops-page table { font-size:11px; }
+  .ops-page th, .ops-page td { padding:7px 8px; }
+  .ops-page .pa-tabs { display:flex; overflow-x:auto; padding-bottom:3px; }
+  .ops-page .pa-tabs button { flex:0 0 auto; }
+  .ops-topbar-right .ops-status-label { display:none; }
+}
+@media (prefers-reduced-motion:no-preference) {
+  .ops-page .card, .ops-page .ops-panel, .ops-page .pa-card, .ops-page .file-item {
+    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+  }
+  .ops-page .card:hover, .ops-page .ops-panel:hover, .ops-page .pa-card:hover {
+    transform:translateY(-1px);
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .ops-page *, .ops-nav-link { scroll-behavior:auto !important; animation:none !important; transition:none !important; }
+}
