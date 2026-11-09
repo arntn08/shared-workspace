@@ -26,6 +26,8 @@ export default function LeaveRequests() {
   const [busy,setBusy] = useState('')
   const [error,setError] = useState('')
   const [message,setMessage] = useState('')
+  const [hrSearch,setHrSearch] = useState('')
+  const [hrStatus,setHrStatus] = useState<'all'|'pending'|'approved'|'rejected'>('all')
 
   async function load() {
     if (!profile) return
@@ -86,6 +88,12 @@ export default function LeaveRequests() {
   }
 
   const counts={pending:items.filter(x=>x.status==='pending').length,approved:items.filter(x=>x.status==='approved').length,rejected:items.filter(x=>x.status==='rejected').length}
+  const visibleItems=items.filter(item=>{
+    const q=hrSearch.trim().toLocaleLowerCase()
+    const person=item.employee_name||item.profiles?.full_name||item.profiles?.email||''
+    const matches=!q||[person,item.profiles?.email||'',item.team_name||'',item.leave_type,item.reason].some(v=>v.toLocaleLowerCase().includes(q))
+    return matches&&(hrStatus==='all'||item.status===hrStatus)
+  })
   return <>
     <div className="page-head"><div><h1>{isHr?'Leave requests':'Leave application'}</h1><p className="muted" style={{margin:0}}>{isHr?'Review employee leave applications and their signed physical forms.':'Submit your leave request with a photo or scan of the signed physical leave form.'}</p></div><button className="small" onClick={()=>void load()}>Refresh</button></div>
     {error&&<p className="error">{error}</p>}{message&&<p className="notice">{message}</p>}
@@ -95,6 +103,7 @@ export default function LeaveRequests() {
         <section className="card"><div className="muted">Approved</div><h2>{counts.approved}</h2></section>
         <section className="card"><div className="muted">Rejected</div><h2>{counts.rejected}</h2></section>
       </div>
+      <section className="card hr-leave-filters" style={{padding:'1rem',marginBottom:'1rem'}}><div className="row" style={{gap:'.7rem',alignItems:'center',flexWrap:'wrap'}}><input aria-label="Search leave applications" value={hrSearch} onChange={e=>setHrSearch(e.target.value)} placeholder="Search employee, team, leave type, or reason…" style={{flex:'1 1 260px',minWidth:0}}/><select aria-label="Filter leave status" value={hrStatus} onChange={e=>setHrStatus(e.target.value as typeof hrStatus)} style={{flex:'0 1 180px'}}><option value="all">All statuses</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select><button type="button" className="small" onClick={()=>{setHrSearch('');setHrStatus('all')}}>Clear filters</button></div><p className="muted" style={{margin:'.6rem 0 0',fontSize:'.8rem'}}>Showing {visibleItems.length} of {items.length} applications.</p></section>
     </> : <section className="card" style={{marginBottom:'1rem'}}>
       <h2 style={{marginTop:0}}>New leave request</h2>
       <form className="stack" onSubmit={e=>void submit(e)}>
@@ -115,7 +124,7 @@ export default function LeaveRequests() {
       </form>
     </section>}
     <div className="page-head"><div><h2>{isHr?'Submitted applications':'My leave requests'}</h2><p className="muted" style={{margin:0}}>{isHr?'Open the signed physical form before making a decision.':'Track the status of your leave applications.'}</p></div></div>
-    {items.map(item=><article className="card" key={item.id} style={{marginBottom:'.75rem'}}>
+    {visibleItems.map(item=><article className="card" key={item.id} style={{marginBottom:'.75rem'}}>
       <div className="row between" style={{alignItems:'flex-start',gap:'1rem',flexWrap:'wrap'}}>
         <div><h3 style={{marginTop:0,marginBottom:'.35rem'}}>{item.leave_type}</h3><p className="muted" style={{margin:0}}>{isHr?(item.employee_name||item.profiles?.full_name||item.profiles?.email)+' · '+(item.team_name||'No team')+' · ':''}{dateLabel(item.start_date)} – {dateLabel(item.end_date)}</p></div>
         <span className="badge">{item.status}</span>
@@ -132,6 +141,6 @@ export default function LeaveRequests() {
       </div>}
       {item.status!=='pending'&&<p className="muted">Reviewed {item.status}.</p>}
     </article>)}
-    {!items.length&&!error&&<section className="card"><h2>{isHr?'No leave applications yet':'No leave requests yet'}</h2><p className="muted">{isHr?'New employee submissions will appear here.':'Your submitted leave applications will appear here.'}</p></section>}
+    {!visibleItems.length&&!error&&<section className="card"><h2>{items.length?'No matching applications':isHr?'No leave applications yet':'No leave requests yet'}</h2><p className="muted">{items.length?'Try a different search term or status filter.':isHr?'New employee submissions will appear here.':'Your submitted leave applications will appear here.'}</p></section>}
   </>
 }
