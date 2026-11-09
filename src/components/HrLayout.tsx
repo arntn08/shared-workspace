@@ -13,6 +13,7 @@ import Tally from '../pages/Tally'
 import ARGenerator from '../pages/ARGenerator'
 import LeaveRequests from '../pages/LeaveRequests'
 import { supabase } from '../lib/supabase'
+import { WorkforceMap } from '../pages/WorkforceLocation'
 
 const links = [
   ['/','HR overview','home'],
@@ -22,6 +23,7 @@ const links = [
   ['/leave','Leave requests','calendar'],
   ['/tally','Installation Tally','tally'],
   ['/weekly-reports','Weekly Team Reports','chart'],
+  ['/workforce-map','Live Workforce Map','map-pin'],
   ['/files','Files & resources','files'],
   ['/settings','Settings','settings']
 ] as const
@@ -56,6 +58,7 @@ export default function HrLayout() {
           <Route path="/leave" element={<LeaveRequests/>}/>
           <Route path="/tally" element={<Tally/>}/>
           <Route path="/weekly-reports" element={<HrWeeklyTeamReports/>}/>
+          <Route path="/workforce-map" element={<WorkforceMap/>}/>
           <Route path="/files" element={<EmployeeFiles settings={settings} />}/>
           <Route path="/file/:id" element={<FileViewer/>}/>
           <Route path="/settings" element={<Settings/>}/>
