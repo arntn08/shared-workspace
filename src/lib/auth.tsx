@@ -40,9 +40,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!error && p) {
             setProfile(p as Profile)
             try { localStorage.setItem('ahba-cached-profile:' + s.user.id, JSON.stringify(p)) } catch { /* storage may be unavailable */ }
-          } else {
+          } else if (error) {
             const cached = localStorage.getItem('ahba-cached-profile:' + s.user.id)
             setProfile(cached ? JSON.parse(cached) as Profile : null)
+          } else {
+            setProfile(null)
+            localStorage.removeItem('ahba-cached-profile:' + s.user.id)
           }
         } catch {
           try {
