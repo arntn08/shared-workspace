@@ -18,12 +18,20 @@ const paths: Record<string, string> = {
   tally: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
   bell: 'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0',
   user: 'M20 21a8 8 0 0 0-16 0M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+  // Navigation icons used by Owner, Editor, HR, AR Encoder and Employee tabs.
+  receipt: 'M4 2l2 1 2-1 2 1 2-1 2 1 2-1 2 1v20l-2-1-2 1-2-1-2 1-2-1-2 1-2-1V2zM8 8h8M8 12h8M8 16h5',
+  'file-text': 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8',
+  calendar: 'M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01',
+  chart: 'M3 3v18h18M8 16V9M13 16V5M18 16v-4',
+  users: 'M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M20 8a4 4 0 0 1 0 7M20 21v-2a4 4 0 0 0-3-3.87',
+  'users-round': 'M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M20 8a3 3 0 1 1-2.5-2.96M20 21v-2a4 4 0 0 0-2.5-3.87',
+  'calendar-check': 'M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 15l2.5 2.5L16 12',
 }
 
 export function Icon({ name }: { name: string }) {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d={paths[name] ?? ''} />
+      <path d={paths[name] ?? 'M12 9v4M12 17h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z'} />
     </svg>
   )
 }
