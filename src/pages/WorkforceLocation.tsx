@@ -220,13 +220,19 @@ export function WorkforceMap() {
     try {
       const [locations, people] = await Promise.all([
         fetchWorkforceLocations(),
-        supabase.from('profiles').select('id,full_name,email,teams').eq('active', true).order('full_name')
+        supabase.from('profiles').select('id,full_name,email,teams').eq('active', true).eq('role', 'employee').order('full_name')
       ])
-      setRows(locations)
+      const roster = people.data || []
+      const locationByUser = new Map(locations.map(row => [row.user_id, row]))
+      const combined = roster.map(person => locationByUser.get(person.id) || ({
+        user_id: person.id, sharing_enabled: false, consented_at: null, latitude: null,
+        longitude: null, accuracy_m: null, captured_at: null, last_seen_at: null, updated_at: ''
+      } as WorkforceLocationRow))
+      setRows(combined)
       const map: Record<string, { full_name: string | null; email: string; teams: string[] | null }> = {}
-      ;(people.data || []).forEach(p => { map[p.id] = p })
+      roster.forEach(p => { map[p.id] = p })
       setProfiles(map); setError('')
-      if (!selected && locations.length) setSelected(locations[0].user_id)
+      if (!selected && combined.length) setSelected(combined[0].user_id)
     } catch (e) { setError((e as Error).message || 'Unable to load workforce locations.') }
     finally { setLoading(false) }
   }, [selected])
@@ -240,10 +246,10 @@ export function WorkforceMap() {
     <div className="grid cols-3"><article style={panel}><small className="muted">Sharing enabled</small><h2>{active.length}</h2></article><article style={panel}><small className="muted">With GPS location</small><h2>{visible.length}</h2></article><article style={panel}><small className="muted">No recent sync</small><h2>{active.filter(r => !isRecent(r.last_seen_at)).length}</h2></article></div>
     {error && <div className="notice error">{error}</div>}
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, .8fr) minmax(0, 1.5fr)', gap: 14 }}>
-      <article style={{ ...panel, maxHeight: 520, overflowY: 'auto' }}><strong>Employees sharing location</strong>
+      <article style={{ ...panel, maxHeight: 520, overflowY: 'auto' }}><strong>Employee location-sharing status</strong>
         {loading && <p className="muted">Loading locations…</p>}
-        {!loading && rows.length === 0 && <p className="muted">No employee has enabled location sharing yet.</p>}
-        {rows.map(r => { const p = profiles[r.user_id]; return <button key={r.user_id} onClick={() => setSelected(r.user_id)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: 12, marginTop: 8, borderRadius: 12, border: selected === r.user_id ? '2px solid #24845a' : '1px solid var(--border, #ddd)', background: selected === r.user_id ? 'rgba(36,132,90,.08)' : 'transparent', color: 'inherit', cursor: 'pointer' }}><strong>{p?.full_name || p?.email || 'Workspace employee'}</strong><small className="muted" style={{ display: 'block' }}>{p?.teams?.join(', ') || 'No team listed'}</small><small style={{ display: 'block', marginTop: 4 }}>{r.sharing_enabled ? (isRecent(r.last_seen_at) ? '● Recently connected' : '○ No recent sync') : 'Sharing off'} · {age(r.last_seen_at)}</small></button> }) }
+        {!loading && rows.length === 0 && <p className="muted">No active employee accounts were found.</p>}
+        {rows.map(r => { const p = profiles[r.user_id]; return <button key={r.user_id} onClick={() => setSelected(r.user_id)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: 12, marginTop: 8, borderRadius: 12, border: selected === r.user_id ? '2px solid #24845a' : '1px solid var(--border, #ddd)', background: selected === r.user_id ? 'rgba(36,132,90,.08)' : 'transparent', color: 'inherit', cursor: 'pointer' }}><strong>{p?.full_name || p?.email || 'Workspace employee'}</strong><small className="muted" style={{ display: 'block' }}>{p?.teams?.join(', ') || 'No team listed'}</small><small style={{ display: 'block', marginTop: 4 }}>{r.sharing_enabled ? (isRecent(r.last_seen_at) ? '● Recently connected' : '○ No recent sync') : (r.last_seen_at ? 'Sharing off' : 'Not enabled')} · {age(r.last_seen_at)}</small></button> }) }
       </article>
       <article style={{ ...panel, minHeight: 390, padding: 8 }}><div style={{ padding: 10, display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}><strong>{visible.length} employee location marker(s)</strong>{chosen && <a href={`https://www.openstreetmap.org/?mlat=${chosen.latitude}&mlon=${chosen.longitude}#map=16/${chosen.latitude}/${chosen.longitude}`} target="_blank" rel="noreferrer">Open selected location ↗</a>}</div>
         <WorkforceLeafletMap locations={visible} profiles={profiles} onSelect={selectLocation} />
