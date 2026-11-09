@@ -46,7 +46,7 @@ export function EmployeeLocationSharing() {
     const result = await syncLocationQueue(uid)
     setPending(result.pending)
     if (result.error) setMessage('Sync will retry: ' + result.error)
-    else if (result.synced) setMessage(result.synced + ' offline GPS update(s) synchronized.')
+    else if (result.synced) setMessage('Latest GPS position synchronized; ' + result.synced + ' queued sample(s) processed.')
   }, [uid])
 
   useEffect(() => {
@@ -64,7 +64,6 @@ export function EmployeeLocationSharing() {
       const count = queuePosition(uid, position)
       setPending(count)
       setPermission('granted')
-      if (navigator.onLine) void sync()
     }, error => {
       setPermission(error.code === 1 ? 'denied' : 'unavailable')
       setMessage(error.code === 1 ? 'Location permission is denied. Enable it in your device settings to share location.' : 'GPS is temporarily unavailable. The app will keep trying while sharing is enabled.')
