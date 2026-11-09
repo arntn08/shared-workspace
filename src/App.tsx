@@ -50,7 +50,9 @@ function Gate() {
     return <div className="employee-shell"><div className="card"><h1>No access</h1><p>This account does not have access. Please contact the workspace owner.</p><button onClick={signOut}>Sign out</button></div></div>
   }
   if (!leaderCheck) return <div className="employee-shell"><p className="muted">Checking account access…</p></div>
-  return teamLeader ? <TeamLeaderLayout /> : projectCoordinator ? <ProjectCoordinatorLayout /> : profile.role === 'ar_encoder' ? <ARLayout /> : profile.role === 'owner' || profile.role === 'editor' ? <OwnerLayout /> : profile.role === 'hr' ? <HrLayout /> : <EmployeeLayout />
+  if (profile.role === 'owner' || profile.role === 'editor') return <OwnerLayout />
+  if (profile.role === 'hr') return <HrLayout />
+  return teamLeader ? <TeamLeaderLayout /> : projectCoordinator ? <ProjectCoordinatorLayout /> : profile.role === 'ar_encoder' ? <ARLayout /> : <EmployeeLayout />
 }
 
 export default function App() {
