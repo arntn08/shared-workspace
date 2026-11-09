@@ -1,3 +1,4 @@
+import './hr-premium.css'
 import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
