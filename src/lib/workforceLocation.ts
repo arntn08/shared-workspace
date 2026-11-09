@@ -20,7 +20,7 @@ export type QueuedPosition = {
 }
 
 const queueKey = (uid: string) => `ahba-location-queue:${uid}`
-const consentKey = (uid: string) => `ahba-location-consent:${uid}'
+const consentKey = (uid: string) => `ahba-location-consent:${uid}`
 const pendingKey = (uid: string) => `ahba-location-pending:${uid}`
 
 export function localConsent(uid: string): { enabled: boolean; consentedAt: string | null } {
