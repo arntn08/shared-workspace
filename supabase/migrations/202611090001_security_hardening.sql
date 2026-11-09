@@ -312,3 +312,45 @@ using (
       )
   )
 );
+
+
+-- Restrict employee-side visibility and pending-request deletion to active accounts.
+drop policy if exists "HR and owners read NTEs" on public.employee_ntes;
+create policy "HR and owners read NTEs"
+on public.employee_ntes for select to authenticated
+using (
+  (
+    employee_id = (select auth.uid())
+    and exists (
+      select 1 from public.profiles p
+      where p.id = (select auth.uid()) and p.role = 'employee' and p.active = true
+    )
+  )
+  or exists (
+    select 1 from public.profiles p
+    where p.id = (select auth.uid()) and p.role in ('hr','owner') and p.active = true
+  )
+);
+
+drop policy if exists "Employees view own leave requests" on public.employee_leave_requests;
+create policy "Employees view own leave requests"
+on public.employee_leave_requests for select to authenticated
+using (
+  employee_id = (select auth.uid())
+  and exists (
+    select 1 from public.profiles p
+    where p.id = (select auth.uid()) and p.role = 'employee' and p.active = true
+  )
+);
+
+drop policy if exists "Employees remove own pending leave request" on public.employee_leave_requests;
+create policy "Employees remove own pending leave request"
+on public.employee_leave_requests for delete to authenticated
+using (
+  employee_id = (select auth.uid())
+  and status = 'pending'
+  and exists (
+    select 1 from public.profiles p
+    where p.id = (select auth.uid()) and p.role = 'employee' and p.active = true
+  )
+);
