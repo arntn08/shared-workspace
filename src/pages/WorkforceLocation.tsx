@@ -167,6 +167,7 @@ function WorkforceLeafletMap({ locations, profiles, onSelect }: {
   const element = useRef<HTMLDivElement | null>(null)
   const map = useRef<any>(null)
   const markers = useRef<any[]>([])
+  const accuracyCircles = useRef<any[]>([])
   const [mapError, setMapError] = useState('')
   const [mapReady, setMapReady] = useState(false)
   useEffect(() => {
@@ -191,14 +192,39 @@ function WorkforceLeafletMap({ locations, profiles, onSelect }: {
     const L = window.L
     if (!instance || !L) return
     markers.current.forEach(marker => marker.remove())
+    accuracyCircles.current.forEach(circle => circle.remove())
     markers.current = []
+    accuracyCircles.current = []
     const points = locations.filter(row => row.latitude != null && row.longitude != null)
     points.forEach(row => {
       const person = profiles[row.user_id]
-      const marker = L.marker([row.latitude, row.longitude]).addTo(instance)
-      marker.bindPopup(`<strong>${(person?.full_name || person?.email || 'Employee').replace(/[<>&"]/g, '')}</strong><br>${(person?.teams?.join(', ') || 'No team').replace(/[<>&"]/g, '')}<br>Last sync: ${age(row.last_seen_at)}`)
+      const displayName = person?.full_name || person?.email || 'Employee'
+      const initials = displayName.split(/\\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase() || 'AH'
+      const fresh = isRecent(row.last_seen_at)
+      const marker = L.marker([row.latitude, row.longitude], {
+        icon: L.divIcon({
+          className: 'ahba-workforce-pin',
+          html: `<div style="width:42px;height:42px;border-radius:50% 50% 50% 8px;transform:rotate(-45deg);background:${fresh ? '#168653' : '#64748b'};border:3px solid white;box-shadow:0 3px 12px #0005;display:grid;place-items:center"><span style="transform:rotate(45deg);font:bold 12px system-ui;color:white">${initials}</span></div>`,
+          iconSize: [42, 42],
+          iconAnchor: [21, 38],
+          popupAnchor: [0, -36]
+        })
+      }).addTo(instance)
+      const safe = (value: string) => value.replace(/[<>&"]/g, '')
+      const popup = `<div style="min-width:190px;font:13px system-ui"><strong style="font-size:15px">${safe(displayName)}</strong><div>${safe(person?.email || '')}</div><div style="margin:5px 0;color:${fresh ? '#168653' : '#64748b'}">${fresh ? '● Recently connected' : '○ No recent sync'}</div><div>Team: ${safe(person?.teams?.join(', ') || 'Not assigned')}</div><div>GPS accuracy: ${row.accuracy_m == null ? 'Not reported' : '±' + Math.round(row.accuracy_m) + ' m'}</div><div>Captured: ${safe(fmt(row.captured_at))}</div><div>Last sync: ${safe(fmt(row.last_seen_at))}</div><a href="https://www.google.com/maps?q=${row.latitude},${row.longitude}" target="_blank" rel="noopener">Open in Google Maps ↗</a></div>`
+      marker.bindPopup(popup)
       marker.on('click', () => onSelect(row.user_id))
       markers.current.push(marker)
+      if (row.accuracy_m && row.accuracy_m > 0) {
+        const circle = L.circle([row.latitude, row.longitude], {
+          radius: Math.min(row.accuracy_m, 5000),
+          color: fresh ? '#168653' : '#64748b',
+          weight: 1,
+          opacity: 0.55,
+          fillOpacity: 0.08
+        }).addTo(instance)
+        accuracyCircles.current.push(circle)
+      }
     })
     if (points.length === 1) instance.setView([points[0].latitude, points[0].longitude], 14)
     else if (points.length > 1) instance.fitBounds(L.latLngBounds(points.map(row => [row.latitude, row.longitude])), { padding: [28, 28], maxZoom: 14 })
@@ -251,11 +277,23 @@ export function WorkforceMap() {
         {!loading && rows.length === 0 && <p className="muted">No active employee accounts were found.</p>}
         {rows.map(r => { const p = profiles[r.user_id]; return <button key={r.user_id} onClick={() => setSelected(r.user_id)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: 12, marginTop: 8, borderRadius: 12, border: selected === r.user_id ? '2px solid #24845a' : '1px solid var(--border, #ddd)', background: selected === r.user_id ? 'rgba(36,132,90,.08)' : 'transparent', color: 'inherit', cursor: 'pointer' }}><strong>{p?.full_name || p?.email || 'Workspace employee'}</strong><small className="muted" style={{ display: 'block' }}>{p?.teams?.join(', ') || 'No team listed'}</small><small style={{ display: 'block', marginTop: 4 }}>{r.sharing_enabled ? (isRecent(r.last_seen_at) ? '● Recently connected' : '○ No recent sync') : (r.last_seen_at ? 'Sharing off' : 'Not enabled')} · {age(r.last_seen_at)}</small></button> }) }
       </article>
-      <article style={{ ...panel, minHeight: 390, padding: 8 }}><div style={{ padding: 10, display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}><strong>{visible.length} employee location marker(s)</strong>{chosen && <a href={`https://www.openstreetmap.org/?mlat=${chosen.latitude}&mlon=${chosen.longitude}#map=16/${chosen.latitude}/${chosen.longitude}`} target="_blank" rel="noreferrer">Open selected location ↗</a>}</div>
+      <article style={{ ...panel, minHeight: 390, padding: 8 }}><div style={{ padding: 10, display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}><strong>{visible.length} employee location marker(s)</strong>{chosen && <a href={`https://www.google.com/maps?q=${chosen.latitude},${chosen.longitude}`} target="_blank" rel="noreferrer">Open in Google Maps ↗</a>}</div>
         <WorkforceLeafletMap locations={visible} profiles={profiles} onSelect={selectLocation} />
-        {chosen && <div className="muted" style={{ padding: 10, fontSize: 13 }}><strong>{person?.full_name || person?.email || 'Selected employee'}</strong> · Last location captured: {fmt(chosen.captured_at)} · Last sync: {fmt(chosen.last_seen_at)}{chosen.accuracy_m != null ? ' · Accuracy ±' + Math.round(chosen.accuracy_m) + ' m' : ''}</div>}
+        {chosen && <div style={{ padding: 14, margin: 8, border: '1px solid var(--border, #ddd)', borderRadius: 14, display: 'grid', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+            <div><strong style={{ fontSize: 17 }}>{person?.full_name || person?.email || 'Selected employee'}</strong><div className="muted" style={{ fontSize: 12 }}>{person?.email || 'No email available'}</div></div>
+            <span className="badge">{isRecent(chosen.last_seen_at) ? 'Recently connected' : 'No recent sync'}</span>
+          </div>
+          <div className="muted" style={{ fontSize: 13 }}>Department / team: {person?.teams?.join(', ') || 'Not assigned'}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(145px,1fr))', gap: 10 }}>
+            <div><small className="muted">GPS accuracy estimate</small><strong style={{ display: 'block' }}>{chosen.accuracy_m != null ? '±' + Math.round(chosen.accuracy_m) + ' meters' : 'Not reported'}</strong></div>
+            <div><small className="muted">Location captured</small><strong style={{ display: 'block' }}>{age(chosen.captured_at)}</strong></div>
+            <div><small className="muted">Last synchronized</small><strong style={{ display: 'block' }}>{age(chosen.last_seen_at)}</strong></div>
+          </div>
+          <div className="muted" style={{ fontSize: 12 }}>Coordinates: {chosen.latitude?.toFixed(6)}, {chosen.longitude?.toFixed(6)} · {fmt(chosen.captured_at)}</div>
+        </div>}
       </article>
     </div>
-    <p className="muted" style={{ fontSize: 12 }}>A stale location does not prove an employee is offline; it means the device has not synchronized recently. Background tracking is not guaranteed by installed PWAs. The map uses internet map tiles and may not render while this management device is offline.</p>
+    <p className="muted" style={{ fontSize: 12 }}>Pin initials identify the employee; the shaded circle represents the device-reported GPS accuracy radius. Accuracy is an estimate, not a guarantee. A stale location does not prove an employee is offline; it means the device has not synchronized recently. Background tracking is not guaranteed by installed PWAs. The map uses internet map tiles and may not render while this management device is offline.</p>
   </section>
 }
