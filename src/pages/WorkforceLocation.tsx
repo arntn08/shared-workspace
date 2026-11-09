@@ -230,7 +230,7 @@ function WorkforceLeafletMap({ locations, profiles, onSelect }: {
     else if (points.length > 1) instance.fitBounds(L.latLngBounds(points.map(row => [row.latitude, row.longitude])), { padding: [28, 28], maxZoom: 14 })
   }, [locations, profiles, onSelect, mapReady])
   return <div style={{ position: 'relative' }}>
-    <div ref={element} style={{ width: '100%', height: 420, borderRadius: 12, zIndex: 0, background: '#e8eee9' }} />
+    <div className="workforce-leaflet" ref={element} style={{ width: '100%', height: 420, borderRadius: 12, zIndex: 0, background: '#e8eee9' }} />
     {mapError && <div className="notice" style={{ marginTop: 8 }}>{mapError} Employee list and last-known timestamps are still available.</div>}
   </div>
 }
@@ -267,19 +267,19 @@ export function WorkforceMap() {
   const active = rows.filter(r => r.sharing_enabled)
   const chosen = visible.find(r => r.user_id === selected) || visible[0]
   const person = chosen ? profiles[chosen.user_id] : undefined
-  return <section style={{ display: 'grid', gap: 16 }}>
+  return <section className="workforce-map-page" style={{ display: 'grid', gap: 16 }}>
     <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', gap: 12, flexWrap: 'wrap' }}><div><span className="ops-eyebrow">AHBA PEOPLE OPERATIONS</span><h1>Live Workforce Map</h1><p className="muted">Locations shared by employees who have explicitly opted in.</p></div><button className="small" onClick={() => void load()}>↻ Refresh</button></header>
-    <div className="grid cols-3"><article style={panel}><small className="muted">Sharing enabled</small><h2>{active.length}</h2></article><article style={panel}><small className="muted">With GPS location</small><h2>{visible.length}</h2></article><article style={panel}><small className="muted">No recent sync</small><h2>{active.filter(r => !isRecent(r.last_seen_at)).length}</h2></article></div>
+    <div className="grid cols-3 workforce-map-stats"><article className="workforce-stat" style={panel}><small className="muted">Sharing enabled</small><h2>{active.length}</h2></article><article className="workforce-stat" style={panel}><small className="muted">With GPS location</small><h2>{visible.length}</h2></article><article className="workforce-stat" style={panel}><small className="muted">No recent sync</small><h2>{active.filter(r => !isRecent(r.last_seen_at)).length}</h2></article></div>
     {error && <div className="notice error">{error}</div>}
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, .8fr) minmax(0, 1.5fr)', gap: 14 }}>
-      <article style={{ ...panel, maxHeight: 520, overflowY: 'auto' }}><strong>Employee location-sharing status</strong>
+      <article className="workforce-roster" style={{ ...panel, maxHeight: 520, overflowY: 'auto' }}><strong>Employee location-sharing status</strong>
         {loading && <p className="muted">Loading locations…</p>}
         {!loading && rows.length === 0 && <p className="muted">No active employee accounts were found.</p>}
-        {rows.map(r => { const p = profiles[r.user_id]; return <button key={r.user_id} onClick={() => setSelected(r.user_id)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: 12, marginTop: 8, borderRadius: 12, border: selected === r.user_id ? '2px solid #24845a' : '1px solid var(--border, #ddd)', background: selected === r.user_id ? 'rgba(36,132,90,.08)' : 'transparent', color: 'inherit', cursor: 'pointer' }}><strong>{p?.full_name || p?.email || 'Workspace employee'}</strong><small className="muted" style={{ display: 'block' }}>{p?.teams?.join(', ') || 'No team listed'}</small><small style={{ display: 'block', marginTop: 4 }}>{r.sharing_enabled ? (isRecent(r.last_seen_at) ? '● Recently connected' : '○ No recent sync') : (r.last_seen_at ? 'Sharing off' : 'Not enabled')} · {age(r.last_seen_at)}</small></button> }) }
+        {rows.map(r => { const p = profiles[r.user_id]; return <button className={`workforce-person-row${selected === r.user_id ? ' is-selected' : ''}`} key={r.user_id} onClick={() => setSelected(r.user_id)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: 12, marginTop: 8, borderRadius: 12, border: selected === r.user_id ? '2px solid #24845a' : '1px solid var(--border, #ddd)', background: selected === r.user_id ? 'rgba(36,132,90,.08)' : 'transparent', color: 'inherit', cursor: 'pointer' }}><strong>{p?.full_name || p?.email || 'Workspace employee'}</strong><small className="muted" style={{ display: 'block' }}>{p?.teams?.join(', ') || 'No team listed'}</small><small style={{ display: 'block', marginTop: 4 }}>{r.sharing_enabled ? (isRecent(r.last_seen_at) ? '● Recently connected' : '○ No recent sync') : (r.last_seen_at ? 'Sharing off' : 'Not enabled')} · {age(r.last_seen_at)}</small></button> }) }
       </article>
-      <article style={{ ...panel, minHeight: 390, padding: 8 }}><div style={{ padding: 10, display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}><strong>{visible.length} employee location marker(s)</strong>{chosen && <a href={`https://www.google.com/maps?q=${chosen.latitude},${chosen.longitude}`} target="_blank" rel="noreferrer">Open in Google Maps ↗</a>}</div>
+      <article className="workforce-map-card" style={{ ...panel, minHeight: 390, padding: 8 }}><div style={{ padding: 10, display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}><strong>{visible.length} employee location marker(s)</strong>{chosen && <a href={`https://www.google.com/maps?q=${chosen.latitude},${chosen.longitude}`} target="_blank" rel="noreferrer">Open in Google Maps ↗</a>}</div>
         <WorkforceLeafletMap locations={visible} profiles={profiles} onSelect={selectLocation} />
-        {chosen && <div style={{ padding: 14, margin: 8, border: '1px solid var(--border, #ddd)', borderRadius: 14, display: 'grid', gap: 10 }}>
+        {chosen && <div className="workforce-selected-person" style={{ padding: 14, margin: 8, border: '1px solid var(--border, #ddd)', borderRadius: 14, display: 'grid', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
             <div><strong style={{ fontSize: 17 }}>{person?.full_name || person?.email || 'Selected employee'}</strong><div className="muted" style={{ fontSize: 12 }}>{person?.email || 'No email available'}</div></div>
             <span className="badge">{isRecent(chosen.last_seen_at) ? 'Recently connected' : 'No recent sync'}</span>
