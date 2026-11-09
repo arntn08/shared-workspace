@@ -16,6 +16,7 @@ import TeamSettings from '../pages/TeamSettings'
 import ARGenerator from '../pages/ARGenerator'
 import ProjectActivities from '../pages/ProjectActivities'
 import { HrWeeklyTeamReports } from './HrLayout'
+import { WorkforceMap } from '../pages/WorkforceLocation'
 
 const ownerLinks: [string, string, string, string][] = [
   ['/', 'Overview', 'home', 'Workspace'],
@@ -23,6 +24,7 @@ const ownerLinks: [string, string, string, string][] = [
   ['/ar', 'AR Generator', 'receipt', 'Operations'],
   ['/schedule', 'Team Schedule', 'schedule', 'Operations'],
   ['/project-coordinator', 'Project Coordinator', 'calendar-check', 'Operations'],
+  ['/workforce-map', 'Live Workforce Map', 'map-pin', 'Management'],
   ['/files', 'Files & resources', 'files', 'Workspace'],
   ['/teams', 'Team Settings', 'users-round', 'Management'],
   ['/people', 'People', 'people', 'Management'],
@@ -37,6 +39,7 @@ const editorLinks: [string, string, string, string][] = [
   ['/ar', 'AR Generator', 'receipt', 'Operations'],
   ['/schedule', 'Schedule', 'schedule', 'Operations'],
   ['/weekly-reports', 'Weekly Team Reports', 'chart', 'Operations'],
+  ['/workforce-map', 'Live Workforce Map', 'map-pin', 'Management'],
   ['/files', 'Files & resources', 'files', 'Workspace'],
   ['/teams', 'Team Settings', 'users-round', 'Management'],
   ['/people', 'People', 'people', 'Management'],
@@ -62,7 +65,7 @@ export default function OwnerLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const isOwner = profile?.role === 'owner'
-  const links = isOwner ? ownerLinks : editorLinks.filter(([to]) => to !== '/people' && to !== '/teams' && to !== '/design' && to !== '/activity')
+  const links = isOwner ? ownerLinks : editorLinks
   const currentPage = links.find(([to]) => to === '/' ? location.pathname === '/' : location.pathname.startsWith(to))?.[1] ?? 'Workspace'
   const groups = ['Workspace', 'Operations', 'Management', 'Account']
 
@@ -84,7 +87,7 @@ export default function OwnerLayout() {
     <main className="ops-main">
       <header className="ops-topbar"><div className="ops-breadcrumb"><span>AHBA WORKSPACE</span><span className="ops-breadcrumb-divider">/</span><strong>{currentPage}</strong></div><div className="ops-topbar-right"><span className="ops-status-dot" /><span className="ops-status-label">Workspace connected</span><span className="ops-role-pill">{profile?.role}</span></div></header>
       <div className="ops-page"><Routes>
-        <Route path="/" element={<Overview />} /><Route path="/files" element={<Files />} /><Route path="/file/:id" element={<FileViewer />} /><Route path="/tally" element={<Tally />} /><Route path="/ar" element={<ARGenerator />} /><Route path="/schedule" element={<HrTeamSchedule />} /><Route path="/weekly-reports" element={<HrWeeklyTeamReports />} /><Route path="/project-coordinator" element={isOwner ? <ProjectActivities coordinator /> : <Navigate to="/" replace />} /><Route path="/settings" element={<Settings />} /><Route path="/teams" element={<TeamSettings />} /><Route path="/people" element={<People />} />{isOwner && <Route path="/design" element={<DashboardDesign />} />}{isOwner && <Route path="/activity" element={<Activity />} />}<Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/" element={<Overview />} /><Route path="/files" element={<Files />} /><Route path="/file/:id" element={<FileViewer />} /><Route path="/tally" element={<Tally />} /><Route path="/ar" element={<ARGenerator />} /><Route path="/schedule" element={<HrTeamSchedule />} /><Route path="/weekly-reports" element={<HrWeeklyTeamReports />} /><Route path="/workforce-map" element={<WorkforceMap />} /><Route path="/project-coordinator" element={isOwner ? <ProjectActivities coordinator /> : <Navigate to="/" replace />} /><Route path="/settings" element={<Settings />} /><Route path="/teams" element={<TeamSettings />} /><Route path="/people" element={<People />} />{isOwner && <Route path="/design" element={<DashboardDesign />} />}{isOwner && <Route path="/activity" element={<Activity />} />}<Route path="*" element={<Navigate to="/" replace />} />
       </Routes></div>
     </main>
   </div>
