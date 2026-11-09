@@ -31,12 +31,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (loadedFor.current === s.user.id) return
       setLoading(true)
       setTimeout(async () => {
-        const { data: p } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', s.user.id)
-          .maybeSingle()
-        setProfile((p as Profile) ?? null)
+        try {
+          const { data: p, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', s.user.id)
+            .maybeSingle()
+          if (!error && p) {
+            setProfile(p as Profile)
+            try { localStorage.setItem('ahba-cached-profile:' + s.user.id, JSON.stringify(p)) } catch { /* storage may be unavailable */ }
+          } else {
+            const cached = localStorage.getItem('ahba-cached-profile:' + s.user.id)
+            setProfile(cached ? JSON.parse(cached) as Profile : null)
+          }
+        } catch {
+          try {
+            const cached = localStorage.getItem('ahba-cached-profile:' + s.user.id)
+            setProfile(cached ? JSON.parse(cached) as Profile : null)
+          } catch { setProfile(null) }
+        }
         loadedFor.current = s.user.id
         setLoading(false)
       }, 0)
