@@ -16,6 +16,7 @@ import Tally from '../pages/Tally'
 import MyTeamSummary from '../pages/MyTeamSummary'
 import EmployeeNtes from '../pages/EmployeeNtes'
 import LeaveRequests from '../pages/LeaveRequests'
+import { EmployeeLocationSharing } from '../pages/WorkforceLocation'
 
 const employeeLinks: [string, string, string, string][] = [
   ['/', 'Home', 'home', 'Workspace'],
@@ -26,6 +27,7 @@ const employeeLinks: [string, string, string, string][] = [
   ['/notifications', 'Notifications', 'bell', 'Operations'],
   ['/my-ntes', 'My NTEs', 'file-text', 'Operations'],
   ['/leave', 'Leave application', 'calendar', 'Operations'],
+  ['/location-sharing', 'Location sharing', 'map-pin', 'Account'],
   ['/profile', 'My profile', 'user', 'Account'],
   ['/settings', 'Settings', 'settings', 'Account']
 ]
@@ -254,6 +256,7 @@ export default function EmployeeLayout() {
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/my-ntes" element={<EmployeeNtes />} />
               <Route path="/leave" element={<LeaveRequests />} />
+              <Route path="/location-sharing" element={<EmployeeLocationSharing />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
