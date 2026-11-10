@@ -92,9 +92,10 @@ const formatDate = (date: Date) => {
 
 const getWeekStart = (dateString: string) => {
   const date = new Date(`${dateString}T12:00:00`)
-  // Reporting weeks run Sunday through Saturday. Month clipping then makes
-  // the final October week Oct 26–31 and the first November week Nov 1–7.
-  date.setDate(date.getDate() - date.getDay())
+  // Reporting weeks run Monday through Sunday, including dates that cross
+  // calendar-month boundaries so teams can review the complete week.
+  const daysSinceMonday = (date.getDay() + 6) % 7
+  date.setDate(date.getDate() - daysSinceMonday)
   return formatDate(date)
 }
 
@@ -145,20 +146,17 @@ export default function Tally() {
   const monthDates = useMemo(() => getMonthDates(month), [month])
   const monthStart = `${month}-01`
   const monthEnd = monthDates[monthDates.length - 1]
-  // Anchor navigation to the first Sunday-based reporting week that touches
-  // the selected month. The month filter below excludes dates outside it.
+  // Anchor navigation to the first Monday-based reporting week touching
+  // the selected month. Always show all seven days, including adjacent-month days.
   const firstMonthWeekStart = getWeekStart(monthStart)
   const weekStart = addDays(firstMonthWeekStart, weekOffset * 7)
-  const dates = useMemo(
-    () => getWeekDates(weekStart).filter(date => date >= monthStart && date <= monthEnd),
-    [weekStart, monthStart, monthEnd]
-  )
-  const weekEnd = dates[dates.length - 1] ?? monthEnd
+  const dates = useMemo(() => getWeekDates(weekStart), [weekStart])
+  const weekEnd = dates[6]
   const nowDate = formatDate(new Date())
-  const rawReportDate = weekStart > nowDate ? weekStart : weekEnd < nowDate ? weekEnd : nowDate
-  const reportDate = rawReportDate > monthEnd ? monthEnd : rawReportDate
-  const importedStart = monthStart
-  const importedEnd = monthEnd
+  const reportDate = weekStart > nowDate ? weekStart : weekEnd < nowDate ? weekEnd : nowDate
+  // Load the full selected month plus the visible week's spillover dates.
+  const importedStart = weekStart < monthStart ? weekStart : monthStart
+  const importedEnd = weekEnd > monthEnd ? weekEnd : monthEnd
 
   const activeTeams = useMemo(
     () =>
@@ -279,8 +277,8 @@ export default function Tally() {
   }, [importedEnd, importedStart])
 
   function changeWeek(offset: number) {
-    // Advance by complete Sunday–Saturday weeks. If that crosses a month,
-    // switch to that month and show only the dates belonging to it.
+    // Advance by complete Monday–Sunday weeks. If that crosses a month,
+    // switch the month selector while retaining all seven visible dates.
     const targetWeekStart = addDays(weekStart, offset * 7)
     const targetMonth = targetWeekStart.slice(0, 7)
     const targetMonthFirstWeek = getWeekStart(`${targetMonth}-01`)
@@ -572,7 +570,7 @@ export default function Tally() {
       `"${String(value).replace(/"/g, '""')}"`
 
     const rows: (string | number)[][] = [
-      ['Team', ...dates, 'WTD', 'MTD']
+      ['Team', ...dates, 'WTD (Mon–Sun)', 'MTD']
     ]
 
     activeTeams.forEach(team => {
@@ -1100,7 +1098,7 @@ export default function Tally() {
         {tallyView === 'wtd-mtd' && (
           <p className="tally-note">
             {canEdit
-              ? 'Enter a daily count and leave the field to save. Weekly dates are shown; WTD and MTD update automatically from saved daily counts.'
+              ? 'Enter a daily count and leave the field to save. Monday–Sunday dates are shown; WTD includes the full selected week, while MTD includes only dates in the selected month.'
               : 'Read-only view. Contact an owner or editor to update counts.'}
           </p>
         )}
@@ -1164,7 +1162,7 @@ export default function Tally() {
             {departmentWTD.toLocaleString()}
           </div>
           <div className="muted" style={{ fontSize: '0.8rem' }}>
-            Week-to-Date · all active teams
+            Selected Monday–Sunday week · all active teams
           </div>
         </div>
 
@@ -1200,7 +1198,7 @@ export default function Tally() {
               })}
             </h2>
             <p className="muted" style={{ margin: '0.35rem 0 0' }}>
-              Daily counts by team · Sunday–Saturday · WTD and MTD calculated automatically
+              Daily counts by team · Monday–Sunday · WTD and MTD calculated automatically
             </p>
           </div>
 
