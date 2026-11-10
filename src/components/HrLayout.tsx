@@ -176,23 +176,22 @@ export function HrWeeklyTeamReports(){
  const activeTeams=teams.filter(t=>t.active)
  const weeklyRows=activeTeams.map(t=>({ ...t,department:depts.find(d=>d.id===t.department_id)?.code??'—',records:orders.filter(o=>o.team_id===t.id),count:orders.filter(o=>o.team_id===t.id).length })).sort((a,b)=>b.count-a.count||a.code.localeCompare(b.code))
  const normalizeTeamValue=(value:unknown)=>String(value??'').toLowerCase().replace(/[^a-z0-9]/g,'')
+ // Numeric suffix padding can differ between employee profiles and imported team codes.
+ const normalizeTeamIdentity=(value:unknown)=>{const key=normalizeTeamValue(value);const match=key.match(/^(.*?)(0*)([0-9]+)$/);return match?match[1]+String(Number(match[3])):key}
  const isCieloNewInstall=(value:unknown)=>normalizeTeamValue(value).includes('cielonewinstall')
  const sliDepartment=depts.find(d=>normalizeTeamValue(d.code)==='sli'||normalizeTeamValue(d.name)==='sli'||normalizeTeamValue(d.name).includes('sli'))
  const employeeAssignments=useMemo(()=>employees.flatMap(employee=>(employee.teams??[]).flatMap(teamValue=>{
   const key=normalizeTeamValue(teamValue)
   if(!key)return []
-  // Cielo New Install is an explicit SLI assignment, regardless of a stale or
-  // incorrectly configured department_id on its team record.
   const cielo=isCieloNewInstall(teamValue)
   const exact=teams.find(t=>[t.id,t.code,t.name].some(v=>normalizeTeamValue(v)===key))
   if(exact)return [{employee,team:exact,departmentId:cielo?(sliDepartment?.id??exact.department_id):exact.department_id}]
-  // Profile labels may include department prefixes/suffixes. Match the
-  // longest unique configured team label before falling back to department text.
+  // Match codes such as AHBA_SLI001 to AHBA_SLI01 by numeric team identity.
+  const identityMatches=teams.filter(team=>[team.code,team.name].some(value=>normalizeTeamIdentity(value)===normalizeTeamIdentity(teamValue)))
+  if(identityMatches.length===1){const team=identityMatches[0];return [{employee,team,departmentId:cielo?(sliDepartment?.id??team.department_id):team.department_id}]}
+  // Profile labels may include department prefixes/suffixes; prefer the longest unique team label.
   const ranked=teams.map(team=>({team,score:Math.max(...[team.code,team.name].map(v=>normalizeTeamValue(v)).filter(Boolean).map(candidate=>(key.includes(candidate)||candidate.includes(key))?candidate.length:0),0)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score)
-  if(ranked.length&&!(ranked.length>1&&ranked[0].score===ranked[1].score)){
-   const team=ranked[0].team
-   return [{employee,team,departmentId:cielo?(sliDepartment?.id??team.department_id):team.department_id}]
-  }
+  if(ranked.length&&!(ranked.length>1&&ranked[0].score===ranked[1].score)){const team=ranked[0].team;return [{employee,team,departmentId:cielo?(sliDepartment?.id??team.department_id):team.department_id}]}
   return []
  })),[employees,teams,sliDepartment])
  const reportWeekDays=Array.from({length:7},(_,index)=>{const date=new Date(selectedWeekStart+'T12:00:00');date.setDate(date.getDate()+index);return hrDate(date)})
