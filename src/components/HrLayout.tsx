@@ -220,7 +220,7 @@ export function HrWeeklyTeamReports(){
    }
    if(codeIndex<0)continue
    const rawCode=String(cells[codeIndex]??'').trim()
-   if(!rawCode||!/^((AHBA|A8)[_-])?SLI0*\\d+$/i.test(rawCode)&&!/^((AHBA|A8)[_-])?OMT0*\\d+$/i.test(rawCode))continue
+   if(!rawCode||!/^((AHBA|A8)[_-])?SLI0*\d+$/i.test(rawCode)&&!/^((AHBA|A8)[_-])?OMT0*\d+$/i.test(rawCode))continue
    const identity=normalizeTeamIdentity(rawCode)
    const matches=teams.filter(team=>normalizeTeamIdentity(team.code)===identity)
    if(matches.length!==1)continue
