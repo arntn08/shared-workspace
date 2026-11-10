@@ -76,6 +76,10 @@ type HrOrder={work_date:string;team_id:string|null;department_id:string|null;sta
 type HrEmployee={id:string;full_name:string|null;email:string;teams:string[]|null}
 const hrDate=(d:Date)=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')
 const hrWeek=(d:Date)=>{const x=new Date(d);x.setDate(x.getDate()-x.getDay());return hrDate(x)}
+
+const hrScheduleNorm=(v:unknown)=>String(v??'').replace(/\\*/g,'').toLowerCase().replace(/[^a-z0-9]/g,'')
+function hrScheduleDate(title:string){const m=title.trim().toUpperCase().match(/^([A-Z]{3,9})\\s+(\\d{1,2})(?:,?\\s+(\\d{4}))?$/);if(!m)return null;const months:Record<string,number>={JAN:0,JANUARY:0,FEB:1,FEBRUARY:1,MAR:2,MARCH:2,APR:3,APRIL:3,MAY:4,JUN:5,JUNE:5,JUL:6,JULY:6,AUG:7,AUGUST:7,SEP:8,SEPT:8,SEPTEMBER:8,OCT:9,OCTOBER:9,NOV:10,NOVEMBER:10,DEC:11,DECEMBER:11};const month=months[m[1]];if(month===undefined)return null;return hrDate(new Date(Number(m[3]||new Date().getFullYear()),month,Number(m[2])))}
+function hrScheduleSections(rows:string[][]){const out:{title:string;headers:string[];rows:string[][]}[]=[];let title='',headers:string[]=[],body:string[][]=[],seen=false,expect=false;const flush=()=>{if(body.length)out.push({title,headers,rows:body});body=[]};for(const raw of rows){const cells=(Array.isArray(raw)?raw:[]).map(v=>String(v??'').trim());if(!cells.some(Boolean))continue;const vals=cells.filter(Boolean),first=vals[0]??'';const heading=vals.length>0&&!/^[\\d.,\\s]+$/.test(first)&&!/^total\\b/i.test(first)&&vals.slice(1).every(v=>/^[\\d.,\\s]+$/.test(v)||/^(new install|migration|slr|total)$/i.test(v));if(heading){flush();if(!seen){seen=true;title=first;continue}title=first;headers=[];expect=true;continue}if(expect){headers=cells;expect=false;continue}if(!headers.length)headers=cells.map((_,i)=>'Column '+(i+1));body.push(cells)}flush();return out}
 function HrMetric({label,value,note}:{label:string;value:number;note:string}){return <article className="card" style={{padding:'1rem'}}><span className="muted">{label}</span><strong style={{display:'block',fontSize:'1.8rem',margin:'.25rem 0'}}>{value.toLocaleString()}</strong><small className="muted">{note}</small></article>}
 function HrOverviewPanel(){
  const {profile}=useAuth()
@@ -116,6 +120,7 @@ function HrOverviewPanel(){
  return <section className="ops-overview" style={{display:'grid',gap:'1rem'}}>
   <div className="ops-overview-heading"><div><span className="ops-eyebrow">PEOPLE OPERATIONS</span><h1>HR overview, {first}.</h1><p>{new Date().toLocaleDateString('en-PH',{weekday:'long',month:'long',day:'numeric',year:'numeric'})} · Workforce and team performance.</p></div><button className="small" onClick={()=>void load()}>↻ Refresh</button></div>
   {error&&<div className="notice error">{error}</div>}
+  {scheduleError&&<div className="notice error">Schedule-based employee matching is unavailable: {scheduleError}</div>}
   <section className="card" style={{padding:'1.2rem',background:'linear-gradient(120deg,rgba(24,91,62,.13),rgba(190,157,91,.10))'}}><span className="ops-eyebrow">HR OPERATIONS CENTER</span><h2 style={{margin:'.35rem 0'}}>People first. Teams in sync.</h2><p className="muted">Monitor team output, follow up on employee requests, and keep schedules organized.</p><div className="row" style={{gap:'.5rem',flexWrap:'wrap'}}><Link className="btn primary" to="/leave">Review leave requests</Link><Link className="btn" to="/schedule">View team schedules</Link></div></section>
   <div><h2>Workforce & HR workload</h2><div className="grid cols-3">
    <HrMetric label="Active employees" value={employees} note="Enabled employee accounts"/><HrMetric label="Active teams" value={activeTeams.length} note={activeDepts.length+' active departments'}/><HrMetric label="Pending leave" value={pending} note="Awaiting HR decision"/><HrMetric label="Open NTEs" value={ntes} note="Notices not yet closed"/><HrMetric label="Completed · WTD" value={wtd} note="Sunday through today"/><HrMetric label="Completed · MTD" value={done.length} note={nowMonthLabel()}/>
@@ -137,6 +142,8 @@ export function HrWeeklyTeamReports(){
  const [teams,setTeams]=useState<HrTeam[]>([])
  const [orders,setOrders]=useState<HrOrder[]>([])
  const [employees,setEmployees]=useState<HrEmployee[]>([])
+ const [scheduleRows,setScheduleRows]=useState<string[][]>([])
+ const [scheduleError,setScheduleError]=useState('')
  const [showEmployeeReport,setShowEmployeeReport]=useState(false)
  useEffect(()=>{
   if(!showEmployeeReport)return
@@ -173,12 +180,60 @@ export function HrWeeklyTeamReports(){
   setUpdated(new Date());setLoading(false)
  }
  useEffect(()=>{void load()},[selectedWeekStart,selectedWeekEnd])
+
+ useEffect(()=>{
+  let alive=true
+  async function loadSchedule(){
+   const {data:files,error:fileError}=await supabase.from('files').select('id').eq('kind','gsheet').order('created_at',{ascending:false}).limit(1)
+   if(fileError||!files?.[0]){if(alive)setScheduleError(fileError?.message??'No shared schedule sheet is configured.');return}
+   const {data,error}=await supabase.functions.invoke('read-sheet',{body:{fileId:files[0].id}})
+   if(!alive)return
+   if(error||!data||data.error){setScheduleError(error?.message??data?.error??'Could not read the shared schedule.');return}
+   setScheduleRows(Array.isArray(data.rows)?data.rows:[])
+   setScheduleError('')
+  }
+  void loadSchedule()
+  const timer=window.setInterval(()=>void loadSchedule(),300000)
+  return()=>{alive=false;window.clearInterval(timer)}
+ },[])
  const activeTeams=teams.filter(t=>t.active)
  const weeklyRows=activeTeams.map(t=>({ ...t,department:depts.find(d=>d.id===t.department_id)?.code??'—',records:orders.filter(o=>o.team_id===t.id),count:orders.filter(o=>o.team_id===t.id).length })).sort((a,b)=>b.count-a.count||a.code.localeCompare(b.code))
  const normalizeTeamValue=(value:unknown)=>String(value??'').toLowerCase().replace(/[^a-z0-9]/g,'')
  // Numeric suffix padding can differ between employee profiles and imported team codes.
  const normalizeTeamIdentity=(value:unknown)=>{const key=normalizeTeamValue(value);const match=key.match(/^(.*?)(0*)([0-9]+)$/);return match?match[1]+String(Number(match[3])):key}
  const isCieloNewInstall=(value:unknown)=>normalizeTeamValue(value).includes('cielonewinstall')
+ const scheduleAssignments=useMemo(()=>{
+  const result=new Map<string,HrTeam[]>()
+  for(const section of hrScheduleSections(scheduleRows)){
+   const sectionDate=hrScheduleDate(section.title)
+   if(sectionDate&&(sectionDate<selectedWeekStart||sectionDate>selectedWeekEnd))continue
+   const headers=section.headers.map(hrScheduleNorm)
+   const codeIndex=headers.findIndex(v=>v==='tcode'||v.includes('teamcode'))
+   const driverIndex=headers.findIndex(v=>v==='driver'||v.includes('drivername'))
+   const techIndex=headers.findIndex(v=>v==='tech'||v.includes('technician'))
+   if(codeIndex<0)continue
+   for(const row of section.rows){
+    const code=String(row[codeIndex]??'').trim()
+    if(!code)continue
+    const identity=normalizeTeamIdentity(code)
+    const matches=teams.filter(team=>normalizeTeamIdentity(team.code)===identity)
+    if(matches.length!==1)continue
+    const team=matches[0]
+    for(const index of [driverIndex,techIndex]){
+     if(index<0)continue
+     const person=hrScheduleNorm(row[index])
+     if(!person)continue
+     for(const employee of employees){
+      if(person!==hrScheduleNorm(employee.full_name||employee.email))continue
+      const list=result.get(employee.id)??[]
+      if(!list.some(x=>x.id===team.id))list.push(team)
+      result.set(employee.id,list)
+     }
+    }
+   }
+  }
+  return result
+ },[scheduleRows,selectedWeekStart,selectedWeekEnd,teams,employees])
  const sliDepartment=depts.find(d=>normalizeTeamValue(d.code)==='sli'||normalizeTeamValue(d.name)==='sli'||normalizeTeamValue(d.name).includes('sli'))
  const employeeAssignments=useMemo(()=>employees.flatMap(employee=>(employee.teams??[]).flatMap(teamValue=>{
   const key=normalizeTeamValue(teamValue)
@@ -211,16 +266,18 @@ export function HrWeeklyTeamReports(){
   return groups.map(deptId=>{
    const dept=depts.find(d=>d.id===deptId)
    const assigned=assignments.filter(x=>(x.departmentId??x.team.department_id)===deptId)
-   const teamIds=new Set(assigned.map(x=>x.team.id))
+   const scheduledTeams=isCieloNewInstall(rawTeams.join(' '))?(scheduleAssignments.get(employee.id)??[]):[]
+  const countedTeams=[...new Map([...assigned.map(x=>x.team),...scheduledTeams].map(team=>[team.id,team])).values()]
+  const teamIds=new Set(countedTeams.map(team=>team.id))
    const employeeOrders=orders.filter(o=>teamIds.has(String(o.team_id??'')))
    // Always show all seven dates in the selected week, including zero counts.
    const days=reportWeekDays.map(day=>({day,count:employeeOrders.filter(o=>String(o.work_date??'').slice(0,10)===day).length}))
    const fallbackTeams=rawTeams.filter(raw=>isCieloNewInstall(raw)?dept?.id===sliDepartment?.id:(!deptId||normalizeTeamValue(raw).includes(normalizeTeamValue(dept?.code))))
-   return {id:employee.id+'|'+(deptId??'unassigned'),employee,department:dept?.code??'—',departmentId:deptId,teams:assigned.length?assigned.map(x=>x.team.code).join(', '):(fallbackTeams.join(', ')||'Unassigned'),days,total:employeeOrders.length}
+   return {id:employee.id+'|'+(deptId??'unassigned'),employee,department:dept?.code??'—',departmentId:deptId,teams:isCieloNewInstall(rawTeams.join(' '))?'Cielo New Install':(assigned.length?assigned.map(x=>x.team.code).join(', '):(fallbackTeams.join(', ')||'Unassigned')),days,total:employeeOrders.length}
   })
- }).sort((a,b)=>String(a.employee.full_name??a.employee.email).localeCompare(String(b.employee.full_name??b.employee.email))||a.department.localeCompare(b.department)),[employees,employeeAssignments,orders,depts,sliDepartment,reportWeekDays])
+ }).sort((a,b)=>String(a.employee.full_name??a.employee.email).localeCompare(String(b.employee.full_name??b.employee.email))||a.department.localeCompare(b.department)),[employees,employeeAssignments,orders,depts,sliDepartment,reportWeekDays,scheduleAssignments])
  const filteredEmployeeRows=employeeReportRows.filter(row=>(departmentFilter==='all'||row.departmentId===departmentFilter)&&[row.employee.full_name,row.employee.email,row.teams,row.department].some(value=>String(value??'').toLowerCase().includes(employeeSearch.trim().toLowerCase())))
- const exportRows=()=>{const quote=(v:string)=>'"'+String(v??'').replace(/"/g,'""')+'"';const deptById=new Map(depts.map(d=>[d.id,d]));const teamById=new Map(teams.map(t=>[t.id,t]));const employeeByTeam=new Map<string,HrEmployee[]>();for(const item of employeeAssignments){const list=employeeByTeam.get(item.team.id)??[];list.push(item.employee);employeeByTeam.set(item.team.id,list)}const rows=[['Work date','Department','Team','Employee','WO ID','Status'],...orders.flatMap(o=>(employeeByTeam.get(o.team_id??'')??[]).map(employee=>[o.work_date,deptById.get(o.department_id??'')?.code??'',teamById.get(o.team_id??'')?.code??'Unassigned',employee.full_name??employee.email,o.wo_id,o.status]))];const csv='\uFEFF'+rows.map(row=>row.map(v=>quote(String(v??''))).join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));const a=document.createElement('a');a.href=url;a.download='AHBA-Weekly-Employee-Completed-Attribution-'+selectedWeekStart+'-to-'+selectedWeekEnd+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)}
+ const exportRows=()=>{const quote=(v:string)=>'"'+String(v??'').replace(/"/g,'""')+'"';const deptById=new Map(depts.map(d=>[d.id,d]));const teamById=new Map(teams.map(t=>[t.id,t]));const employeeByTeam=new Map<string,HrEmployee[]>();for(const item of employeeAssignments){const list=employeeByTeam.get(item.team.id)??[];list.push(item.employee);employeeByTeam.set(item.team.id,list)}for(const [employeeId,scheduled] of scheduleAssignments){const employee=employees.find(x=>x.id===employeeId);if(!employee)continue;for(const team of scheduled){const list=employeeByTeam.get(team.id)??[];if(!list.some(x=>x.id===employee.id))list.push(employee);employeeByTeam.set(team.id,list)}}const rows=[['Work date','Department','Team','Employee','WO ID','Status'],...orders.flatMap(o=>(employeeByTeam.get(o.team_id??'')??[]).map(employee=>[o.work_date,deptById.get(o.department_id??'')?.code??'',teamById.get(o.team_id??'')?.code??'Unassigned',employee.full_name??employee.email,o.wo_id,o.status]))];const csv='\uFEFF'+rows.map(row=>row.map(v=>quote(String(v??''))).join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));const a=document.createElement('a');a.href=url;a.download='AHBA-Weekly-Employee-Completed-Attribution-'+selectedWeekStart+'-to-'+selectedWeekEnd+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)}
  return <section className="ops-overview" style={{display:'grid',gap:'1rem'}}>
   <div className="ops-overview-heading"><div><span className="ops-eyebrow">HR REPORTING</span><h1>Weekly Team Reports</h1><p>Completed work orders by team · Sunday–Saturday</p></div><div className="row" style={{gap:'.55rem',flexWrap:'wrap'}}><button className="primary" onClick={()=>setShowEmployeeReport(true)} style={{minHeight:42,padding:'.65rem 1rem',borderRadius:12,fontWeight:750,boxShadow:'0 5px 14px rgba(24,91,62,.16)'}}>Employee reports ↗</button><button className="small" onClick={()=>void load()}>↻ Refresh</button></div></div>
   {error&&<div className="notice error">{error}</div>}
