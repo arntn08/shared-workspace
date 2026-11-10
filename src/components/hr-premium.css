@@ -617,3 +617,43 @@
 @media(prefers-reduced-motion:reduce) {
   .hr-employee-report-backdrop,.hr-employee-report-modal,.hr-employee-report-close { animation:none;transition:none; }
 }
+
+
+/* Employee report date navigator */
+.hr-employee-report-datebar {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:14px 16px;
+  border:1px solid color-mix(in srgb,var(--hr-green,#246448) 28%,var(--ops-border,#dce5de));
+  border-radius:17px;
+  background:linear-gradient(110deg,color-mix(in srgb,var(--hr-green,#246448) 11%,var(--ops-panel,#fff)),color-mix(in srgb,#bd995d 8%,var(--ops-panel,#fff)));
+  box-shadow:0 7px 20px rgba(22,75,49,.07),inset 0 1px 0 rgba(255,255,255,.5);
+}
+.hr-employee-report-date-current {display:flex;align-items:center;gap:12px;min-width:0}
+.hr-employee-report-date-icon {
+  display:grid;place-items:center;width:42px;height:42px;flex:0 0 42px;
+  border-radius:13px;background:linear-gradient(145deg,#347b5a,#174a35);
+  color:#fff;font-size:20px;box-shadow:0 6px 15px rgba(28,91,62,.2)
+}
+.hr-employee-report-date-current > div {display:flex;flex-direction:column;gap:3px;min-width:0}
+.hr-employee-report-date-caption {font-size:9px;font-weight:850;letter-spacing:1.3px;color:var(--hr-green,#246448)}
+.hr-employee-report-date-current strong {font-size:16px;line-height:1.25;color:var(--ops-text,#18251d);font-variant-numeric:tabular-nums}
+.hr-employee-report-date-current small {font-size:10px;color:var(--ops-muted,#718077)}
+.hr-employee-report-date-actions {display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+.hr-employee-report-date-actions button {
+  min-height:36px;padding:7px 11px;border:1px solid var(--ops-border,#dce5de);
+  border-radius:10px;background:var(--ops-panel,#fff);color:var(--ops-text,#24362a);
+  font-size:11px;font-weight:750;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .16s ease
+}
+.hr-employee-report-date-actions button:hover:not(:disabled) {background:var(--hr-green-soft,rgba(49,126,88,.11));border-color:var(--hr-green,#246448);transform:translateY(-1px)}
+.hr-employee-report-date-actions button:disabled {opacity:.4;cursor:not-allowed}
+.hr-employee-report-date-actions .hr-employee-report-this-week {background:var(--hr-green,#246448);border-color:var(--hr-green,#246448);color:#fff}
+@media(max-width:640px) {
+  .hr-employee-report-datebar {align-items:stretch;flex-direction:column;gap:12px;padding:13px}
+  .hr-employee-report-date-actions {display:grid;grid-template-columns:1fr 1fr}
+  .hr-employee-report-date-actions button {width:100%;padding:7px 6px}
+  .hr-employee-report-date-actions .hr-employee-report-this-week {grid-column:1/-1}
+  .hr-employee-report-date-current strong {font-size:14px}
+}
