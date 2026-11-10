@@ -1,5 +1,6 @@
 import './hr-premium.css'
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { useSettings } from '../lib/settings'
@@ -137,6 +138,14 @@ export function HrWeeklyTeamReports(){
  const [orders,setOrders]=useState<HrOrder[]>([])
  const [employees,setEmployees]=useState<HrEmployee[]>([])
  const [showEmployeeReport,setShowEmployeeReport]=useState(false)
+ useEffect(()=>{
+  if(!showEmployeeReport)return
+  const previousOverflow=document.body.style.overflow
+  document.body.style.overflow='hidden'
+  const closeOnEscape=(event:KeyboardEvent)=>{if(event.key==='Escape')setShowEmployeeReport(false)}
+  window.addEventListener('keydown',closeOnEscape)
+  return()=>{document.body.style.overflow=previousOverflow;window.removeEventListener('keydown',closeOnEscape)}
+ },[showEmployeeReport])
  const [employeeSearch,setEmployeeSearch]=useState('')
  const [departmentFilter,setDepartmentFilter]=useState('all')
  const [weekOffset,setWeekOffset]=useState(0)
@@ -200,7 +209,29 @@ export function HrWeeklyTeamReports(){
    {loading?<p className="muted">Loading weekly records…</p>:<><div className="grid cols-3"><HrMetric label="Completed work orders" value={orders.length} note="Selected Sunday–Saturday week"/><HrMetric label="Active teams" value={activeTeams.length} note="Configured active teams"/><HrMetric label="Teams with completions" value={weeklyRows.filter(t=>t.count>0).length} note="At least one completed order"/></div>
    <div style={{overflowX:'auto',marginTop:'1rem'}}><table className="tally-table"><thead><tr><th>Team</th><th>Department</th><th>Completed this week</th></tr></thead><tbody>{weeklyRows.map(t=><tr key={t.id}><th>{t.code}</th><td>{t.department}</td><td><strong>{t.count}</strong></td></tr>)}</tbody><tfoot><tr><th colSpan={2}>All teams</th><td><strong>{orders.length}</strong></td></tr></tfoot></table></div>
    <div className="ops-panel" style={{marginTop:'1rem'}}><div className="ops-panel-heading"><div><h2>Employee reports</h2><p>View completed work orders under each employee instead of grouping the report by team.</p></div><span className="ops-mini-badge">{employees.length} active employees</span></div><p className="tally-note">Each completed work order is credited to every active employee assigned to that team. Team and overall totals continue to count each work order only once.</p></div>
-   {showEmployeeReport&&<div role="dialog" aria-modal="true" aria-labelledby="hr-employee-report-title" onClick={e=>{if(e.target===e.currentTarget)setShowEmployeeReport(false)}} style={{position:'fixed',inset:0,zIndex:1000,background:'rgba(8,15,12,.68)',display:'grid',placeItems:'center',padding:'1rem'}}><section className="ops-panel" style={{width:'min(1100px,100%)',maxHeight:'88vh',overflowY:'auto',boxShadow:'0 24px 80px rgba(0,0,0,.35)'}}><div className="ops-panel-heading"><div><span className="ops-eyebrow">HR REPORTING</span><h2 id="hr-employee-report-title">Daily completed by employee</h2><p>{selectedWeekStart} through {selectedWeekEnd}</p></div><button className="small" onClick={()=>setShowEmployeeReport(false)}>Close ✕</button></div><div className="row" style={{gap:'.65rem',flexWrap:'wrap',margin:'1rem 0'}}><input aria-label="Search employees" placeholder="Search employee name, email, team…" value={employeeSearch} onChange={e=>setEmployeeSearch(e.target.value)} style={{flex:'1 1 260px',minWidth:0}}/><select aria-label="Filter by department" value={departmentFilter} onChange={e=>setDepartmentFilter(e.target.value)} style={{flex:'0 1 230px'}}><option value="all">All departments</option>{depts.filter(d=>d.active).map(d=><option key={d.id} value={d.id}>{d.code} — {d.name}</option>)}</select><button className="small" onClick={()=>{setEmployeeSearch('');setDepartmentFilter('all')}}>Clear filters</button></div><div style={{overflowX:'auto'}}><table className="tally-table"><thead><tr><th>Employee</th><th>Department</th><th>Assigned team</th><th>Daily completed</th><th>Weekly total</th></tr></thead><tbody>{filteredEmployeeRows.map(row=><tr key={row.id}><th>{row.employee.full_name||row.employee.email}<div className="muted" style={{fontWeight:400,fontSize:'.75rem'}}>{row.employee.email}</div></th><td>{row.department}</td><td>{row.teams||'—'}</td><td>{row.days.length?row.days.map(day=><div key={day.day} style={{whiteSpace:'nowrap'}}>{day.day}: <strong>{day.count}</strong></div>):'0'}</td><td><strong>{row.total}</strong></td></tr>)}{filteredEmployeeRows.length===0&&<tr><td colSpan={5} className="muted">No employees match this search and department filter.</td></tr>}</tbody></table></div><p className="tally-note">Employee totals are attributed from their assigned team's completed work orders. If two employees share a team, both see the same team completion count; the team-level totals are not doubled.</p></section></div>}
+    {showEmployeeReport&&createPortal(
+     <div className="hr-employee-report-backdrop" role="dialog" aria-modal="true" aria-labelledby="hr-employee-report-title" onMouseDown={e=>{if(e.target===e.currentTarget)setShowEmployeeReport(false)}}>
+      <section className="hr-employee-report-modal">
+       <div className="ops-panel-heading">
+        <div><span className="ops-eyebrow">HR REPORTING</span><h2 id="hr-employee-report-title">Daily completed by employee</h2><p>{selectedWeekStart} through {selectedWeekEnd}</p></div>
+        <button className="small" onClick={()=>setShowEmployeeReport(false)}>Close ✕</button>
+       </div>
+       <div className="row" style={{gap:'.65rem',flexWrap:'wrap',margin:'1rem 0'}}>
+        <input aria-label="Search employees" placeholder="Search employee name, email, team…" value={employeeSearch} onChange={e=>setEmployeeSearch(e.target.value)} style={{flex:'1 1 260px',minWidth:0}}/>
+        <select aria-label="Filter by department" value={departmentFilter} onChange={e=>setDepartmentFilter(e.target.value)} style={{flex:'0 1 230px'}}>
+         <option value="all">All departments</option>{depts.filter(d=>d.active).map(d=><option key={d.id} value={d.id}>{d.code} — {d.name}</option>)}
+        </select>
+        <button className="small" onClick={()=>{setEmployeeSearch('');setDepartmentFilter('all')}}>Clear filters</button>
+       </div>
+       <div className="hr-employee-report-table-wrap"><table className="tally-table"><thead><tr><th>Employee</th><th>Department</th><th>Assigned team</th><th>Daily completed</th><th>Weekly total</th></tr></thead><tbody>
+        {filteredEmployeeRows.map(row=><tr key={row.id}><th>{row.employee.full_name||row.employee.email}<div className="muted" style={{fontWeight:400,fontSize:'.75rem'}}>{row.employee.email}</div></th><td>{row.department}</td><td>{row.teams||'—'}</td><td>{row.days.length?row.days.map(day=><div key={day.day} style={{whiteSpace:'nowrap'}}>{day.day}: <strong>{day.count}</strong></div>):'0'}</td><td><strong>{row.total}</strong></td></tr>)}
+        {filteredEmployeeRows.length===0&&<tr><td colSpan={5} className="muted">No employees match this search and department filter.</td></tr>}
+       </tbody></table></div>
+       <p className="tally-note">Employee totals are attributed from their assigned team’s completed work orders. If two employees share a team, both see the same team completion count; team-level totals are not doubled.</p>
+      </section>
+     </div>,
+     document.body
+    )}
    <details style={{marginTop:'1rem'}} open><summary style={{cursor:'pointer',fontWeight:700}}>Completed work-order rows ({orders.length})</summary><div style={{overflowX:'auto',marginTop:'.75rem'}}><table className="tally-table"><thead><tr><th>Work date</th><th>Department</th><th>Team</th><th>WO ID</th><th>Status</th></tr></thead><tbody>{orders.map((o,i)=><tr key={o.wo_id||i}><td>{o.work_date}</td><td>{depts.find(d=>d.id===o.department_id)?.code??'—'}</td><td>{teams.find(t=>t.id===o.team_id)?.code??'Unassigned'}</td><td>{o.wo_id}</td><td>{o.status}</td></tr>)}</tbody></table></div></details></>}
   </section>
   <p className="muted" style={{fontSize:'.75rem',textAlign:'right'}}>Only COMPLETED records are included{updated?' · Updated '+updated.toLocaleTimeString('en-PH'):''}</p>
