@@ -238,6 +238,17 @@ export function HrWeeklyTeamReports(){
         <button type="button" className="hr-employee-report-close" onClick={()=>setShowEmployeeReport(false)} aria-label="Close employee report">×</button>
        </header>
        <div className="hr-employee-report-body">
+        <div className="hr-employee-report-datebar">
+         <div className="hr-employee-report-date-current">
+          <span className="hr-employee-report-date-icon">▦</span>
+          <div><span className="hr-employee-report-date-caption">REPORTING PERIOD</span><strong>{new Date(selectedWeekStart+'T12:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})} – {new Date(selectedWeekEnd+'T12:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})}</strong><small>{weekOffset===0?'Current week':'Historical week'} · Sunday to Saturday</small></div>
+         </div>
+         <div className="hr-employee-report-date-actions">
+          <button type="button" onClick={()=>setWeekOffset(x=>x+1)} aria-label="View previous week">← Previous week</button>
+          <button type="button" onClick={()=>setWeekOffset(x=>Math.max(0,x-1))} disabled={weekOffset===0} aria-label="View next week">Next week →</button>
+          {weekOffset!==0&&<button type="button" className="hr-employee-report-this-week" onClick={()=>setWeekOffset(0)}>This week</button>}
+         </div>
+        </div>
         <div className="hr-employee-report-metrics">
          <div><span>Employees shown</span><strong>{filteredEmployeeRows.length}</strong></div>
          <div><span>Teams represented</span><strong>{new Set(filteredEmployeeRows.flatMap(row=>row.teams.split(',').map(x=>x.trim()).filter(Boolean))).size}</strong></div>
