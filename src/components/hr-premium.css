@@ -304,3 +304,316 @@
 @media(prefers-reduced-motion:reduce) {
   .hr-employee-report-backdrop,.hr-employee-report-modal { animation:none; }
 }
+
+
+/* Refined HR employee-performance report */
+.hr-employee-report-backdrop {
+  position:fixed;
+  inset:0;
+  z-index:30000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  padding:clamp(10px,2vw,26px);
+  background:rgba(5,13,9,.76);
+  isolation:isolate;
+  -webkit-overflow-scrolling:touch;
+  animation:hrReportFadeIn .16s ease-out both;
+}
+.hr-employee-report-modal {
+  display:flex;
+  flex-direction:column;
+  width:min(1180px,100%);
+  max-height:calc(100dvh - 32px);
+  min-height:0;
+  overflow:hidden;
+  margin:auto;
+  border:1px solid color-mix(in srgb,var(--hr-green,#246448) 24%,var(--ops-border,#ddd));
+  border-radius:24px;
+  background:var(--ops-panel,#fff);
+  color:var(--ops-text,var(--text,#18251d));
+  box-shadow:0 32px 100px rgba(0,0,0,.48),0 0 0 1px rgba(255,255,255,.04) inset;
+  animation:hrReportModalIn .18s ease-out both;
+}
+.hr-employee-report-header {
+  position:relative;
+  display:flex;
+  flex:0 0 auto;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  padding:clamp(18px,2.5vw,28px);
+  overflow:hidden;
+  border-bottom:1px solid var(--ops-border,#e5eae6);
+  background:
+    radial-gradient(360px 180px at 92% 0%,rgba(185,149,85,.19),transparent 72%),
+    linear-gradient(120deg,color-mix(in srgb,var(--hr-green,#246448) 12%,var(--ops-panel,#fff)),var(--ops-panel,#fff) 74%);
+}
+.hr-employee-report-header:after {
+  content:"";
+  position:absolute;
+  width:180px;height:180px;
+  right:55px;top:-125px;
+  border:1px solid color-mix(in srgb,var(--hr-green,#246448) 15%,transparent);
+  border-radius:50%;
+  box-shadow:0 0 0 22px color-mix(in srgb,var(--hr-green,#246448) 4%,transparent),0 0 0 44px color-mix(in srgb,var(--hr-green,#246448) 3%,transparent);
+  pointer-events:none;
+}
+.hr-employee-report-titlegroup {
+  display:flex;
+  align-items:center;
+  gap:15px;
+  min-width:0;
+  position:relative;
+  z-index:1;
+}
+.hr-employee-report-icon {
+  display:grid;
+  place-items:center;
+  width:52px;height:52px;
+  flex:0 0 52px;
+  border:1px solid color-mix(in srgb,var(--hr-green,#246448) 24%,transparent);
+  border-radius:17px;
+  background:linear-gradient(145deg,#347b5a,#174a35);
+  color:#fff;
+  font-size:25px;
+  box-shadow:0 9px 22px rgba(28,91,62,.22);
+}
+.hr-employee-report-header .ops-eyebrow {
+  display:block;
+  margin-bottom:5px;
+  font-size:9px;
+  letter-spacing:1.65px;
+}
+.hr-employee-report-header h2 {
+  margin:0;
+  font-size:clamp(21px,2.5vw,29px);
+  line-height:1.12;
+  letter-spacing:-.75px;
+}
+.hr-employee-report-header p {
+  margin:6px 0 0;
+  color:var(--ops-muted,#718077);
+  font-size:12px;
+}
+.hr-employee-report-close {
+  position:relative;
+  z-index:2;
+  display:grid;
+  place-items:center;
+  width:40px;height:40px;
+  flex:0 0 40px;
+  border:1px solid var(--ops-border,#dce5de);
+  border-radius:13px;
+  background:var(--ops-panel,#fff);
+  color:var(--ops-text,#24362a);
+  font-size:25px;
+  line-height:1;
+  cursor:pointer;
+  transition:background .18s ease,transform .18s ease;
+}
+.hr-employee-report-close:hover { background:var(--hr-green-soft,rgba(49,126,88,.11)); transform:rotate(90deg); }
+.hr-employee-report-body {
+  display:flex;
+  flex:1 1 auto;
+  flex-direction:column;
+  gap:15px;
+  min-height:0;
+  padding:clamp(14px,2vw,22px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  -webkit-overflow-scrolling:touch;
+}
+.hr-employee-report-metrics {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:11px;
+}
+.hr-employee-report-metrics > div {
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  min-width:0;
+  padding:14px 16px;
+  border:1px solid color-mix(in srgb,var(--hr-green,#246448) 15%,var(--ops-border,#ddd));
+  border-radius:15px;
+  background:linear-gradient(145deg,var(--ops-panel-soft,var(--ops-panel,#fff)),color-mix(in srgb,var(--hr-green,#246448) 5%,var(--ops-panel,#fff)));
+}
+.hr-employee-report-metrics span {
+  color:var(--ops-muted,#718077);
+  font-size:10px;
+  font-weight:750;
+  letter-spacing:.45px;
+  text-transform:uppercase;
+}
+.hr-employee-report-metrics strong {
+  color:var(--hr-green,#246448);
+  font-size:clamp(22px,2.5vw,29px);
+  font-weight:850;
+  line-height:1;
+  letter-spacing:-.8px;
+  font-variant-numeric:tabular-nums;
+}
+.hr-employee-report-toolbar {
+  display:grid;
+  grid-template-columns:minmax(180px,1fr) minmax(180px,240px) auto;
+  align-items:center;
+  gap:9px;
+}
+.hr-employee-report-search {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-width:0;
+  height:43px;
+  padding:0 12px;
+  border:1px solid var(--ops-border,#dce5de);
+  border-radius:12px;
+  background:var(--ops-panel,var(--card,#fff));
+  color:var(--ops-muted,#718077);
+}
+.hr-employee-report-search > span { font-size:20px; line-height:1; }
+.hr-employee-report-search input {
+  width:100%;
+  min-width:0;
+  height:100%;
+  padding:0;
+  border:0 !important;
+  outline:0;
+  background:transparent !important;
+  box-shadow:none !important;
+  color:var(--ops-text,var(--text,#18251d));
+  font:inherit;
+  font-size:12px;
+}
+.hr-employee-report-toolbar select {
+  width:100%;
+  min-width:0;
+  height:43px;
+  padding:0 12px;
+  border:1px solid var(--ops-border,#dce5de);
+  border-radius:12px;
+  background:var(--ops-panel,var(--card,#fff));
+  color:var(--ops-text,var(--text,#18251d));
+  font-size:12px;
+}
+.hr-employee-report-reset {
+  height:43px;
+  padding:0 14px;
+  border:1px solid var(--ops-border,#dce5de);
+  border-radius:12px;
+  background:var(--ops-panel-soft,var(--ops-panel,#fff));
+  color:var(--ops-text,var(--text,#18251d));
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+}
+.hr-employee-report-reset:hover { border-color:var(--hr-green,#246448); color:var(--hr-green,#246448); }
+.hr-employee-report-table-wrap {
+  width:100%;
+  max-height:min(52dvh,560px);
+  min-height:140px;
+  overflow:auto;
+  overscroll-behavior:contain;
+  border:1px solid var(--ops-border,#dce5de);
+  border-radius:15px;
+  background:var(--ops-panel,var(--card,#fff));
+  scrollbar-width:thin;
+  -webkit-overflow-scrolling:touch;
+}
+.hr-employee-report-table-wrap table {
+  width:100%;
+  min-width:820px;
+  margin:0;
+  border-collapse:separate;
+  border-spacing:0;
+}
+.hr-employee-report-table-wrap thead th {
+  position:sticky;
+  top:0;
+  z-index:2;
+  padding:13px 14px;
+  border-bottom:1px solid var(--ops-border,#dce5de);
+  background:var(--ops-panel-soft,var(--ops-panel,#fff));
+  color:var(--ops-muted,#718077);
+  font-size:9px;
+  letter-spacing:.75px;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.hr-employee-report-table-wrap tbody td,
+.hr-employee-report-table-wrap tbody th {
+  padding:13px 14px;
+  border-bottom:1px solid var(--ops-border,rgba(120,140,125,.14));
+  font-size:12px;
+  vertical-align:top;
+}
+.hr-employee-report-table-wrap tbody tr:last-child td,
+.hr-employee-report-table-wrap tbody tr:last-child th { border-bottom:0; }
+.hr-employee-report-table-wrap tbody tr:hover td,
+.hr-employee-report-table-wrap tbody tr:hover th { background:var(--hr-green-soft,rgba(49,126,88,.055)); }
+.hr-employee-report-table-wrap tbody th { min-width:190px; font-weight:750; }
+.hr-report-dept-pill {
+  display:inline-flex;
+  align-items:center;
+  padding:5px 9px;
+  border:1px solid color-mix(in srgb,var(--hr-green,#246448) 22%,transparent);
+  border-radius:999px;
+  background:var(--hr-green-soft,rgba(49,126,88,.1));
+  color:var(--hr-green,#246448);
+  font-size:10px;
+  font-weight:850;
+  letter-spacing:.3px;
+}
+.hr-report-total {
+  display:inline-flex;
+  min-width:28px;
+  justify-content:center;
+  padding:5px 8px;
+  border-radius:8px;
+  background:var(--hr-green-soft,rgba(49,126,88,.1));
+  color:var(--hr-green,#246448);
+  font-size:13px;
+  font-variant-numeric:tabular-nums;
+}
+.hr-employee-report-footnote {
+  margin:0;
+  padding:11px 13px;
+  border:1px solid var(--ops-border,#dce5de);
+  border-radius:12px;
+  background:var(--ops-panel-soft,var(--ops-panel,#fff));
+  color:var(--ops-muted,#718077);
+  font-size:11px;
+  line-height:1.55;
+}
+@keyframes hrReportFadeIn { from {opacity:0} to {opacity:1} }
+@keyframes hrReportModalIn { from {opacity:.96;transform:translateY(6px)} to {opacity:1;transform:translateY(0)} }
+@media(max-width:760px) {
+  .hr-employee-report-backdrop { align-items:flex-start; padding:8px; }
+  .hr-employee-report-modal { width:100%; max-height:calc(100dvh - 16px); margin:auto 0; border-radius:18px; }
+  .hr-employee-report-header { padding:15px; gap:10px; }
+  .hr-employee-report-icon { width:43px;height:43px;flex-basis:43px;border-radius:14px;font-size:21px; }
+  .hr-employee-report-header h2 { font-size:20px; }
+  .hr-employee-report-header p { font-size:10px; }
+  .hr-employee-report-body { gap:11px; padding:12px; }
+  .hr-employee-report-metrics { gap:7px; }
+  .hr-employee-report-metrics > div { padding:10px; border-radius:12px; }
+  .hr-employee-report-metrics span { font-size:8px; line-height:1.3; }
+  .hr-employee-report-metrics strong { font-size:21px; }
+  .hr-employee-report-toolbar { grid-template-columns:1fr 1fr; }
+  .hr-employee-report-search { grid-column:1/-1; }
+  .hr-employee-report-reset { width:100%; }
+  .hr-employee-report-table-wrap { max-height:48dvh; }
+}
+@media(max-width:420px) {
+  .hr-employee-report-metrics { grid-template-columns:1fr 1fr; }
+  .hr-employee-report-metrics > div:last-child { grid-column:1/-1; }
+  .hr-employee-report-toolbar { grid-template-columns:1fr; }
+  .hr-employee-report-search { grid-column:auto; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .hr-employee-report-backdrop,.hr-employee-report-modal,.hr-employee-report-close { animation:none;transition:none; }
+}
