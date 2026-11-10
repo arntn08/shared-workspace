@@ -657,3 +657,19 @@
   .hr-employee-report-date-actions .hr-employee-report-this-week {grid-column:1/-1}
   .hr-employee-report-date-current strong {font-size:14px}
 }
+
+
+/* Seven-day employee completion breakdown */
+.hr-employee-daily-table {min-width:1040px}
+.hr-employee-daily-table .hr-daily-date-heading {min-width:66px;text-align:center;white-space:nowrap}
+.hr-employee-daily-table .hr-daily-date-heading span,
+.hr-employee-daily-table .hr-daily-date-heading small {display:block}
+.hr-employee-daily-table .hr-daily-date-heading span {font-size:10px;font-weight:850;color:var(--hr-green,#246448);text-transform:uppercase}
+.hr-employee-daily-table .hr-daily-date-heading small {margin-top:3px;font-size:9px;font-weight:650;color:var(--ops-muted,#718077)}
+.hr-employee-daily-table .hr-daily-count-cell {text-align:center;padding:9px 6px}
+.hr-employee-daily-table .hr-daily-count-cell strong {
+ display:inline-grid;place-items:center;min-width:29px;height:29px;padding:0 5px;
+ border-radius:9px;font-size:12px;font-variant-numeric:tabular-nums
+}
+.hr-employee-daily-table .hr-daily-count-cell .has-completions {background:color-mix(in srgb,var(--hr-green,#246448) 13%,var(--ops-panel,#fff));color:var(--hr-green,#246448);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--hr-green,#246448) 20%,transparent)}
+.hr-employee-daily-table .hr-daily-count-cell .zero-completions {background:var(--ops-panel-soft,#f5f7f5);color:var(--ops-muted,#87928b);font-weight:600}
