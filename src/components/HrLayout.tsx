@@ -176,35 +176,48 @@ export function HrWeeklyTeamReports(){
  const activeTeams=teams.filter(t=>t.active)
  const weeklyRows=activeTeams.map(t=>({ ...t,department:depts.find(d=>d.id===t.department_id)?.code??'—',records:orders.filter(o=>o.team_id===t.id),count:orders.filter(o=>o.team_id===t.id).length })).sort((a,b)=>b.count-a.count||a.code.localeCompare(b.code))
  const normalizeTeamValue=(value:unknown)=>String(value??'').toLowerCase().replace(/[^a-z0-9]/g,'')
+ const isCieloNewInstall=(value:unknown)=>normalizeTeamValue(value).includes('cielonewinstall')
+ const sliDepartment=depts.find(d=>normalizeTeamValue(d.code)==='sli'||normalizeTeamValue(d.name)==='sli'||normalizeTeamValue(d.name).includes('sli'))
  const employeeAssignments=useMemo(()=>employees.flatMap(employee=>(employee.teams??[]).flatMap(teamValue=>{
   const key=normalizeTeamValue(teamValue)
   if(!key)return []
+  // Cielo New Install is an explicit SLI assignment, regardless of a stale or
+  // incorrectly configured department_id on its team record.
+  const cielo=isCieloNewInstall(teamValue)
   const exact=teams.find(t=>[t.id,t.code,t.name].some(v=>normalizeTeamValue(v)===key))
-  if(exact)return [{employee,team:exact}]
-  // Profile labels can contain a department prefix/suffix, e.g. "SLI - Cielo New Install".
-  // Resolve the longest unique configured team label, then trust its department_id.
+  if(exact)return [{employee,team:exact,departmentId:cielo?(sliDepartment?.id??exact.department_id):exact.department_id}]
+  // Profile labels may include department prefixes/suffixes. Match the
+  // longest unique configured team label before falling back to department text.
   const ranked=teams.map(team=>({team,score:Math.max(...[team.code,team.name].map(v=>normalizeTeamValue(v)).filter(Boolean).map(candidate=>(key.includes(candidate)||candidate.includes(key))?candidate.length:0),0)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score)
-  if(!ranked.length||(ranked.length>1&&ranked[0].score===ranked[1].score))return []
-  return [{employee,team:ranked[0].team}]
- })),[employees,teams])
+  if(ranked.length&&!(ranked.length>1&&ranked[0].score===ranked[1].score)){
+   const team=ranked[0].team
+   return [{employee,team,departmentId:cielo?(sliDepartment?.id??team.department_id):team.department_id}]
+  }
+  return []
+ })),[employees,teams,sliDepartment])
  const employeeReportRows=useMemo(()=>employees.flatMap(employee=>{
   const assignments=employeeAssignments.filter(x=>x.employee.id===employee.id)
   const rawTeams=(employee.teams??[]).map(x=>String(x).trim()).filter(Boolean)
-  // A configured team-to-department relationship is authoritative. Only infer
-  // department from profile text when none of the employee's teams resolve.
-  const inferredDeptIds=assignments.length?[]:[...new Set(rawTeams.flatMap(raw=>{const key=normalizeTeamValue(raw);const match=depts.filter(d=>key.includes(normalizeTeamValue(d.code))).sort((a,b)=>normalizeTeamValue(b.code).length-normalizeTeamValue(a.code).length)[0];return match?[match.id]:[]}))]
-  const deptIds=[...new Set(assignments.length?assignments.map(x=>x.team.department_id):inferredDeptIds)]
+  // A configured team assignment is authoritative, except the explicit Cielo
+  // New Install alias which always belongs to SLI.
+  const inferredDeptIds=[...new Set(rawTeams.flatMap(raw=>{
+   if(isCieloNewInstall(raw)&&sliDepartment)return [sliDepartment.id]
+   const key=normalizeTeamValue(raw)
+   const match=depts.filter(d=>key.includes(normalizeTeamValue(d.code))).sort((a,b)=>normalizeTeamValue(b.code).length-normalizeTeamValue(a.code).length)[0]
+   return match?[match.id]:[]
+  }))]
+  const deptIds=[...new Set([...assignments.map(x=>x.departmentId??x.team.department_id),...inferredDeptIds])]
   const groups=deptIds.length?deptIds:[null]
   return groups.map(deptId=>{
    const dept=depts.find(d=>d.id===deptId)
-   const assigned=assignments.filter(x=>!deptId||x.team.department_id===deptId)
+   const assigned=assignments.filter(x=>(x.departmentId??x.team.department_id)===deptId)
    const teamIds=new Set(assigned.map(x=>x.team.id))
    const employeeOrders=orders.filter(o=>teamIds.has(o.team_id??''))
    const days=Array.from(new Set(employeeOrders.map(o=>o.work_date))).sort().map(day=>({day,count:employeeOrders.filter(o=>o.work_date===day).length}))
-   const fallbackTeams=rawTeams.filter(raw=>!deptId||normalizeTeamValue(raw).includes(normalizeTeamValue(dept?.code)))
+   const fallbackTeams=rawTeams.filter(raw=>isCieloNewInstall(raw)?dept?.id===sliDepartment?.id:(!deptId||normalizeTeamValue(raw).includes(normalizeTeamValue(dept?.code))))
    return {id:employee.id+'|'+(deptId??'unassigned'),employee,department:dept?.code??'—',departmentId:deptId,teams:assigned.length?assigned.map(x=>x.team.code).join(', '):(fallbackTeams.join(', ')||'Unassigned'),days,total:employeeOrders.length}
   })
- }).sort((a,b)=>String(a.employee.full_name??a.employee.email).localeCompare(String(b.employee.full_name??b.employee.email))||a.department.localeCompare(b.department)),[employees,employeeAssignments,orders,depts])
+ }).sort((a,b)=>String(a.employee.full_name??a.employee.email).localeCompare(String(b.employee.full_name??b.employee.email))||a.department.localeCompare(b.department)),[employees,employeeAssignments,orders,depts,sliDepartment])
  const filteredEmployeeRows=employeeReportRows.filter(row=>(departmentFilter==='all'||row.departmentId===departmentFilter)&&[row.employee.full_name,row.employee.email,row.teams,row.department].some(value=>String(value??'').toLowerCase().includes(employeeSearch.trim().toLowerCase())))
  const exportRows=()=>{const quote=(v:string)=>'"'+String(v??'').replace(/"/g,'""')+'"';const deptById=new Map(depts.map(d=>[d.id,d]));const teamById=new Map(teams.map(t=>[t.id,t]));const employeeByTeam=new Map<string,HrEmployee[]>();for(const item of employeeAssignments){const list=employeeByTeam.get(item.team.id)??[];list.push(item.employee);employeeByTeam.set(item.team.id,list)}const rows=[['Work date','Department','Team','Employee','WO ID','Status'],...orders.flatMap(o=>(employeeByTeam.get(o.team_id??'')??[]).map(employee=>[o.work_date,deptById.get(o.department_id??'')?.code??'',teamById.get(o.team_id??'')?.code??'Unassigned',employee.full_name??employee.email,o.wo_id,o.status]))];const csv='\uFEFF'+rows.map(row=>row.map(v=>quote(String(v??''))).join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));const a=document.createElement('a');a.href=url;a.download='AHBA-Weekly-Employee-Completed-Attribution-'+selectedWeekStart+'-to-'+selectedWeekEnd+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)}
  return <section className="ops-overview" style={{display:'grid',gap:'1rem'}}>
