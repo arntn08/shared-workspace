@@ -184,10 +184,6 @@ export function HrWeeklyTeamReports(){
   const key=normalizeTeamValue(teamValue)
   if(!key)return []
   const cielo=isCieloNewInstall(teamValue)
-  // Cielo New Install is the employee-facing alias for the SLI001 team.
-  // Resolve it to the configured team row so reports count its real team_id.
-  const cieloTeam=cielo?teams.find(t=>normalizeTeamValue(t.code)==='ahbasli001'):undefined
-  if(cieloTeam)return [{employee,team:cieloTeam,departmentId:sliDepartment?.id??cieloTeam.department_id}]
   const exact=teams.find(t=>[t.id,t.code,t.name].some(v=>normalizeTeamValue(v)===key))
   if(exact)return [{employee,team:exact,departmentId:cielo?(sliDepartment?.id??exact.department_id):exact.department_id}]
   // Match codes such as AHBA_SLI001 to AHBA_SLI01 by numeric team identity.
