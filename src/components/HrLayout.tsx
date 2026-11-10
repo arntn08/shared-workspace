@@ -195,6 +195,7 @@ export function HrWeeklyTeamReports(){
   }
   return []
  })),[employees,teams,sliDepartment])
+ const reportWeekDays=Array.from({length:7},(_,index)=>{const date=new Date(selectedWeekStart+'T12:00:00');date.setDate(date.getDate()+index);return hrDate(date)})
  const employeeReportRows=useMemo(()=>employees.flatMap(employee=>{
   const assignments=employeeAssignments.filter(x=>x.employee.id===employee.id)
   const rawTeams=(employee.teams??[]).map(x=>String(x).trim()).filter(Boolean)
@@ -212,12 +213,13 @@ export function HrWeeklyTeamReports(){
    const dept=depts.find(d=>d.id===deptId)
    const assigned=assignments.filter(x=>(x.departmentId??x.team.department_id)===deptId)
    const teamIds=new Set(assigned.map(x=>x.team.id))
-   const employeeOrders=orders.filter(o=>teamIds.has(o.team_id??''))
-   const days=Array.from(new Set(employeeOrders.map(o=>o.work_date))).sort().map(day=>({day,count:employeeOrders.filter(o=>o.work_date===day).length}))
+   const employeeOrders=orders.filter(o=>teamIds.has(String(o.team_id??'')))
+   // Always show all seven dates in the selected week, including zero counts.
+   const days=reportWeekDays.map(day=>({day,count:employeeOrders.filter(o=>String(o.work_date??'').slice(0,10)===day).length}))
    const fallbackTeams=rawTeams.filter(raw=>isCieloNewInstall(raw)?dept?.id===sliDepartment?.id:(!deptId||normalizeTeamValue(raw).includes(normalizeTeamValue(dept?.code))))
    return {id:employee.id+'|'+(deptId??'unassigned'),employee,department:dept?.code??'—',departmentId:deptId,teams:assigned.length?assigned.map(x=>x.team.code).join(', '):(fallbackTeams.join(', ')||'Unassigned'),days,total:employeeOrders.length}
   })
- }).sort((a,b)=>String(a.employee.full_name??a.employee.email).localeCompare(String(b.employee.full_name??b.employee.email))||a.department.localeCompare(b.department)),[employees,employeeAssignments,orders,depts,sliDepartment])
+ }).sort((a,b)=>String(a.employee.full_name??a.employee.email).localeCompare(String(b.employee.full_name??b.employee.email))||a.department.localeCompare(b.department)),[employees,employeeAssignments,orders,depts,sliDepartment,reportWeekDays])
  const filteredEmployeeRows=employeeReportRows.filter(row=>(departmentFilter==='all'||row.departmentId===departmentFilter)&&[row.employee.full_name,row.employee.email,row.teams,row.department].some(value=>String(value??'').toLowerCase().includes(employeeSearch.trim().toLowerCase())))
  const exportRows=()=>{const quote=(v:string)=>'"'+String(v??'').replace(/"/g,'""')+'"';const deptById=new Map(depts.map(d=>[d.id,d]));const teamById=new Map(teams.map(t=>[t.id,t]));const employeeByTeam=new Map<string,HrEmployee[]>();for(const item of employeeAssignments){const list=employeeByTeam.get(item.team.id)??[];list.push(item.employee);employeeByTeam.set(item.team.id,list)}const rows=[['Work date','Department','Team','Employee','WO ID','Status'],...orders.flatMap(o=>(employeeByTeam.get(o.team_id??'')??[]).map(employee=>[o.work_date,deptById.get(o.department_id??'')?.code??'',teamById.get(o.team_id??'')?.code??'Unassigned',employee.full_name??employee.email,o.wo_id,o.status]))];const csv='\uFEFF'+rows.map(row=>row.map(v=>quote(String(v??''))).join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));const a=document.createElement('a');a.href=url;a.download='AHBA-Weekly-Employee-Completed-Attribution-'+selectedWeekStart+'-to-'+selectedWeekEnd+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)}
  return <section className="ops-overview" style={{display:'grid',gap:'1rem'}}>
@@ -261,9 +263,9 @@ export function HrWeeklyTeamReports(){
          </select>
          <button type="button" className="hr-employee-report-reset" onClick={()=>{setEmployeeSearch('');setDepartmentFilter('all')}}>Reset filters</button>
         </div>
-        <div className="hr-employee-report-table-wrap"><table className="tally-table"><thead><tr><th>Employee</th><th>Department</th><th>Assigned team</th><th>Daily completed</th><th>Weekly total</th></tr></thead><tbody>
-         {filteredEmployeeRows.map(row=><tr key={row.id}><th>{row.employee.full_name||row.employee.email}<div className="muted" style={{fontWeight:400,fontSize:'.75rem'}}>{row.employee.email}</div></th><td><span className="hr-report-dept-pill">{row.department}</span></td><td>{row.teams||'—'}</td><td>{row.days.length?row.days.map(day=><div key={day.day} style={{whiteSpace:'nowrap'}}>{day.day}: <strong>{day.count}</strong></div>):'0'}</td><td><strong className="hr-report-total">{row.total}</strong></td></tr>)}
-         {filteredEmployeeRows.length===0&&<tr><td colSpan={5} className="muted">No employees match this search and department filter.</td></tr>}
+        <div className="hr-employee-report-table-wrap"><table className="tally-table hr-employee-daily-table"><thead><tr><th>Employee</th><th>Department</th><th>Assigned team</th>{reportWeekDays.map(day=><th key={day} className="hr-daily-date-heading"><span>{new Date(day+'T12:00:00').toLocaleDateString('en-PH',{weekday:'short'})}</span><small>{new Date(day+'T12:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric'})}</small></th>)}<th>Weekly total</th></tr></thead><tbody>
+         {filteredEmployeeRows.map(row=><tr key={row.id}><th>{row.employee.full_name||row.employee.email}<div className="muted" style={{fontWeight:400,fontSize:'.75rem'}}>{row.employee.email}</div></th><td><span className="hr-report-dept-pill">{row.department}</span></td><td>{row.teams||'—'}</td>{row.days.map(day=><td key={day.day} className="hr-daily-count-cell"><strong className={day.count>0?'has-completions':'zero-completions'}>{day.count}</strong></td>)}<td><strong className="hr-report-total">{row.total}</strong></td></tr>)}
+         {filteredEmployeeRows.length===0&&<tr><td colSpan={11} className="muted">No employees match this search and department filter.</td></tr>}
         </tbody></table></div>
         <p className="hr-employee-report-footnote">Employee totals are attributed from their assigned team’s completed work orders. If two employees share a team, both see the same team completion count; team-level totals are not doubled.</p>
        </div>
