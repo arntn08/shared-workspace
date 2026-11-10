@@ -224,3 +224,83 @@
     border-color: color-mix(in srgb,var(--hr-green) 20%,var(--ops-border));
   }
 }
+
+
+/* Employee reports dialog: render at document root to avoid parent stacking,
+   transform and overflow clipping that can make fixed overlays flicker. */
+.hr-employee-report-backdrop {
+  position:fixed;
+  inset:0;
+  z-index:20000;
+  display:grid;
+  place-items:center;
+  padding:clamp(10px,2vw,24px);
+  background:rgba(5,13,9,.72);
+  isolation:isolate;
+  overscroll-behavior:contain;
+  animation:hrReportFadeIn .14s ease-out both;
+}
+.hr-employee-report-modal {
+  width:min(1120px,100%);
+  max-height:min(88dvh,900px);
+  overflow:auto;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+  padding:clamp(14px,2vw,22px);
+  border:1px solid var(--ops-border,rgba(22,134,83,.22));
+  border-radius:20px;
+  background:var(--ops-panel,var(--card,#fff));
+  color:var(--ops-text,var(--text,#17251c));
+  box-shadow:0 28px 90px rgba(0,0,0,.42);
+  transform:none !important;
+  animation:hrReportModalIn .16s ease-out both;
+}
+.hr-employee-report-modal .ops-panel-heading {
+  position:sticky;
+  top:calc(-1 * clamp(14px,2vw,22px));
+  z-index:2;
+  margin:calc(-1 * clamp(14px,2vw,22px)) calc(-1 * clamp(14px,2vw,22px)) 14px;
+  padding:clamp(14px,2vw,22px);
+  background:var(--ops-panel,var(--card,#fff));
+  border-bottom:1px solid var(--ops-border,var(--border,#ddd));
+}
+.hr-employee-report-modal .ops-panel-heading h2 { margin:4px 0; }
+.hr-employee-report-modal .ops-panel-heading p { margin:0; }
+.hr-employee-report-modal .hr-employee-report-table-wrap {
+  width:100%;
+  overflow:auto;
+  border:1px solid var(--ops-border,var(--border,#ddd));
+  border-radius:12px;
+  overscroll-behavior:contain;
+}
+.hr-employee-report-modal .hr-employee-report-table-wrap table {
+  min-width:760px;
+  margin:0;
+}
+.hr-employee-report-modal .tally-note {
+  margin:14px 0 0;
+  line-height:1.55;
+}
+@keyframes hrReportFadeIn { from { opacity:0 } to { opacity:1 } }
+@keyframes hrReportModalIn { from { opacity:.96; translate:0 5px } to { opacity:1; translate:0 0 } }
+@media(max-width:640px) {
+  .hr-employee-report-backdrop { padding:8px; place-items:center; }
+  .hr-employee-report-modal {
+    max-height:92dvh;
+    padding:13px;
+    border-radius:16px;
+  }
+  .hr-employee-report-modal .ops-panel-heading {
+    top:-13px;
+    margin:-13px -13px 12px;
+    padding:13px;
+    gap:10px;
+    align-items:flex-start;
+  }
+  .hr-employee-report-modal .ops-panel-heading h2 { font-size:17px; }
+  .hr-employee-report-modal .row input,
+  .hr-employee-report-modal .row select { flex:1 1 100% !important; width:100%; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .hr-employee-report-backdrop,.hr-employee-report-modal { animation:none; }
+}
