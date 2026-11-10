@@ -203,36 +203,43 @@ export function HrWeeklyTeamReports(){
  const isCieloNewInstall=(value:unknown)=>normalizeTeamValue(value).includes('cielonewinstall')
  const scheduleAssignments=useMemo(()=>{
   const result=new Map<string,HrTeam[]>()
-  for(const section of hrScheduleSections(scheduleRows)){
-   const sectionDate=hrScheduleDate(section.title)
-   if(sectionDate&&(sectionDate<selectedWeekStart||sectionDate>selectedWeekEnd))continue
-   const headers=section.headers.map(hrScheduleNorm)
-   const codeIndex=headers.findIndex(v=>v==='tcode'||v.includes('teamcode'))
-   const driverIndex=headers.findIndex(v=>v==='driver'||v.includes('drivername'))
-   const techIndex=headers.findIndex(v=>v==='tech'||v.includes('technician'))
+  const nameKey=(value:unknown)=>{
+   const words=String(value??'').replace(/\*/g,'').toLowerCase().match(/[a-z0-9]+/g)??[]
+   return words.sort().join('')
+  }
+  let codeIndex=-1,driverIndex=-1,techIndex=-1
+  for(const raw of scheduleRows){
+   const cells=(Array.isArray(raw)?raw:[]).map(v=>String(v??'').trim())
+   const headers=cells.map(hrScheduleNorm)
+   const foundCode=headers.findIndex(v=>v==='tcode'||v==='teamcode')
+   const foundDriver=headers.findIndex(v=>v==='driver'||v==='drivername')
+   const foundTech=headers.findIndex(v=>v==='tech'||v==='technician'||v==='techname')
+   if(foundCode>=0&&(foundDriver>=0||foundTech>=0)){
+    codeIndex=foundCode;driverIndex=foundDriver;techIndex=foundTech
+    continue
+   }
    if(codeIndex<0)continue
-   for(const row of section.rows){
-    const code=String(row[codeIndex]??'').trim()
-    if(!code)continue
-    const identity=normalizeTeamIdentity(code)
-    const matches=teams.filter(team=>normalizeTeamIdentity(team.code)===identity)
-    if(matches.length!==1)continue
-    const team=matches[0]
-    for(const index of [driverIndex,techIndex]){
-     if(index<0)continue
-     const person=hrScheduleNorm(row[index])
-     if(!person)continue
-     for(const employee of employees){
-      if(person!==hrScheduleNorm(employee.full_name||employee.email))continue
-      const list=result.get(employee.id)??[]
-      if(!list.some(x=>x.id===team.id))list.push(team)
-      result.set(employee.id,list)
-     }
+   const rawCode=String(cells[codeIndex]??'').trim()
+   if(!rawCode||!/^((AHBA|A8)[_-])?SLI0*\\d+$/i.test(rawCode)&&!/^((AHBA|A8)[_-])?OMT0*\\d+$/i.test(rawCode))continue
+   const identity=normalizeTeamIdentity(rawCode)
+   const matches=teams.filter(team=>normalizeTeamIdentity(team.code)===identity)
+   if(matches.length!==1)continue
+   const team=matches[0]
+   for(const index of [driverIndex,techIndex]){
+    if(index<0)continue
+    const personKey=nameKey(cells[index])
+    if(!personKey)continue
+    for(const employee of employees){
+     const employeeKey=nameKey(employee.full_name)
+     if(!employeeKey||personKey!==employeeKey)continue
+     const list=result.get(employee.id)??[]
+     if(!list.some(x=>x.id===team.id))list.push(team)
+     result.set(employee.id,list)
     }
    }
   }
   return result
- },[scheduleRows,selectedWeekStart,selectedWeekEnd,teams,employees])
+ },[scheduleRows,teams,employees])
  const sliDepartment=depts.find(d=>normalizeTeamValue(d.code)==='sli'||normalizeTeamValue(d.name)==='sli'||normalizeTeamValue(d.name).includes('sli'))
  const employeeAssignments=useMemo(()=>employees.flatMap(employee=>(employee.teams??[]).flatMap(teamValue=>{
   const key=normalizeTeamValue(teamValue)
