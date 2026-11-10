@@ -181,14 +181,19 @@ export function HrWeeklyTeamReports(){
   if(!key)return []
   const exact=teams.find(t=>[t.id,t.code,t.name].some(v=>normalizeTeamValue(v)===key))
   if(exact)return [{employee,team:exact}]
-  const partial=teams.filter(t=>[t.code,t.name].some(v=>{const candidate=normalizeTeamValue(v);return key.length>=6&&(candidate.startsWith(key)||key.startsWith(candidate))}))
-  return partial.length===1?[{employee,team:partial[0]}]:[]
+  // Profile labels can contain a department prefix/suffix, e.g. "SLI - Cielo New Install".
+  // Resolve the longest unique configured team label, then trust its department_id.
+  const ranked=teams.map(team=>({team,score:Math.max(...[team.code,team.name].map(v=>normalizeTeamValue(v)).filter(Boolean).map(candidate=>(key.includes(candidate)||candidate.includes(key))?candidate.length:0),0)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score)
+  if(!ranked.length||(ranked.length>1&&ranked[0].score===ranked[1].score))return []
+  return [{employee,team:ranked[0].team}]
  })),[employees,teams])
  const employeeReportRows=useMemo(()=>employees.flatMap(employee=>{
   const assignments=employeeAssignments.filter(x=>x.employee.id===employee.id)
   const rawTeams=(employee.teams??[]).map(x=>String(x).trim()).filter(Boolean)
-  const inferredDeptIds=[...new Set(rawTeams.flatMap(raw=>{const key=normalizeTeamValue(raw);const match=depts.find(d=>key.includes(normalizeTeamValue(d.code)));return match?[match.id]:[]}))]
-  const deptIds=[...new Set([...assignments.map(x=>x.team.department_id),...inferredDeptIds])]
+  // A configured team-to-department relationship is authoritative. Only infer
+  // department from profile text when none of the employee's teams resolve.
+  const inferredDeptIds=assignments.length?[]:[...new Set(rawTeams.flatMap(raw=>{const key=normalizeTeamValue(raw);const match=depts.filter(d=>key.includes(normalizeTeamValue(d.code))).sort((a,b)=>normalizeTeamValue(b.code).length-normalizeTeamValue(a.code).length)[0];return match?[match.id]:[]}))]
+  const deptIds=[...new Set(assignments.length?assignments.map(x=>x.team.department_id):inferredDeptIds)]
   const groups=deptIds.length?deptIds:[null]
   return groups.map(deptId=>{
    const dept=depts.find(d=>d.id===deptId)
@@ -212,27 +217,37 @@ export function HrWeeklyTeamReports(){
     {showEmployeeReport&&createPortal(
      <div className="hr-employee-report-backdrop" role="dialog" aria-modal="true" aria-labelledby="hr-employee-report-title" onMouseDown={e=>{if(e.target===e.currentTarget)setShowEmployeeReport(false)}}>
       <section className="hr-employee-report-modal">
-       <div className="ops-panel-heading">
-        <div><span className="ops-eyebrow">HR REPORTING</span><h2 id="hr-employee-report-title">Daily completed by employee</h2><p>{selectedWeekStart} through {selectedWeekEnd}</p></div>
-        <button className="small" onClick={()=>setShowEmployeeReport(false)}>Close ✕</button>
+       <header className="hr-employee-report-header">
+        <div className="hr-employee-report-titlegroup">
+         <span className="hr-employee-report-icon">▤</span>
+         <div><span className="ops-eyebrow">AHBA · PEOPLE ANALYTICS</span><h2 id="hr-employee-report-title">Employee performance</h2><p>Daily completed work orders · {selectedWeekStart} — {selectedWeekEnd}</p></div>
+        </div>
+        <button type="button" className="hr-employee-report-close" onClick={()=>setShowEmployeeReport(false)} aria-label="Close employee report">×</button>
+       </header>
+       <div className="hr-employee-report-body">
+        <div className="hr-employee-report-metrics">
+         <div><span>Employees shown</span><strong>{filteredEmployeeRows.length}</strong></div>
+         <div><span>Teams represented</span><strong>{new Set(filteredEmployeeRows.flatMap(row=>row.teams.split(',').map(x=>x.trim()).filter(Boolean))).size}</strong></div>
+         <div><span>Employee-attributed completions</span><strong>{filteredEmployeeRows.reduce((sum,row)=>sum+row.total,0)}</strong></div>
+        </div>
+        <div className="hr-employee-report-toolbar">
+         <label className="hr-employee-report-search"><span>⌕</span><input aria-label="Search employees" placeholder="Search name, email or team…" value={employeeSearch} onChange={e=>setEmployeeSearch(e.target.value)}/></label>
+         <select aria-label="Filter by department" value={departmentFilter} onChange={e=>setDepartmentFilter(e.target.value)}>
+          <option value="all">All departments</option>{depts.filter(d=>d.active).map(d=><option key={d.id} value={d.id}>{d.code} — {d.name}</option>)}
+         </select>
+         <button type="button" className="hr-employee-report-reset" onClick={()=>{setEmployeeSearch('');setDepartmentFilter('all')}}>Reset filters</button>
+        </div>
+        <div className="hr-employee-report-table-wrap"><table className="tally-table"><thead><tr><th>Employee</th><th>Department</th><th>Assigned team</th><th>Daily completed</th><th>Weekly total</th></tr></thead><tbody>
+         {filteredEmployeeRows.map(row=><tr key={row.id}><th>{row.employee.full_name||row.employee.email}<div className="muted" style={{fontWeight:400,fontSize:'.75rem'}}>{row.employee.email}</div></th><td><span className="hr-report-dept-pill">{row.department}</span></td><td>{row.teams||'—'}</td><td>{row.days.length?row.days.map(day=><div key={day.day} style={{whiteSpace:'nowrap'}}>{day.day}: <strong>{day.count}</strong></div>):'0'}</td><td><strong className="hr-report-total">{row.total}</strong></td></tr>)}
+         {filteredEmployeeRows.length===0&&<tr><td colSpan={5} className="muted">No employees match this search and department filter.</td></tr>}
+        </tbody></table></div>
+        <p className="hr-employee-report-footnote">Employee totals are attributed from their assigned team’s completed work orders. If two employees share a team, both see the same team completion count; team-level totals are not doubled.</p>
        </div>
-       <div className="row" style={{gap:'.65rem',flexWrap:'wrap',margin:'1rem 0'}}>
-        <input aria-label="Search employees" placeholder="Search employee name, email, team…" value={employeeSearch} onChange={e=>setEmployeeSearch(e.target.value)} style={{flex:'1 1 260px',minWidth:0}}/>
-        <select aria-label="Filter by department" value={departmentFilter} onChange={e=>setDepartmentFilter(e.target.value)} style={{flex:'0 1 230px'}}>
-         <option value="all">All departments</option>{depts.filter(d=>d.active).map(d=><option key={d.id} value={d.id}>{d.code} — {d.name}</option>)}
-        </select>
-        <button className="small" onClick={()=>{setEmployeeSearch('');setDepartmentFilter('all')}}>Clear filters</button>
-       </div>
-       <div className="hr-employee-report-table-wrap"><table className="tally-table"><thead><tr><th>Employee</th><th>Department</th><th>Assigned team</th><th>Daily completed</th><th>Weekly total</th></tr></thead><tbody>
-        {filteredEmployeeRows.map(row=><tr key={row.id}><th>{row.employee.full_name||row.employee.email}<div className="muted" style={{fontWeight:400,fontSize:'.75rem'}}>{row.employee.email}</div></th><td>{row.department}</td><td>{row.teams||'—'}</td><td>{row.days.length?row.days.map(day=><div key={day.day} style={{whiteSpace:'nowrap'}}>{day.day}: <strong>{day.count}</strong></div>):'0'}</td><td><strong>{row.total}</strong></td></tr>)}
-        {filteredEmployeeRows.length===0&&<tr><td colSpan={5} className="muted">No employees match this search and department filter.</td></tr>}
-       </tbody></table></div>
-       <p className="tally-note">Employee totals are attributed from their assigned team’s completed work orders. If two employees share a team, both see the same team completion count; team-level totals are not doubled.</p>
       </section>
      </div>,
      document.body
     )}
-   <details style={{marginTop:'1rem'}} open><summary style={{cursor:'pointer',fontWeight:700}}>Completed work-order rows ({orders.length})</summary><div style={{overflowX:'auto',marginTop:'.75rem'}}><table className="tally-table"><thead><tr><th>Work date</th><th>Department</th><th>Team</th><th>WO ID</th><th>Status</th></tr></thead><tbody>{orders.map((o,i)=><tr key={o.wo_id||i}><td>{o.work_date}</td><td>{depts.find(d=>d.id===o.department_id)?.code??'—'}</td><td>{teams.find(t=>t.id===o.team_id)?.code??'Unassigned'}</td><td>{o.wo_id}</td><td>{o.status}</td></tr>)}</tbody></table></div></details></>}
+    <details style={{marginTop:'1rem'}} open><summary style={{cursor:'pointer',fontWeight:700}}>Completed work-order rows ({orders.length})</summary><div style={{overflowX:'auto',marginTop:'.75rem'}}><table className="tally-table"><thead><tr><th>Work date</th><th>Department</th><th>Team</th><th>WO ID</th><th>Status</th></tr></thead><tbody>{orders.map((o,i)=><tr key={o.wo_id||i}><td>{o.work_date}</td><td>{depts.find(d=>d.id===o.department_id)?.code??'—'}</td><td>{teams.find(t=>t.id===o.team_id)?.code??'Unassigned'}</td><td>{o.wo_id}</td><td>{o.status}</td></tr>)}</tbody></table></div></details></>}
   </section>
   <p className="muted" style={{fontSize:'.75rem',textAlign:'right'}}>Only COMPLETED records are included{updated?' · Updated '+updated.toLocaleTimeString('en-PH'):''}</p>
  </section>
