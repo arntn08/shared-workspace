@@ -9,6 +9,7 @@ import './premium.css'
 import './operations.css'
 import './compact-workspace.css'
 import './mobile-optimization.css'
+import './workspace-refresh.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
