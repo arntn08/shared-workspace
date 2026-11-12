@@ -18,6 +18,9 @@ export default function EmployeeHome({ settings }: { settings: DashSettings }) {
   const { items, unread, loading, error, offline, ack, done, markRead } = useNotifs()
   const [recent, setRecent] = useState<FileRow[]>([])
   const today = todayIso()
+  const assignedTeams = [...new Set((profile?.teams ?? []).map(team => team.trim()).filter(Boolean))]
+  const primaryTeam = assignedTeams[0] ?? ''
+  const departmentCode = primaryTeam.match(/^(?:AHBA_|A8_)?([A-Z]+)[-_]?\d/i)?.[1]?.toUpperCase() ?? ''
 
   useEffect(() => {
     supabase.from('files').select('*')
@@ -60,9 +63,27 @@ export default function EmployeeHome({ settings }: { settings: DashSettings }) {
         </div>
         <div className="quick-grid">
           <Link to="/schedule" className="qa"><span className="qa-icon"><Icon name="schedule" /></span><span>My schedule</span><small>Work assignments</small></Link>
+          <Link to="/tally" className="qa"><span className="qa-icon"><Icon name="tally" /></span><span>Installation tally</span><small>WTD / MTD progress</small></Link>
+          <Link to="/my-team" className="qa"><span className="qa-icon"><Icon name="users" /></span><span>My team</span><small>Team performance</small></Link>
           <Link to="/files" className="qa"><span className="qa-icon"><Icon name="files" /></span><span>Files & resources</span><small>Shared documents</small></Link>
           <Link to="/notifications" className="qa"><span className="qa-icon"><Icon name="bell" /></span><span>Notifications</span><small>{unread ? `${unread} unread` : 'All up to date'}</small></Link>
           <Link to="/profile" className="qa"><span className="qa-icon"><Icon name="user" /></span><span>My ID card</span><small>Profile & account</small></Link>
+        </div>
+      </section>
+
+      <section className="emp-section emp-assignment-section">
+        <div className="emp-section-heading">
+          <div><span className="emp-eyebrow">YOUR ASSIGNMENT</span><h2>Team information</h2></div>
+          <Link to="/profile" className="emp-text-link">View profile</Link>
+        </div>
+        <div className="emp-assignment-card">
+          <div className="emp-assignment-icon"><Icon name="users" /></div>
+          <div className="emp-assignment-copy">
+            <strong>{assignedTeams.length ? (assignedTeams.length === 1 ? primaryTeam : `${assignedTeams.length} assigned teams`) : 'No team assignment listed'}</strong>
+            <span>{departmentCode ? `${departmentCode} department assignment` : 'Your current workspace assignment'}</span>
+            {assignedTeams.length > 1 && <div className="emp-team-chips">{assignedTeams.map(team => <span key={team}>{team}</span>)}</div>}
+          </div>
+          <Link to="/my-team" className="btn small">Open team summary</Link>
         </div>
       </section>
 
