@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { useSettings } from '../lib/settings'
@@ -46,18 +46,6 @@ const editorLinks: [string, string, string, string][] = [
   ['/settings', 'Settings', 'settings', 'Account']
 ]
 
-function SidebarClock() {
-  const [now, setNow] = useState(() => new Date())
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 1000)
-    return () => window.clearInterval(timer)
-  }, [])
-  const day = new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', weekday: 'long' }).format(now)
-  const date = new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', day: 'numeric', month: 'long', year: 'numeric' }).format(now)
-  const time = new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).format(now)
-  return <section className="ops-sidebar-clock" aria-label="Current date and time"><div className="ops-clock-top"><span className="ops-clock-live-dot" /> PHILIPPINE TIME</div><strong>{time}</strong><span className="ops-clock-day">{day}</span><span className="ops-clock-date">{date}</span></section>
-}
-
 export default function OwnerLayout() {
   const { profile, signOut } = useAuth()
   const [settings] = useSettings()
@@ -74,13 +62,12 @@ export default function OwnerLayout() {
     {mobileOpen && <button className="ops-mobile-scrim" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
     <aside className={`ops-sidebar${mobileOpen ? ' is-open' : ''}`}>
       <div className="ops-brand"><div className="ops-brand-mark">A</div><div className="ops-brand-copy"><strong>AHBA</strong><span>{settings.title || 'Development Workspace'}</span></div><button className="ops-sidebar-close" type="button" aria-label="Close navigation" onClick={() => setMobileOpen(false)}>×</button></div>
-      <div className="ops-workspace-label">WORKSPACE</div><SidebarClock />
       <nav className="ops-nav" aria-label="Main navigation">
         {groups.map(group => { const groupLinks = links.filter(item => item[3] === group); if (!groupLinks.length) return null
           return <div className="ops-nav-group" key={group}><div className="ops-nav-heading">{group}</div>{groupLinks.map(([to,label,icon]) => <NavLink key={to} to={to} end={to === '/'} onClick={() => setMobileOpen(false)} className={({isActive}) => `ops-nav-link${isActive ? ' active' : ''}`}><span className="ops-nav-icon"><Icon name={icon} /></span><span className="ops-nav-label">{label}</span>{to === '/tally' && <span className="ops-nav-tag">LIVE</span>}</NavLink>)}</div>
         })}
       </nav>
-      <div className="ops-sidebar-bottom"><div className="ops-help-card"><span className="ops-help-icon">✦</span><div><strong>Workspace access</strong><span>{isOwner ? 'Owner permissions' : 'Editor permissions'}</span></div></div>
+      <div className="ops-sidebar-bottom">
         <div className="ops-profile"><Avatar name={profile?.full_name} email={profile?.email} /><div className="ops-profile-copy"><strong>{profile?.full_name || profile?.email || 'Account'}</strong><span>{profile?.role || 'Member'}</span></div><ThemeButton /><button className="ops-icon-button" type="button" onClick={async () => { await signOut(); navigate('/', { replace: true }) }} title="Sign out" aria-label="Sign out"><Icon name="out" /></button></div>
       </div>
     </aside>
