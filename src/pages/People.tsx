@@ -38,8 +38,12 @@ export default function People() {
   const [results, setResults] = useState<Result[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [newTeam, setNewTeam] = useState('')
-  const [activeModal, setActiveModal] = useState<'add' | 'bulk' | 'teams' | null>(null)
+  const [activeModal, setActiveModal] = useState<'add' | 'bulk' | 'teams' | 'passwords' | null>(null)
   const [search, setSearch] = useState('')
+  const [bulkResetEmails, setBulkResetEmails] = useState('')
+  const [bulkResetPassword, setBulkResetPassword] = useState('')
+  const [bulkResetBusy, setBulkResetBusy] = useState(false)
+  const [bulkResetReport, setBulkResetReport] = useState<{ ok: number; failed: number; missing: string[] } | null>(null)
 
   async function load() {
     const [p, t] = await Promise.all([
@@ -158,6 +162,32 @@ export default function People() {
     await load()
   }
 
+  async function resetManyPasswords(e: FormEvent) {
+    e.preventDefault()
+    const emails = [...new Set(bulkResetEmails.split(/[\\n,;]+/).map((x) => x.trim().toLowerCase()).filter(Boolean))]
+    if (!emails.length) return setMsg({ text: 'Paste at least one email address.', err: true })
+    if (bulkResetPassword.length < 8) return setMsg({ text: 'Use a password with at least 8 characters.', err: true })
+    const matched = emails.map((email) => ({ email, person: list.find((p) => p.email?.toLowerCase() === email) }))
+    const missing = matched.filter((x) => !x.person).map((x) => x.email)
+    const targets = matched.filter((x): x is { email: string; person: Profile } => Boolean(x.person))
+    if (!targets.length) return setMsg({ text: 'None of those email addresses matched an account in this workspace.', err: true })
+    if (!window.confirm('Reset passwords for ' + targets.length + ' matched accounts to the same temporary password? This cannot be undone.')) return
+    setBulkResetBusy(true)
+    setBulkResetReport(null)
+    setMsg(null)
+    let ok = 0
+    let failed = 0
+    for (const target of targets) {
+      const res = await call({ action: 'set_password', userId: target.person.id, password: bulkResetPassword })
+      if (res.ok) ok += 1
+      else failed += 1
+    }
+    setBulkResetBusy(false)
+    setBulkResetReport({ ok, failed, missing })
+    setBulkResetPassword('')
+    setMsg({ text: 'Bulk reset finished: ' + ok + ' updated, ' + failed + ' failed, ' + missing.length + ' email(s) not found.', err: failed > 0 || missing.length > 0 })
+    await load()
+  }
   async function resetPw(p: Profile) {
     const pw = window.prompt(`New temporary password for ${p.email} (at least 8 characters):`)
     if (!pw) return
@@ -230,17 +260,28 @@ export default function People() {
           <button type="button" className="people-action-button" onClick={() => setActiveModal('add')}><span className="people-action-icon">＋</span><span><strong>Add person</strong><small>Create one account</small></span></button>
           <button type="button" className="people-action-button" onClick={() => setActiveModal('bulk')}><span className="people-action-icon">↥</span><span><strong>Bulk add</strong><small>Import multiple people</small></span></button>
           <button type="button" className="people-action-button" onClick={() => setActiveModal('teams')}><span className="people-action-icon">◇</span><span><strong>Teams</strong><small>Organize your workspace</small></span></button>
+          <button type="button" className="people-action-button" onClick={() => { setBulkResetReport(null); setActiveModal('passwords') }}><span className="people-action-icon">↻</span><span><strong>Bulk password reset</strong><small>Reset multiple accounts</small></span></button>
         </div>
       </div>
       {activeModal && <div className="people-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) setActiveModal(null) }}>
         <section className="people-modal" role="dialog" aria-modal="true" aria-labelledby="people-modal-title">
-          <div className="people-modal-heading"><div><span className="ops-eyebrow">{activeModal === 'add' ? 'NEW ACCOUNT' : activeModal === 'bulk' ? 'QUICK IMPORT' : 'TEAM MANAGEMENT'}</span><h2 id="people-modal-title">{activeModal === 'add' ? 'Add a person' : activeModal === 'bulk' ? 'Bulk add people' : 'Manage teams'}</h2><p>{activeModal === 'add' ? 'Create an account and assign team access.' : activeModal === 'bulk' ? 'Add several accounts using a simple list.' : 'Organize people into teams.'}</p></div><button type="button" className="people-modal-close" disabled={busy} onClick={() => setActiveModal(null)} aria-label="Close">×</button></div>
+          <div className="people-modal-heading"><div><span className="ops-eyebrow">{activeModal === 'add' ? 'NEW ACCOUNT' : activeModal === 'bulk' ? 'QUICK IMPORT' : activeModal === 'teams' ? 'TEAM MANAGEMENT' : 'ACCOUNT SECURITY'}</span><h2 id="people-modal-title">{activeModal === 'add' ? 'Add a person' : activeModal === 'bulk' ? 'Bulk add people' : activeModal === 'teams' ? 'Manage teams' : 'Bulk password reset'}</h2><p>{activeModal === 'add' ? 'Create an account and assign team access.' : activeModal === 'bulk' ? 'Add several accounts using a simple list.' : activeModal === 'teams' ? 'Organize people into teams.' : 'Set one temporary password for the email addresses you provide.'}</p></div><button type="button" className="people-modal-close" disabled={busy} onClick={() => setActiveModal(null)} aria-label="Close">×</button></div>
           {activeModal === 'add' && <form onSubmit={addOne} className="people-modal-form">
             <div className="form-grid"><div><label htmlFor="n">Name</label><input id="n" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" /></div><div><label htmlFor="e">Email</label><input id="e" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" required /></div><div className="people-field-full"><label htmlFor="p">Temporary password (optional)</label><input id="p" autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Leave blank to generate" /></div></div>
             <label>Assign teams</label><div className="people-team-picker">{teamNames.map((n) => <label key={n} className="people-team-option"><input type="checkbox" checked={picked.includes(n)} onChange={() => setPicked(picked.includes(n) ? picked.filter((x) => x !== n) : [...picked, n])} />{n}</label>)}</div>
             <div className="people-modal-footer"><button type="button" className="small" onClick={() => setActiveModal(null)}>Cancel</button><button className="primary" disabled={busy}>{busy ? 'Working…' : 'Create account'}</button></div>
           </form>}
           {activeModal === 'bulk' && <form onSubmit={addBulk} className="people-modal-form"><div className="people-import-hint"><strong>One person per line</strong><span>Email, name, teams separated by ;, password (optional)</span><code>name@company.com, Juan Dela Cruz, QA; OMT</code></div><label htmlFor="people-bulk">People to add</label><textarea id="people-bulk" rows={7} value={bulk} onChange={(e) => setBulk(e.target.value)} placeholder={'ahba.alvin@gmail.com, Ahba Alvin, Cielo; QA\nsomeone@gmail.com, Some One, NAP Audit Team'} /><p className="muted">Existing accounts will have teams updated instead of creating a duplicate.</p><div className="people-modal-footer"><button type="button" className="small" onClick={() => setActiveModal(null)}>Cancel</button><button className="primary" disabled={busy}>{busy ? 'Processing…' : 'Create accounts'}</button></div></form>}
+          {activeModal === 'passwords' && <form onSubmit={resetManyPasswords} className="people-modal-form">
+            <div className="people-import-hint"><strong>One email address per line</strong><span>Only matching accounts will be changed. Duplicate addresses are ignored.</span></div>
+            <label htmlFor="bulk-reset-emails">Account email addresses</label>
+            <textarea id="bulk-reset-emails" rows={7} value={bulkResetEmails} onChange={(e) => setBulkResetEmails(e.target.value)} placeholder={'employee1@company.com\\nemployee2@company.com'} autoComplete="off" />
+            <label htmlFor="bulk-reset-password">New temporary password</label>
+            <input id="bulk-reset-password" type="password" value={bulkResetPassword} onChange={(e) => setBulkResetPassword(e.target.value)} minLength={8} autoComplete="new-password" required />
+            <p className="muted">This sets the same password for every matched account. Ask each employee to change it immediately in Settings. The password is not saved in the app or included in the results.</p>
+            {bulkResetReport && <div className="notice">Updated: {bulkResetReport.ok} · Failed: {bulkResetReport.failed} · Not found: {bulkResetReport.missing.length}{bulkResetReport.missing.length > 0 && <div className="muted" style={{ marginTop: 6 }}>{bulkResetReport.missing.join(', ')}</div>}</div>}
+            <div className="people-modal-footer"><button type="button" className="small" disabled={bulkResetBusy} onClick={() => setActiveModal(null)}>Close</button><button className="primary" disabled={bulkResetBusy}>{bulkResetBusy ? 'Resetting accounts…' : 'Reset matched passwords'}</button></div>
+          </form>}
           {activeModal === 'teams' && <form onSubmit={addTeam} className="people-modal-form"><p className="muted">{teamNames.length} teams in your workspace</p><div className="people-team-list">{teamNames.map((n) => <span className="badge" key={n}>{n}</span>)}</div><label htmlFor="new-team-name">Create a team</label><div className="people-add-team-row"><input id="new-team-name" placeholder="New team name" value={newTeam} onChange={(e) => setNewTeam(e.target.value)} required /><button className="primary">Add team</button></div><div className="people-modal-footer"><button type="button" className="small" onClick={() => setActiveModal(null)}>Done</button></div></form>}
         </section>
       </div>}
