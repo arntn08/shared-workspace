@@ -46,7 +46,7 @@ const toDataUrl = (b: Blob) =>
 export default function Profile() {
   const { profile, signOut } = useAuth()
   const uid = profile?.id as string | undefined
-  const card = useRef<HTMLDivElement>(null)
+  const card = useRef<HTMLButtonElement>(null)
   const [roster, setRoster] = useState<RosterRow[]>([])
   const [photo, setPhoto] = useState<string | null>(null)
   const [savedAt, setSavedAt] = useState<number | null>(null)
@@ -86,7 +86,7 @@ export default function Profile() {
     })()
   }, [uid])
 
-  function move(e: PointerEvent<HTMLDivElement>) {
+  function move(e: PointerEvent<HTMLButtonElement>) {
     const el = card.current
     if (!el) return
     const r = e.currentTarget.getBoundingClientRect()
@@ -165,7 +165,7 @@ export default function Profile() {
               <button
                 type="button"
                 className={`idcard ${flipped ? 'is-flipped' : ''}`}
-                ref={card as unknown as React.RefObject<HTMLDivElement>}
+                ref={card}
                 onClick={() => setFlipped((v) => !v)}
                 onPointerMove={move}
                 onPointerLeave={leave}
