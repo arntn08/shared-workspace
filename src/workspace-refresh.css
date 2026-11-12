@@ -156,3 +156,22 @@ body { background:var(--ops-bg); color:var(--ops-text); }
   .quick-grid .qa { transition:none; }
   .quick-grid .qa:hover { transform:none; }
 }
+
+.emp-assignment-card {
+  display:flex; align-items:center; gap:14px; min-width:0;
+  padding:15px 17px; border:1px solid var(--ops-border); border-radius:17px;
+  background:var(--ops-panel); box-shadow:0 5px 18px rgba(15,50,28,.035);
+}
+.emp-assignment-icon {
+  display:grid; place-items:center; flex:0 0 42px; width:42px; height:42px;
+  border-radius:13px; color:var(--ops-accent); background:var(--ops-accent-soft);
+}
+.emp-assignment-copy { display:grid; gap:3px; min-width:0; flex:1; }
+.emp-assignment-copy strong { overflow-wrap:anywhere; }
+.emp-assignment-copy>span { color:var(--ops-muted); font-size:12px; }
+.emp-team-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:5px; }
+.emp-team-chips span { padding:4px 8px; border-radius:999px; background:var(--ops-accent-soft); color:var(--ops-accent); font-size:11px; font-weight:700; }
+@media(max-width:600px) {
+  .emp-assignment-card { align-items:flex-start; flex-wrap:wrap; }
+  .emp-assignment-card .btn { width:100%; }
+}
