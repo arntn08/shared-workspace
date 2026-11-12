@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { ageLabel, cacheGet, cacheSet, clearCache } from '../lib/offline'
-import { initialsOf } from '../components/Nav'
 import './profile.css'
 
 interface RosterRow {
@@ -52,6 +51,7 @@ export default function Profile() {
   const [photo, setPhoto] = useState<string | null>(null)
   const [savedAt, setSavedAt] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
+  const [flipped, setFlipped] = useState(false)
   const [msg, setMsg] = useState<{ text: string; err: boolean } | null>(null)
   const path = `${uid}/avatar`
 
@@ -157,91 +157,75 @@ export default function Profile() {
       {savedAt && <div className="notice">Offline: showing the details saved {ageLabel(savedAt)}.</div>}
       {msg && <div className={`notice${msg.err ? ' error' : ''}`}>{msg.text}</div>}
 
-      <div className="idscene">
-        <div className="id-sway">
-          <div className="idcard" ref={card} onPointerMove={move} onPointerLeave={leave} onPointerCancel={leave}>
-            <div className="id-sheen" />
-            <div className="id-orgbar">
-              <span className="id-brand">A</span>
-              <strong>AHBA DEVELOPMENT</strong>
-              <span className="id-status">ACTIVE</span>
-            </div>
-            <div className="portrait-card">
-              <div className="id-avatar">
-                {photo ? <img src={photo} alt={`${name} profile photo`} /> : (
-                  <span className="profile-silhouette" aria-label={`Default profile icon for ${name}`}>
-                    <svg viewBox="0 0 160 190" role="img" aria-hidden="true">
-                      <defs>
-                        <linearGradient id="profileGlass" x1="0" y1="0" x2="1" y2="1">
-                          <stop offset="0%" stopColor="#ffffff" />
-                          <stop offset="100%" stopColor="#e8eee6" />
-                        </linearGradient>
-                        <linearGradient id="profileGreen" x1="0" y1="0" x2="1" y2="1">
-                          <stop offset="0%" stopColor="#8dc99b" />
-                          <stop offset="100%" stopColor="#176b3c" />
-                        </linearGradient>
-                      </defs>
-                      <rect x="3" y="3" width="154" height="184" rx="22" fill="url(#profileGlass)" />
-                      <circle cx="80" cy="21" r="6" fill="#20242d" />
-                      <circle cx="80" cy="60" r="24" fill="#b8954d" opacity=".2" />
-                      <circle cx="80" cy="57" r="22" fill="url(#profileGreen)" />
-                      <path d="M38 119c2-25 20-39 42-39s40 14 42 39v5H38z" fill="url(#profileGreen)" />
-                      <rect x="46" y="135" width="68" height="12" rx="6" fill="#b8954d" />
-                      <rect x="25" y="154" width="110" height="11" rx="6" fill="url(#profileGreen)" />
-                      <rect x="25" y="171" width="70" height="9" rx="5" fill="#b8954d" />
-                    </svg>
+      <div className="profile-layout">
+        <section className="profile-id-panel" aria-label="Employee identification card">
+          <div className="id-lanyard" aria-hidden="true"><span /><span /></div>
+          <div className="idscene">
+            <div className="id-sway">
+              <button
+                type="button"
+                className={`idcard ${flipped ? 'is-flipped' : ''}`}
+                ref={card as unknown as React.RefObject<HTMLDivElement>}
+                onClick={() => setFlipped((v) => !v)}
+                onPointerMove={move}
+                onPointerLeave={leave}
+                onPointerCancel={leave}
+                aria-label={flipped ? 'Show front of employee ID' : 'Flip employee ID to show details'}
+              >
+                <span className="id-card-inner">
+                  <span className="id-face id-front">
+                    <span className="id-clip" aria-hidden="true"><i /></span>
+                    <span className="id-front-title">AHBA Development · Training<br />&amp; QA</span>
+                    <span className="id-eyebrow">EMPLOYEE ID</span>
+                    <span className="id-avatar">
+                      {photo ? <img src={photo} alt="" /> : <span className="id-initials">{name.split(/\\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase()}</span>}
+                    </span>
+                    <strong className="id-person-name">{name}</strong>
+                    <span className="id-role">{ROLE_LABEL[profile.role] || 'Employee'}</span>
+                    <span className="id-company">AHBA Development</span>
+                    <span className="id-front-footer"><span>ID {profile.employee_id || 'not yet assigned'}</span><b>Regular</b></span>
                   </span>
-                )}
-              </div>
-            </div>
-            <div className="portrait-name">
-              <span>Name</span>
-              <strong>{name}</strong>
-            </div>
-            <div className="profile-details">
-              <h2>Employee details</h2>
-              <dl className="profile-detail-grid">
-                <div><dt>Full name</dt><dd>{name}</dd></div>
-                <div><dt>Role</dt><dd>{ROLE_LABEL[profile.role] || 'Employee'}</dd></div>
-                <div><dt>Team code</dt><dd>{codes.join(', ') || 'Not matched yet'}</dd></div>
-                <div><dt>JO MOB</dt><dd>{mobs.join(', ') || '—'}</dd></div>
-                <div><dt>Email</dt><dd>{profile.email || '—'}</dd></div>
-                <div><dt>Member since</dt><dd>{since}</dd></div>
-                <div><dt>Account reference</dt><dd>{ref}</dd></div>
-              </dl>
-            </div>
-            <div className="id-footer">
-              <span>Account ref {ref}</span>
-              <strong>SHARED WORKSPACE</strong>
+                  <span className="id-face id-back">
+                    <strong>Employee details</strong>
+                    <span className="id-back-row"><small>Full name</small><b>{name}</b></span>
+                    <span className="id-back-row"><small>Team code</small><b>{codes.join(', ') || 'Not matched yet'}</b></span>
+                    <span className="id-back-row"><small>JO MOB</small><b>{mobs.join(', ') || '—'}</b></span>
+                    <span className="id-back-row"><small>Email</small><b>{profile.email || '—'}</b></span>
+                    <span className="id-back-row"><small>Member since</small><b>{since}</b></span>
+                    <span className="id-back-row"><small>Account reference</small><b>{ref}</b></span>
+                    <span className="id-back-hint">Tap to return to the front</span>
+                  </span>
+                </span>
+              </button>
             </div>
           </div>
-        </div>
-      </div>
+          <p className="id-hint">Tap or click the card to flip it.</p>
+        </section>
 
-      <div className="card profile-actions">
-        <h2>Your card</h2>
-        <div className="row">
-          <label className="btn small" style={{ margin: 0, cursor: 'pointer' }}>
-            {busy ? 'Working…' : photo ? 'Change photo' : 'Add photo'}
-            <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={onPhoto} disabled={busy} />
-          </label>
-          {photo && <button className="small" onClick={removePhoto} disabled={busy}>Remove photo</button>}
-          <Link className="btn small" to="/settings">Settings</Link>
-        </div>
-        <p className="muted" style={{ fontSize: '0.82rem', marginBottom: 0 }}>
-          Photos are private to you and the owner or editors, and are resized on your device before upload.
-        </p>
-      </div>
+        <section className="profile-side-cards" aria-label="Profile settings and device">
+          <div className="card profile-actions">
+            <div className="profile-card-heading"><span className="profile-card-icon">✦</span><div><h2>Profile photo</h2><p>Keep your employee ID up to date.</p></div></div>
+            <div className="row">
+              <label className="btn small" style={{ margin: 0, cursor: 'pointer' }}>
+                {busy ? 'Working…' : photo ? 'Change photo' : 'Add photo'}
+                <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={onPhoto} disabled={busy} />
+              </label>
+              {photo && <button className="small" onClick={removePhoto} disabled={busy}>Remove photo</button>}
+              <Link className="btn small" to="/settings">Settings</Link>
+            </div>
+            <p className="muted profile-card-note">Photos are private to you and the owner or editors, and are resized on your device before upload.</p>
+          </div>
 
-      <div className="card profile-actions">
-        <h2>On this device</h2>
-        <p className="muted" style={{ fontSize: '0.85rem' }}>
-          Your schedule, files, tally and notifications are saved here so you can read them offline. On a shared phone, clear them before handing it over.
-        </p>
-        <div className="row">
-          <button className="small" onClick={wipe}>Clear saved data</button>
-          <button className="small" onClick={signOut}>Sign out</button>
-        </div>
+          <div className="card profile-actions">
+            <div className="profile-card-heading"><span className="profile-card-icon">⌁</span><div><h2>On this device</h2><p>Your offline workspace</p></div></div>
+            <p className="muted profile-card-note">Your schedule, files, tally and notifications are saved here so you can read them offline. On a shared phone, clear them before handing it over.</p>
+            {savedAt && <p className="muted profile-card-note">Last saved: {ageLabel(savedAt)} ago.</p>}
+            <div className="row">
+              <button className="small" onClick={wipe}>Clear saved data</button>
+              <button className="small" onClick={signOut}>Sign out</button>
+            </div>
+          </div>
+        </section>
       </div>
     </>
   )
