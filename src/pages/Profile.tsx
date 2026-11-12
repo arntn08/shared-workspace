@@ -175,7 +175,7 @@ export default function Profile() {
                 <span className="id-card-inner">
                   <span className="id-face id-front">
                     <span className="id-clip" aria-hidden="true"><i /></span>
-                    <span className="id-front-title">AHBA Development · Training<br />&amp; QA</span>
+                    <span className="id-front-title">AHBA Development</span>
                     <span className="id-eyebrow">EMPLOYEE ID</span>
                     <span className="id-avatar">
                       {photo ? <img src={photo} alt="" /> : <span className="id-initials">{name.split(/\\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase()}</span>}
