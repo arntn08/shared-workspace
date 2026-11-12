@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { useSettings } from '../lib/settings'
@@ -32,42 +32,6 @@ const employeeLinks: [string, string, string, string][] = [
   ['/settings', 'Settings', 'settings', 'Account']
 ]
 
-function SidebarClock() {
-  const [now, setNow] = useState(() => new Date())
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 1000)
-    return () => window.clearInterval(timer)
-  }, [])
-
-  const day = new Intl.DateTimeFormat('en-PH', {
-    timeZone: 'Asia/Manila',
-    weekday: 'long'
-  }).format(now)
-  const date = new Intl.DateTimeFormat('en-PH', {
-    timeZone: 'Asia/Manila',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  }).format(now)
-  const time = new Intl.DateTimeFormat('en-PH', {
-    timeZone: 'Asia/Manila',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true
-  }).format(now)
-
-  return (
-    <section className="ops-sidebar-clock" aria-label="Current date and time">
-      <div className="ops-clock-top"><span className="ops-clock-live-dot" /> PHILIPPINE TIME</div>
-      <strong>{time}</strong>
-      <span className="ops-clock-day">{day}</span>
-      <span className="ops-clock-date">{date}</span>
-    </section>
-  )
-}
-
 function EmployeeSidebar({ title, mobileOpen, setMobileOpen }: {
   title: string
   mobileOpen: boolean
@@ -75,7 +39,6 @@ function EmployeeSidebar({ title, mobileOpen, setMobileOpen }: {
 }) {
   const { profile, signOut } = useAuth()
   const [settings] = useSettings()
-  const [tallyExpanded, setTallyExpanded] = useState(true)
   const navigate = useNavigate()
   const { unread: serverUnread } = useNotifs()
   const local = useLocalUpdates(profile?.id)
@@ -120,75 +83,34 @@ function EmployeeSidebar({ title, mobileOpen, setMobileOpen }: {
           </button>
         </div>
 
-        <div className="ops-workspace-label">WORKSPACE</div>
-        <SidebarClock />
-
         <nav className="ops-nav" aria-label="Employee navigation">
           {groups.map(group => {
             const groupLinks = employeeLinks.filter(item => item[3] === group)
             if (!groupLinks.length) return null
-
             return (
-              <div className="ops-nav-group" key={group}>
+              <section className="ops-nav-group" key={group} aria-label={group}>
                 <div className="ops-nav-heading">{group}</div>
                 {groupLinks.map(([to, label, icon]) => (
-                  <Fragment key={to}>
-                    {to !== '/my-team' && (
-                      <NavLink
-                        to={to}
-                        end={to === '/'}
-                        onClick={() => { setMobileOpen(false); if (to === '/tally') setTallyExpanded(true) }}
-                        className={({ isActive }) => `ops-nav-link${isActive ? ' active' : ''}`}
-                      >
-                        <span className="ops-nav-icon"><Icon name={icon} /></span>
-                        <span className="ops-nav-label">{label}</span>
-                        {to === '/tally' && <span className="ops-nav-tag">LIVE</span>}
-                        {to === '/notifications' && unread > 0 && (
-                          <span className="ops-nav-tag">{unread > 99 ? '99+' : unread} NEW</span>
-                        )}
-                      </NavLink>
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={to === '/'}
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) => `ops-nav-link${isActive ? ' active' : ''}`}
+                  >
+                    <span className="ops-nav-icon"><Icon name={icon} /></span>
+                    <span className="ops-nav-label">{label}</span>
+                    {to === '/notifications' && unread > 0 && (
+                      <span className="ops-nav-tag">{unread > 99 ? '99+' : unread}</span>
                     )}
-                    {to === '/tally' && (
-                      <div style={{ margin: '.15rem 0 .4rem 2.2rem' }}>
-                        <button
-                          type="button"
-                          className="ops-nav-link"
-                          aria-expanded={tallyExpanded}
-                          onClick={() => setTallyExpanded(value => !value)}
-                          style={{ width: '100%', border: 0, background: 'transparent', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '.5rem', font: 'inherit', padding: '.45rem .55rem', opacity: .9 }}
-                        >
-                          <span aria-hidden="true">{tallyExpanded ? '▾' : '▸'}</span>
-                          <span className="ops-nav-label">My Team Summary</span>
-                        </button>
-                        {tallyExpanded && (
-                          <NavLink
-                            to="/my-team"
-                            onClick={() => setMobileOpen(false)}
-                            className={({ isActive }) => `ops-nav-link${isActive ? ' active' : ''}`}
-                            style={{ marginLeft: '.3rem', fontSize: '.92em' }}
-                          >
-                            <span className="ops-nav-icon"><Icon name="users" /></span>
-                            <span className="ops-nav-label">My team</span>
-                          </NavLink>
-                        )}
-                      </div>
-                    )}
-                  </Fragment>
+                  </NavLink>
                 ))}
-              </div>
+              </section>
             )
           })}
         </nav>
 
         <div className="ops-sidebar-bottom">
-          <div className="ops-help-card">
-            <span className="ops-help-icon">✦</span>
-            <div>
-              <strong>Workspace access</strong>
-              <span>Employee permissions</span>
-            </div>
-          </div>
-
           <div className="ops-profile">
             <Avatar name={profile?.full_name} email={profile?.email} />
             <div className="ops-profile-copy">
