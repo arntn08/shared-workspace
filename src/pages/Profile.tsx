@@ -183,7 +183,7 @@ export default function Profile() {
                     <strong className="id-person-name">{name}</strong>
                     <span className="id-role">{ROLE_LABEL[profile.role] || 'Employee'}</span>
                     <span className="id-company">AHBA Development</span>
-                    <span className="id-front-footer"><span>ID {profile.employee_id || 'not yet assigned'}</span><b>Regular</b></span>
+                    <span className="id-front-footer"><span>ID {'not yet assigned'}</span><b>Regular</b></span>
                   </span>
                   <span className="id-face id-back">
                     <strong>Employee details</strong>
