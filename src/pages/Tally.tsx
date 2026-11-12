@@ -92,7 +92,7 @@ const formatDate = (date: Date) => {
 
 const getWeekStart = (dateString: string) => {
   const date = new Date(`${dateString}T12:00:00`)
-  // Reporting weeks run Monday through Sunday, including dates that cross
+  // Reporting periods run Monday through Sunday, including dates that cross
   // calendar-month boundaries so teams can review the complete week.
   const daysSinceMonday = (date.getDay() + 6) % 7
   date.setDate(date.getDate() - daysSinceMonday)
@@ -112,16 +112,9 @@ export default function Tally() {
   const [teams, setTeams] = useState<Team[]>([])
   const [departmentId, setDepartmentId] = useState('')
   const [month, setMonth] = useState(getCurrentMonth)
-  const [weekOffset, setWeekOffset] = useState(() => {
-    const initialMonth = getCurrentMonth()
-    const firstWeekStart = getWeekStart(`${initialMonth}-01`)
-    const currentWeekStart = getWeekStart(formatDate(new Date()))
-    return Math.round(
-      (new Date(`${currentWeekStart}T12:00:00`).getTime() -
-        new Date(`${firstWeekStart}T12:00:00`).getTime()) /
-        (7 * 24 * 60 * 60 * 1000)
-    )
-  })
+  const [weekOffset, setWeekOffset] = useState(() =>
+    Math.floor((new Date().getDate() - 1) / 8)
+  )
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -146,17 +139,23 @@ export default function Tally() {
   const monthDates = useMemo(() => getMonthDates(month), [month])
   const monthStart = `${month}-01`
   const monthEnd = monthDates[monthDates.length - 1]
-  // Anchor navigation to the first Monday-based reporting week touching
-  // the selected month. Always show all seven days, including adjacent-month days.
-  const firstMonthWeekStart = getWeekStart(monthStart)
-  const weekStart = addDays(firstMonthWeekStart, weekOffset * 7)
-  const dates = useMemo(() => getWeekDates(weekStart), [weekStart])
-  const weekEnd = dates[6]
+  // Monthly reporting blocks intentionally stay inside the calendar month:
+  // Nov 1–8, Nov 9–15, Nov 16–22, then Nov 23–month-end.
+  const periodStartDay = Math.min(1 + weekOffset * 8, Number(monthEnd.slice(-2)))
+  const weekStart = `${month}-${String(periodStartDay).padStart(2, '0')}`
+  const dates = useMemo(
+    () => Array.from(
+      { length: Math.min(8, Number(monthEnd.slice(-2)) - periodStartDay + 1) },
+      (_, index) => addDays(weekStart, index)
+    ),
+    [monthEnd, periodStartDay, weekStart]
+  )
+  const weekEnd = dates[dates.length - 1]
   const nowDate = formatDate(new Date())
-  const reportDate = weekStart > nowDate ? weekStart : weekEnd < nowDate ? weekEnd : nowDate
-  // Load the full selected month plus the visible week's spillover dates.
-  const importedStart = weekStart < monthStart ? weekStart : monthStart
-  const importedEnd = weekEnd > monthEnd ? weekEnd : monthEnd
+  const reportDate = nowDate < weekStart ? weekStart : nowDate > weekEnd ? weekEnd : nowDate
+  // Imported records and every displayed date are scoped to the selected month.
+  const importedStart = monthStart
+  const importedEnd = monthEnd
 
   const activeTeams = useMemo(
     () =>
@@ -223,17 +222,6 @@ export default function Tally() {
         return
       }
 
-      // Load the days before the first of the month when needed,
-      // so WTD can include Monday-to-month-boundary dates.
-      const [year, monthNumber] = month.split('-').map(Number)
-      const firstOfMonth = new Date(year, monthNumber - 1, 1)
-      const firstDayOfWeek = firstOfMonth.getDay()
-      const daysBack = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1
-      firstOfMonth.setDate(firstOfMonth.getDate() - daysBack)
-      const monthQueryStart = formatDate(firstOfMonth)
-      const queryStart = monthQueryStart < weekStart ? monthQueryStart : weekStart
-      const queryEnd = monthEnd > weekEnd ? monthEnd : weekEnd
-
       try {
         setImportedLoads(await fetchImportedWorkOrders(importedStart, importedEnd))
         setLoadBreakdownError('')
@@ -277,16 +265,20 @@ export default function Tally() {
   }, [importedEnd, importedStart])
 
   function changeWeek(offset: number) {
-    // Advance by complete Monday–Sunday weeks. If that crosses a month,
-    // switch the month selector while retaining all seven visible dates.
-    const targetWeekStart = addDays(weekStart, offset * 7)
-    const targetMonth = targetWeekStart.slice(0, 7)
-    const targetMonthFirstWeek = getWeekStart(`${targetMonth}-01`)
-    const targetOffset = Math.round(
-      (new Date(`${targetWeekStart}T12:00:00`).getTime() -
-        new Date(`${targetMonthFirstWeek}T12:00:00`).getTime()) /
-        (7 * 24 * 60 * 60 * 1000)
-    )
+    // Each selected reporting block belongs to one month only.
+    let targetMonth = month
+    let targetOffset = weekOffset + offset
+    if (targetOffset < 0) {
+      const [year, monthNumber] = month.split('-').map(Number)
+      const previous = new Date(year, monthNumber - 2, 1)
+      targetMonth = `${previous.getFullYear()}-${String(previous.getMonth() + 1).padStart(2, '0')}`
+      targetOffset = 3
+    } else if (targetOffset > 3) {
+      const [year, monthNumber] = month.split('-').map(Number)
+      const next = new Date(year, monthNumber, 1)
+      targetMonth = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`
+      targetOffset = 0
+    }
     setMonth(targetMonth)
     setWeekOffset(targetOffset)
   }
@@ -570,7 +562,7 @@ export default function Tally() {
       `"${String(value).replace(/"/g, '""')}"`
 
     const rows: (string | number)[][] = [
-      ['Team', ...dates, 'WTD (Mon–Sun)', 'MTD']
+      ['Team', ...dates, 'WTD (selected period)', 'MTD']
     ]
 
     activeTeams.forEach(team => {
@@ -1098,7 +1090,7 @@ export default function Tally() {
         {tallyView === 'wtd-mtd' && (
           <p className="tally-note">
             {canEdit
-              ? 'Enter a daily count and leave the field to save. Monday–Sunday dates are shown; WTD includes the full selected week, while MTD includes only dates in the selected month.'
+              ? 'Enter a daily count and leave the field to save. Reporting periods stay within the selected month (1–8, 9–15, 16–22, 23–month-end). WTD covers the selected period; MTD always starts on day 1 of that month.'
               : 'Read-only view. Contact an owner or editor to update counts.'}
           </p>
         )}
@@ -1162,7 +1154,7 @@ export default function Tally() {
             {departmentWTD.toLocaleString()}
           </div>
           <div className="muted" style={{ fontSize: '0.8rem' }}>
-            Selected Monday–Sunday week · all active teams
+            Selected in-month reporting period · all active teams
           </div>
         </div>
 
@@ -1198,7 +1190,7 @@ export default function Tally() {
               })}
             </h2>
             <p className="muted" style={{ margin: '0.35rem 0 0' }}>
-              Daily counts by team · Monday–Sunday · WTD and MTD calculated automatically
+              Daily counts by team · dates stay within the selected month · WTD and MTD calculated automatically
             </p>
           </div>
 
@@ -1314,9 +1306,9 @@ export default function Tally() {
         )}
 
         <p className="tally-note">
-          WTD means Week-to-Date (Sunday through the reporting date). MTD means
-          Month-to-Date (the first day of the month through the reporting date).
-          Historical weeks use Sunday as the reporting date. Totals are
+          WTD means Week-to-Date within the selected in-month reporting period. MTD means
+          Month-to-Date from the 1st through the reporting date, never including dates
+          from the previous or following month. Totals are
           calculated from unique imported work orders marked COMPLETED. Incomplete and canceled work orders are shown only in Total Loads.
         </p>
       </div>
