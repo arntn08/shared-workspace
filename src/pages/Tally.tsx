@@ -101,9 +101,10 @@ export default function Tally() {
   const [teams, setTeams] = useState<Team[]>([])
   const [departmentId, setDepartmentId] = useState('')
   const [month, setMonth] = useState(getCurrentMonth)
-  const [weekOffset, setWeekOffset] = useState(() =>
-    Math.floor((new Date().getDate() - 1) / 8)
-  )
+  const [weekOffset, setWeekOffset] = useState(() => {
+    const day = new Date().getDate()
+    return day <= 8 ? 0 : day <= 15 ? 1 : day <= 22 ? 2 : 3
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -130,11 +131,11 @@ export default function Tally() {
   const monthEnd = monthDates[monthDates.length - 1]
   // Monthly reporting blocks intentionally stay inside the calendar month:
   // Nov 1–8, Nov 9–15, Nov 16–22, then Nov 23–month-end.
-  const periodStartDay = Math.min(1 + weekOffset * 8, Number(monthEnd.slice(-2)))
+  const periodStartDay = Math.min(weekOffset === 0 ? 1 : 2 + weekOffset * 7, Number(monthEnd.slice(-2)))
   const weekStart = `${month}-${String(periodStartDay).padStart(2, '0')}`
   const dates = useMemo(
     () => Array.from(
-      { length: Math.min(8, Number(monthEnd.slice(-2)) - periodStartDay + 1) },
+      { length: Math.min(weekOffset === 0 ? 8 : 7, Number(monthEnd.slice(-2)) - periodStartDay + 1) },
       (_, index) => addDays(weekStart, index)
     ),
     [monthEnd, periodStartDay, weekStart]
