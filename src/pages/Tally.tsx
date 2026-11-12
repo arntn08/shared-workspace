@@ -51,9 +51,6 @@ const addDays = (dateString: string, amount: number) => {
   return formatDate(date)
 }
 
-const getWeekDates = (start: string) =>
-  Array.from({ length: 7 }, (_, index) => addDays(start, index))
-
 const getMonthDates = (month: string) => {
   const [year, monthNumber] = month.split('-').map(Number)
   const days = new Date(year, monthNumber, 0).getDate()
@@ -90,14 +87,6 @@ const formatDate = (date: Date) => {
   return `${year}-${month}-${day}`
 }
 
-const getWeekStart = (dateString: string) => {
-  const date = new Date(`${dateString}T12:00:00`)
-  // Reporting periods run Monday through Sunday, including dates that cross
-  // calendar-month boundaries so teams can review the complete week.
-  const daysSinceMonday = (date.getDay() + 6) % 7
-  date.setDate(date.getDate() - daysSinceMonday)
-  return formatDate(date)
-}
 
 export default function Tally() {
   const { profile } = useAuth()
