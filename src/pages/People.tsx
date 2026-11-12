@@ -164,7 +164,7 @@ export default function People() {
 
   async function resetManyPasswords(e: FormEvent) {
     e.preventDefault()
-    const emails = [...new Set(bulkResetEmails.split(/[\\n,;]+/).map((x) => x.trim().toLowerCase()).filter(Boolean))]
+    const emails = [...new Set(bulkResetEmails.split(/[\n,;]+/).map((x) => x.trim().toLowerCase()).filter(Boolean))]
     if (!emails.length) return setMsg({ text: 'Paste at least one email address.', err: true })
     if (bulkResetPassword.length < 8) return setMsg({ text: 'Use a password with at least 8 characters.', err: true })
     const matched = emails.map((email) => ({ email, person: list.find((p) => p.email?.toLowerCase() === email) }))
