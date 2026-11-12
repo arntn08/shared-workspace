@@ -1,0 +1,117 @@
+/* AHBA Shared Workspace — final phone-first refinements.
+   Visual-only polish; no data, routes, permissions or workflows changed. */
+html, body, #root { min-height:100%; }
+html { scroll-padding-top:72px; -webkit-tap-highlight-color:transparent; }
+body { overflow-x:hidden; overscroll-behavior-x:none; }
+button, a, input, select, textarea { touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline:2px solid var(--ops-accent,var(--accent)); outline-offset:3px; }
+.ops-shell, .ops-main, .ops-page, .ops-topbar, .ops-sidebar, .ops-page > * { min-width:0; }
+.ops-shell { width:100%; overflow-x:clip; }
+.ops-page { overflow-wrap:anywhere; }
+.ops-page img, .ops-page video, .ops-page canvas, .ops-page iframe { max-width:100%; }
+.ops-page .card, .ops-page .ops-panel, .ops-page .pa-card { min-width:0; }
+.ops-sidebar { scrollbar-width:thin; scrollbar-color:var(--ops-border) transparent; }
+.ops-nav-link { min-height:44px; }
+.ops-sidebar-close, .ops-icon-button { min-width:42px; min-height:42px; border-radius:12px; }
+.ops-profile, .ops-profile-copy { min-width:0; }
+.ops-profile-copy { flex:1 1 auto; }
+.ops-profile-copy strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ops-mobile-toggle { padding-top:max(10px,env(safe-area-inset-top)); min-height:calc(58px + env(safe-area-inset-top)); }
+.ops-mobile-toggle:active { transform:none; }
+.ops-mobile-toggle .ops-toggle-lines { border-color:var(--ops-border); background:var(--ops-panel-soft); }
+.ops-mobile-scrim { -webkit-backdrop-filter:blur(3px); }
+.ops-topbar-right { justify-content:flex-end; }
+.ops-breadcrumb strong { overflow-wrap:anywhere; }
+.ops-page input, .ops-page select, .ops-page textarea { max-width:100%; }
+.ops-page input[type="checkbox"], .ops-page input[type="radio"] { width:auto; min-height:0; }
+.ops-page button, .ops-page .btn { min-height:42px; }
+.ops-page button.small, .ops-page .btn.small { min-height:38px; }
+.ops-page .table-wrap, .ops-page .tally-scroll, .ops-page [style*="overflow-x: auto"] {
+  max-width:100%; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; scrollbar-width:thin;
+}
+.ops-page .table-wrap table, .ops-page .tally-scroll table { margin:0; }
+.ops-page [role="dialog"] { max-width:calc(100vw - 16px); overscroll-behavior:contain; }
+.ops-page .notice, .ops-page .page-head, .ops-page .ops-overview-heading { min-width:0; overflow-wrap:anywhere; }
+.profile-layout { width:100%; }
+
+/* Tablet: keep the desktop navigation rail while reclaiming content space. */
+@media (max-width:980px) and (min-width:761px) {
+  .ops-sidebar { flex-basis:220px; width:220px; max-width:220px; padding-inline:10px; }
+  .ops-main { width:calc(100% - 220px); }
+  .ops-brand-copy span { white-space:normal; }
+  .ops-page { padding:16px 14px 28px; }
+  .ops-topbar { padding-inline:14px; }
+}
+
+/* Phone shell: comfortable navigation drawer and safe-area-aware content. */
+@media (max-width:760px) {
+  html { scroll-padding-top:64px; }
+  .ops-shell { display:block; min-height:100dvh; }
+  .ops-mobile-toggle {
+    position:sticky; top:0; z-index:45; display:flex; align-items:center;
+    min-height:calc(58px + env(safe-area-inset-top));
+    padding:calc(8px + env(safe-area-inset-top)) 14px 8px;
+    font-size:14px; font-weight:800; letter-spacing:-.01em;
+  }
+  .ops-mobile-toggle > span:last-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ops-sidebar {
+    z-index:70; width:min(320px,calc(100vw - 42px)); height:100dvh; max-height:100dvh;
+    padding:calc(14px + env(safe-area-inset-top)) 13px max(14px,env(safe-area-inset-bottom));
+    border-radius:0 22px 22px 0;
+  }
+  .ops-sidebar.is-open { box-shadow:22px 0 70px rgba(0,0,0,.28); }
+  .ops-sidebar .ops-brand { min-height:48px; }
+  .ops-sidebar .ops-nav { padding:4px 2px 14px; }
+  .ops-sidebar .ops-nav-group { margin-bottom:14px; }
+  .ops-sidebar .ops-nav-heading { padding-inline:9px; }
+  .ops-sidebar .ops-nav-link { min-height:46px; margin:3px 0; padding:10px 11px; border-radius:13px; font-size:13px; }
+  .ops-sidebar .ops-nav-icon { flex:0 0 21px; }
+  .ops-sidebar .ops-nav-label { line-height:1.3; }
+  .ops-sidebar-clock { padding:12px 13px; border-radius:15px; }
+  .ops-sidebar-bottom { position:sticky; bottom:0; padding:12px 0 max(5px,env(safe-area-inset-bottom)); background:var(--ops-panel); }
+  .ops-help-card { display:none; }
+  .ops-profile { gap:8px; padding:9px 2px 2px; }
+  .ops-profile .avatar { flex:0 0 34px; width:34px; height:34px; }
+  .ops-topbar { display:flex; min-height:44px; align-items:center; justify-content:space-between; gap:8px; padding:9px 14px 3px; }
+  .ops-breadcrumb { font-size:11px; }
+  .ops-topbar-right { gap:6px; }
+  .ops-role-pill { padding:4px 8px; font-size:9px; }
+  .ops-page { width:100%; padding:13px 12px calc(28px + env(safe-area-inset-bottom)); }
+  .ops-page .page-head, .ops-page .ops-overview-heading { align-items:flex-start; gap:10px; }
+  .ops-page .page-head h1, .ops-page .ops-overview-heading h1 { font-size:clamp(21px,5.8vw,26px); line-height:1.15; }
+  .ops-page .page-head p, .ops-page .ops-overview-heading p { font-size:12px; }
+  .ops-page .card, .ops-page .ops-panel { border-radius:15px; }
+  .ops-page .row { min-width:0; }
+  .ops-page .row > button, .ops-page .row > .btn { max-width:100%; }
+  .ops-page .grid.cols-2 { grid-template-columns:minmax(0,1fr); }
+  .ops-page .grid.metrics, .ops-page .grid.cols-3 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .ops-page .table-wrap, .ops-page .tally-scroll { border-radius:12px; max-width:100%; }
+  .ops-page .table-wrap table, .ops-page .tally-scroll table { min-width:max-content; }
+  .ops-page .notice { padding:11px 12px; border-radius:12px; font-size:12px; }
+  .ops-page [role="dialog"] { width:calc(100vw - 16px) !important; max-width:calc(100vw - 16px); max-height:calc(100dvh - 16px); overflow:auto; margin:auto; border-radius:18px; }
+  .profile-layout { grid-template-columns:minmax(0,1fr); }
+  .profile-side-cards { grid-template-columns:minmax(0,1fr); }
+}
+
+/* Small phones: prevent cramped forms and iOS input zoom. */
+@media (max-width:430px) {
+  .ops-mobile-toggle { padding-inline:11px; font-size:13px; }
+  .ops-page { padding-inline:10px; }
+  .ops-page .grid.metrics, .ops-page .grid.cols-3 { gap:8px; }
+  .ops-page .grid.metrics .card, .ops-page .grid.cols-3 > .card { padding:10px !important; }
+  .ops-page .metric-value { font-size:23px; }
+  .ops-page .page-head > .row { width:100%; }
+  .ops-page .page-head > .row > button, .ops-page .page-head > .row > .btn { flex:1 1 auto; }
+  .ops-page input:not([type="checkbox"]):not([type="radio"]), .ops-page select, .ops-page textarea { font-size:16px; }
+  .ops-page .ops-overview-heading { flex-wrap:wrap; }
+  .ops-page .ops-overview-heading > .row { width:100%; }
+}
+
+/* Landscape phones and short screens. */
+@media (max-width:760px) and (orientation:landscape) {
+  .ops-sidebar { overflow-y:auto; }
+  .ops-sidebar-clock { margin-block:7px; }
+  .ops-sidebar .ops-nav-group { margin-bottom:8px; }
+  .ops-sidebar-bottom { position:static; }
+}
+@media (prefers-reduced-motion:reduce) { .ops-sidebar, .ops-mobile-toggle, .ops-nav-link { transition:none !important; } }
