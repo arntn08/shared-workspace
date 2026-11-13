@@ -673,3 +673,80 @@
 }
 .hr-employee-daily-table .hr-daily-count-cell .has-completions {background:color-mix(in srgb,var(--hr-green,#246448) 13%,var(--ops-panel,#fff));color:var(--hr-green,#246448);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--hr-green,#246448) 20%,transparent)}
 .hr-employee-daily-table .hr-daily-count-cell .zero-completions {background:var(--ops-panel-soft,#f5f7f5);color:var(--ops-muted,#87928b);font-weight:600}
+
+
+/* Weekly team report: compact summary card and matching completed-order action */
+.hr-completed-orders-trigger {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-height:42px;
+  padding:9px 13px;
+  border:1px solid color-mix(in srgb,var(--hr-green,#246448) 30%,var(--ops-border,#dce5de));
+  border-radius:12px;
+  background:var(--ops-panel,#fff);
+  color:var(--hr-green,#246448);
+  font-size:12px;
+  font-weight:750;
+  cursor:pointer;
+  transition:background .16s ease,border-color .16s ease,transform .16s ease;
+}
+.hr-completed-orders-trigger strong {
+  display:inline-grid;
+  min-width:23px;
+  height:23px;
+  place-items:center;
+  padding:0 5px;
+  border-radius:8px;
+  background:var(--hr-green-soft,rgba(49,126,88,.11));
+  font-size:11px;
+  font-variant-numeric:tabular-nums;
+}
+.hr-completed-orders-trigger:hover {
+  background:var(--hr-green-soft,rgba(49,126,88,.08));
+  border-color:var(--hr-green,#246448);
+  transform:translateY(-1px);
+}
+.hr-weekly-report-card {
+  padding:14px 16px !important;
+}
+.hr-weekly-report-card > .ops-panel-heading {
+  margin-bottom:8px;
+}
+.hr-weekly-report-card .hr-weekly-report-metrics {
+  gap:9px;
+  margin-top:8px;
+}
+.hr-weekly-report-card .hr-weekly-report-metrics > .card {
+  min-width:0;
+  padding:11px 13px !important;
+  border-radius:13px !important;
+}
+.hr-weekly-report-card .hr-weekly-report-metrics > .card h2,
+.hr-weekly-report-card .hr-weekly-report-metrics > .card strong {
+  font-size:clamp(20px,2vw,25px);
+  line-height:1.1;
+}
+.hr-weekly-report-card > div > table,
+.hr-weekly-report-card table {
+  margin-top:0;
+}
+.hr-weekly-report-card table th,
+.hr-weekly-report-card table td {
+  padding:8px 11px;
+}
+.hr-completed-orders-modal .hr-employee-report-table-wrap {
+  max-height:66dvh;
+  min-height:180px;
+}
+.hr-completed-orders-modal .hr-employee-report-table-wrap table {
+  min-width:650px;
+}
+@media(max-width:640px) {
+  .hr-weekly-report-card {padding:12px !important;}
+  .hr-weekly-report-card .hr-weekly-report-metrics {gap:7px;}
+  .hr-weekly-report-card .hr-weekly-report-metrics > .card {padding:9px !important;}
+  .hr-completed-orders-trigger {min-height:38px;padding:8px 10px;font-size:11px;}
+  .hr-completed-orders-modal .hr-employee-report-table-wrap {max-height:68dvh;}
+}
