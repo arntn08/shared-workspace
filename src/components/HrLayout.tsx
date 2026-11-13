@@ -144,14 +144,15 @@ export function HrWeeklyTeamReports(){
  const [scheduleRows,setScheduleRows]=useState<string[][]>([])
  const [scheduleError,setScheduleError]=useState('')
  const [showEmployeeReport,setShowEmployeeReport]=useState(false)
+ const [showCompletedOrders,setShowCompletedOrders]=useState(false)
  useEffect(()=>{
-  if(!showEmployeeReport)return
+  if(!showEmployeeReport&&!showCompletedOrders)return
   const previousOverflow=document.body.style.overflow
   document.body.style.overflow='hidden'
-  const closeOnEscape=(event:KeyboardEvent)=>{if(event.key==='Escape')setShowEmployeeReport(false)}
+  const closeOnEscape=(event:KeyboardEvent)=>{if(event.key==='Escape'){setShowEmployeeReport(false);setShowCompletedOrders(false)}}
   window.addEventListener('keydown',closeOnEscape)
   return()=>{document.body.style.overflow=previousOverflow;window.removeEventListener('keydown',closeOnEscape)}
- },[showEmployeeReport])
+ },[showEmployeeReport,showCompletedOrders])
  const [employeeSearch,setEmployeeSearch]=useState('')
  const [departmentFilter,setDepartmentFilter]=useState('all')
  const [weekOffset,setWeekOffset]=useState(0)
@@ -285,11 +286,11 @@ export function HrWeeklyTeamReports(){
  const filteredEmployeeRows=employeeReportRows.filter(row=>(departmentFilter==='all'||row.departmentId===departmentFilter)&&[row.employee.full_name,row.employee.email,row.teams,row.department].some(value=>String(value??'').toLowerCase().includes(employeeSearch.trim().toLowerCase())))
  const exportRows=()=>{const quote=(v:string)=>'"'+String(v??'').replace(/"/g,'""')+'"';const deptById=new Map(depts.map(d=>[d.id,d]));const teamById=new Map(teams.map(t=>[t.id,t]));const employeeByTeam=new Map<string,HrEmployee[]>();for(const item of employeeAssignments){const list=employeeByTeam.get(item.team.id)??[];list.push(item.employee);employeeByTeam.set(item.team.id,list)}for(const [employeeId,scheduled] of scheduleAssignments){const employee=employees.find(x=>x.id===employeeId);if(!employee)continue;for(const team of scheduled){const list=employeeByTeam.get(team.id)??[];if(!list.some(x=>x.id===employee.id))list.push(employee);employeeByTeam.set(team.id,list)}}const rows=[['Work date','Department','Team','Employee','WO ID','Status'],...orders.flatMap(o=>(employeeByTeam.get(o.team_id??'')??[]).map(employee=>[o.work_date,deptById.get(o.department_id??'')?.code??'',teamById.get(o.team_id??'')?.code??'Unassigned',employee.full_name??employee.email,o.wo_id,o.status]))];const csv='\uFEFF'+rows.map(row=>row.map(v=>quote(String(v??''))).join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));const a=document.createElement('a');a.href=url;a.download='AHBA-Weekly-Employee-Completed-Attribution-'+selectedWeekStart+'-to-'+selectedWeekEnd+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)}
  return <section className="ops-overview" style={{display:'grid',gap:'1rem'}}>
-  <div className="ops-overview-heading"><div><span className="ops-eyebrow">HR REPORTING</span><h1>Weekly Team Reports</h1><p>Completed work orders by team · Sunday–Saturday</p></div><div className="row" style={{gap:'.55rem',flexWrap:'wrap'}}><button className="primary" onClick={()=>setShowEmployeeReport(true)} style={{minHeight:42,padding:'.65rem 1rem',borderRadius:12,fontWeight:750,boxShadow:'0 5px 14px rgba(24,91,62,.16)'}}>Employee reports ↗</button><button className="small" onClick={()=>void load()}>↻ Refresh</button></div></div>
+  <div className="ops-overview-heading"><div><span className="ops-eyebrow">HR REPORTING</span><h1>Weekly Team Reports</h1><p>Completed work orders by team · Sunday–Saturday</p></div><div className="row" style={{gap:'.55rem',flexWrap:'wrap'}}><button className="primary" onClick={()=>setShowEmployeeReport(true)} style={{minHeight:42,padding:'.65rem 1rem',borderRadius:12,fontWeight:750,boxShadow:'0 5px 14px rgba(24,91,62,.16)'}}>Employee reports ↗</button><button type="button" className="hr-completed-orders-trigger" onClick={()=>setShowCompletedOrders(true)}>Completed work orders <strong>{orders.length}</strong> ↗</button><button className="small" onClick={()=>void load()}>↻ Refresh</button></div></div>
   {error&&<div className="notice error">{error}</div>}
   {scheduleError&&<div className="notice error">Schedule-based employee matching is unavailable: {scheduleError}</div>}
-  <section className="ops-panel"><div className="ops-panel-heading"><div><h2>Reporting week</h2><p>{selectedWeekStart} through {selectedWeekEnd}</p></div><div className="row" style={{gap:'.5rem',flexWrap:'wrap'}}><button className="small" onClick={()=>setWeekOffset(x=>x+1)}>← Previous week</button><button className="small" disabled={weekOffset===0} onClick={()=>setWeekOffset(x=>Math.max(0,x-1))}>Next week →</button><button className="small" disabled={loading||orders.length===0} onClick={exportRows}>↓ Export CSV</button></div></div>
-   {loading?<p className="muted">Loading weekly records…</p>:<><div className="grid cols-3"><HrMetric label="Completed work orders" value={orders.length} note="Selected Sunday–Saturday week"/><HrMetric label="Active teams" value={activeTeams.length} note="Configured active teams"/><HrMetric label="Teams with completions" value={weeklyRows.filter(t=>t.count>0).length} note="At least one completed order"/></div>
+  <section className="ops-panel hr-weekly-report-card"><div className="ops-panel-heading"><div><h2>Reporting week</h2><p>{selectedWeekStart} through {selectedWeekEnd}</p></div><div className="row" style={{gap:'.5rem',flexWrap:'wrap'}}><button className="small" onClick={()=>setWeekOffset(x=>x+1)}>← Previous week</button><button className="small" disabled={weekOffset===0} onClick={()=>setWeekOffset(x=>Math.max(0,x-1))}>Next week →</button><button className="small" disabled={loading||orders.length===0} onClick={exportRows}>↓ Export CSV</button></div></div>
+   {loading?<p className="muted">Loading weekly records…</p>:<><div className="grid cols-3 hr-weekly-report-metrics"><HrMetric label="Completed work orders" value={orders.length} note="Selected Sunday–Saturday week"/><HrMetric label="Active teams" value={activeTeams.length} note="Configured active teams"/><HrMetric label="Teams with completions" value={weeklyRows.filter(t=>t.count>0).length} note="At least one completed order"/></div>
    <div style={{overflowX:'auto',marginTop:'1rem'}}><table className="tally-table"><thead><tr><th>Team</th><th>Department</th><th>Completed this week</th></tr></thead><tbody>{weeklyRows.map(t=><tr key={t.id}><th>{t.code}</th><td>{t.department}</td><td><strong>{t.count}</strong></td></tr>)}</tbody><tfoot><tr><th colSpan={2}>All teams</th><td><strong>{orders.length}</strong></td></tr></tfoot></table></div>
    <div className="ops-panel" style={{marginTop:'1rem'}}><div className="ops-panel-heading"><div><h2>Employee reports</h2><p>View completed work orders under each employee instead of grouping the report by team.</p></div><span className="ops-mini-badge">{employees.length} active employees</span></div><p className="tally-note">Each completed work order is credited to every active employee assigned to that team. Team and overall totals continue to count each work order only once.</p></div>
     {showEmployeeReport&&createPortal(
@@ -336,7 +337,29 @@ export function HrWeeklyTeamReports(){
      </div>,
      document.body
     )}
-    <details style={{marginTop:'1rem'}} open><summary style={{cursor:'pointer',fontWeight:700}}>Completed work-order rows ({orders.length})</summary><div style={{overflowX:'auto',marginTop:'.75rem'}}><table className="tally-table"><thead><tr><th>Work date</th><th>Department</th><th>Team</th><th>WO ID</th><th>Status</th></tr></thead><tbody>{orders.map((o,i)=><tr key={o.wo_id||i}><td>{o.work_date}</td><td>{depts.find(d=>d.id===o.department_id)?.code??'—'}</td><td>{teams.find(t=>t.id===o.team_id)?.code??'Unassigned'}</td><td>{o.wo_id}</td><td>{o.status}</td></tr>)}</tbody></table></div></details></>}
+    {showCompletedOrders&&createPortal(
+     <div className="hr-employee-report-backdrop" role="dialog" aria-modal="true" aria-labelledby="hr-completed-orders-title" onMouseDown={e=>{if(e.target===e.currentTarget)setShowCompletedOrders(false)}}>
+      <section className="hr-employee-report-modal hr-completed-orders-modal">
+       <header className="hr-employee-report-header">
+        <div className="hr-employee-report-titlegroup">
+         <span className="hr-employee-report-icon">▤</span>
+         <div><span className="ops-eyebrow">AHBA · WEEKLY OPERATIONS</span><h2 id="hr-completed-orders-title">Completed work orders</h2><p>{selectedWeekStart} — {selectedWeekEnd} · {orders.length.toLocaleString()} completed records</p></div>
+        </div>
+        <button type="button" className="hr-employee-report-close" onClick={()=>setShowCompletedOrders(false)} aria-label="Close completed work orders">×</button>
+       </header>
+       <div className="hr-employee-report-body">
+        <div className="hr-employee-report-table-wrap">
+         <table className="tally-table"><thead><tr><th>Work date</th><th>Department</th><th>Team</th><th>WO ID</th><th>Status</th></tr></thead><tbody>
+          {orders.map((o,i)=><tr key={o.wo_id||i}><td>{o.work_date}</td><td>{depts.find(d=>d.id===o.department_id)?.code??'—'}</td><td>{teams.find(t=>t.id===o.team_id)?.code??'Unassigned'}</td><td>{o.wo_id}</td><td><span className="hr-report-dept-pill">{o.status}</span></td></tr>)}
+          {orders.length===0&&<tr><td colSpan={5} className="muted">No completed work orders for this reporting week.</td></tr>}
+         </tbody></table>
+        </div>
+        <p className="hr-employee-report-footnote">Only COMPLETED work orders from the selected Sunday–Saturday reporting week are shown.</p>
+       </div>
+      </section>
+     </div>,
+     document.body
+    )}</>}
   </section>
   <p className="muted" style={{fontSize:'.75rem',textAlign:'right'}}>Only COMPLETED records are included{updated?' · Updated '+updated.toLocaleTimeString('en-PH'):''}</p>
  </section>
