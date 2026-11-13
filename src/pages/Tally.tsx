@@ -114,10 +114,6 @@ export default function Tally() {
   const [loadBreakdownError, setLoadBreakdownError] = useState('')
   const [tallyView, setTallyView] = useState<'wtd-mtd' | 'total-loads'>('wtd-mtd')
   const [quotaOpen, setQuotaOpen] = useState(false)
-  const [completedModalOpen, setCompletedModalOpen] = useState(false)
-  const [completedSearch, setCompletedSearch] = useState('')
-  const [completedTeamFilter, setCompletedTeamFilter] = useState<string | null>(null)
-  const [completedPeriodOnly, setCompletedPeriodOnly] = useState(false)
 
   useEffect(() => {
     if (canEdit || !profile?.id) return
@@ -133,25 +129,17 @@ export default function Tally() {
   const monthDates = useMemo(() => getMonthDates(month), [month])
   const monthStart = `${month}-01`
   const monthEnd = monthDates[monthDates.length - 1]
-  // Calendar-month reporting periods: 1–8, 9–15, 16–22, and 23–month-end.
-  // The final period absorbs every remaining day, including the 30th/31st.
-  const monthDayCount = Number(monthEnd.slice(-2))
-  const periodStartDay = Math.min(weekOffset === 0 ? 1 : 2 + weekOffset * 7, monthDayCount)
+  // Monthly reporting blocks intentionally stay inside the calendar month:
+  // Nov 1–8, Nov 9–15, Nov 16–22, then Nov 23–month-end.
+  const periodStartDay = Math.min(weekOffset === 0 ? 1 : 2 + weekOffset * 7, Number(monthEnd.slice(-2)))
   const weekStart = `${month}-${String(periodStartDay).padStart(2, '0')}`
-  const periodLength = weekOffset === 0 ? 8 : weekOffset < 3 ? 7 : monthDayCount - 22
   const dates = useMemo(
     () => Array.from(
-      { length: Math.max(1, Math.min(periodLength, monthDayCount - periodStartDay + 1)) },
+      { length: Math.min(weekOffset === 0 ? 8 : 7, Number(monthEnd.slice(-2)) - periodStartDay + 1) },
       (_, index) => addDays(weekStart, index)
     ),
-    [monthDayCount, periodStartDay, periodLength, weekStart]
+    [monthEnd, periodStartDay, weekStart]
   )
-  const periodOptions = [
-    { value: 0, label: `1–8 · ${month}` },
-    { value: 1, label: `9–15 · ${month}` },
-    { value: 2, label: `16–22 · ${month}` },
-    { value: 3, label: `23–${monthDayCount} · ${month}` }
-  ]
   const weekEnd = dates[dates.length - 1]
   const nowDate = formatDate(new Date())
   const reportDate = nowDate < weekStart ? weekStart : nowDate > weekEnd ? weekEnd : nowDate
@@ -543,26 +531,7 @@ export default function Tally() {
 
   const departmentWTD = activeTeams.reduce((sum, team) => sum + getWTD(team.id), 0)
   const departmentMTD = activeTeams.reduce((sum, team) => sum + getMTD(team.id), 0)
-  const completedWorkOrders = monthLoads
-    .filter(row => String(row.status).trim().toUpperCase() === 'COMPLETED')
-    .sort((a, b) => b.work_date.localeCompare(a.work_date) || a.wo_id.localeCompare(b.wo_id))
-  const completedInstalled = completedWorkOrders.length
-  const modalCompletedWorkOrders = completedWorkOrders.filter(row =>
-    (!completedTeamFilter || row.team_id === completedTeamFilter) &&
-    (!completedPeriodOnly || (row.work_date >= weekStart && row.work_date <= reportDate))
-  )
-  const visibleCompletedWorkOrders = modalCompletedWorkOrders.filter(row => {
-    const teamCode = teams.find(team => team.id === row.team_id)?.code ?? ''
-    const query = completedSearch.trim().toLowerCase()
-    return !query || row.wo_id.toLowerCase().includes(query) ||
-      teamCode.toLowerCase().includes(query) || row.work_date.includes(query)
-  })
-  const openCompletedWorkOrders = (teamId: string | null = null, periodOnly = false) => {
-    setCompletedTeamFilter(teamId)
-    setCompletedPeriodOnly(periodOnly)
-    setCompletedSearch('')
-    setCompletedModalOpen(true)
-  }
+  const completedInstalled = monthLoads.filter(row => String(row.status).trim().toUpperCase() === 'COMPLETED').length
   const daysRemaining = month === getCurrentMonth()
     ? Math.max(0, Number(monthEnd.slice(-2)) - Number(nowDate.slice(-2)))
     : month > getCurrentMonth() ? Number(monthEnd.slice(-2)) : 0
@@ -630,104 +599,6 @@ export default function Tally() {
           gap: .5rem;
           flex-wrap: wrap;
         }
-        .tally-page .tally-period-manager {
-          border: 1px solid var(--tally-border);
-          border-radius: 10px;
-          background: var(--tally-card);
-          padding: .35rem .5rem;
-          min-width: 0;
-          max-width: 520px;
-          justify-self: end;
-        }
-        .tally-page .tally-period-heading {
-          display:flex;
-          align-items:center;
-          justify-content:space-between;
-          gap:.4rem;
-          margin-bottom:.2rem;
-          font-size:.7rem;
-          font-weight:700;
-        }
-        .tally-page .tally-period-heading label { margin:0; }
-        .tally-page .tally-current-period {
-          border:0;
-          background:var(--tally-soft);
-          color:var(--tally-accent);
-          border-radius:7px;
-          padding:.18rem .45rem;
-          font-size:.7rem;
-          font-weight:700;
-          cursor:pointer;
-        }
-        .tally-page .tally-period-controls {
-          display:grid;
-          grid-template-columns:28px minmax(112px,1fr) minmax(72px,.72fr) 28px;
-          gap:.25rem;
-          align-items:center;
-        }
-        .tally-page .tally-period-controls input,
-        .tally-page .tally-period-controls select {
-          width:100%;
-          min-width:0;
-          min-height:34px;
-          padding:.25rem .35rem;
-          border:1px solid var(--tally-border);
-          border-radius:8px;
-          background:var(--tally-card);
-          color:var(--text);
-          font-size:.78rem;
-        }
-        .tally-page .tally-period-arrow {
-          min-height:32px;
-          padding:.15rem;
-          line-height:1;
-        }
-        .tally-page .tally-period-range {
-          margin-top:.2rem;
-          text-align:center;
-          font-size:.65rem;
-          color:var(--muted);
-          font-weight:600;
-        }
-        .tally-page .tally-period-cutoff { color:var(--tally-accent); font-weight:700; }
-        .tally-page .tally-row-completed-button {
-          min-width:54px;
-          min-height:32px;
-          padding:.2rem .45rem;
-          border:1px solid var(--tally-border);
-          border-radius:8px;
-          background:var(--tally-soft);
-          color:var(--tally-accent);
-          font-weight:800;
-          cursor:pointer;
-        }
-        .tally-page .tally-row-completed-button:hover,
-        .tally-page .tally-mobile-completed:hover { border-color:var(--tally-accent); }
-        .tally-page .tally-mobile-completed {
-          display:flex;
-          width:calc(100% - 1rem);
-          justify-content:space-between;
-          align-items:center;
-          gap:.4rem;
-          margin:0 .5rem .45rem;
-          padding:.32rem .45rem;
-          border:1px solid var(--tally-border);
-          border-radius:8px;
-          background:var(--tally-soft);
-          color:var(--text);
-          font-size:.68rem;
-          cursor:pointer;
-        }
-        .tally-page .tally-mobile-completed strong { color:var(--tally-accent); font-size:.82rem; }
-        .tally-page .tally-completed-button {
-          width:100%;
-          text-align:left;
-          color:inherit;
-          cursor:pointer;
-          font:inherit;
-        }
-        .tally-page .tally-completed-button:hover { border-color:var(--tally-accent); transform:translateY(-1px); }
-        .tally-page .tally-completed-button:focus-visible { outline:2px solid var(--tally-accent); outline-offset:3px; }
         .tally-page .tally-toolbar {
           display: grid;
           grid-template-columns: minmax(180px, 1fr) minmax(240px, 1fr);
@@ -922,48 +793,6 @@ export default function Tally() {
         }
 
 
-        .tally-page .tally-workorders-backdrop {
-          position:fixed;
-          inset:0;
-          z-index:1000;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          padding:1rem;
-          background:rgba(10,16,12,.58);
-          backdrop-filter:blur(7px);
-        }
-        .tally-page .tally-workorders-modal {
-          width:min(760px,100%);
-          max-height:min(82vh,760px);
-          overflow:auto;
-          padding:1rem;
-          border:1px solid var(--tally-border);
-          border-radius:18px;
-          background:var(--tally-card);
-          box-shadow:0 24px 80px rgba(0,0,0,.24);
-        }
-        .tally-page .tally-workorders-table { width:100%; border-collapse:collapse; font-size:.85rem; }
-        .tally-page .tally-workorders-table th,
-        .tally-page .tally-workorders-table td { padding:.55rem .5rem; border-bottom:1px solid var(--tally-border); text-align:left; }
-        .tally-page .tally-workorders-table th { color:var(--muted); font-size:.72rem; text-transform:uppercase; }
-        .tally-page .tally-workorders-search {
-          width:100%;
-          min-height:38px;
-          margin:.8rem 0;
-          padding:.45rem .65rem;
-          border:1px solid var(--tally-border);
-          border-radius:9px;
-          background:var(--tally-card);
-          color:var(--text);
-        }
-        @media (max-width:600px) {
-          .tally-page .tally-period-manager { max-width:none; width:100%; justify-self:stretch; }
-          .tally-page .tally-period-controls { grid-template-columns:26px minmax(95px,1fr) minmax(62px,.7fr) 26px; }
-          .tally-page .tally-workorders-modal { padding:.75rem; }
-          .tally-page .tally-workorders-table { font-size:.75rem; }
-        }
-
         .tally-page .tally-mobile-teams { display: none; }
         .tally-page .tally-mobile-team {
           border: 1px solid var(--tally-border);
@@ -987,7 +816,6 @@ export default function Tally() {
         .tally-page .tally-mobile-team-name { font-size: .82rem; font-weight: 800; overflow-wrap:anywhere; line-height:1.2; }
         .tally-page .tally-mobile-totals { display:flex; gap:.3rem; }
         .tally-page .tally-mobile-total { min-width: 42px; text-align:center; border-radius:8px; background:var(--tally-soft); padding:.28rem .35rem; }
-        .tally-page .tally-mobile-total-button { border:0; cursor:pointer; color:inherit; font:inherit; }
         .tally-page .tally-mobile-total strong { display:block; color:var(--tally-accent); font-size:.92rem; line-height:1.15; }
         .tally-page .tally-mobile-total small { font-size:.6rem; }
         .tally-page .tally-mobile-days { padding: 0 .5rem .5rem; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.3rem; }
@@ -1145,11 +973,11 @@ export default function Tally() {
       {message && <div className="notice">{message}</div>}
 
       <div className="tally-summary tally-live-summary" aria-live="polite">
-        <button type="button" className="tally-summary-card tally-live-card tally-completed-button" onClick={() => openCompletedWorkOrders(null, false)} aria-haspopup="dialog" aria-label={`View ${completedInstalled} completed work orders for ${month}`}>
-          <span className="muted">Completed work orders · {month}</span>
-          <span className="tally-summary-number">{completedInstalled.toLocaleString()}</span>
-          <small className="muted">Tap to view work order details <span aria-hidden="true">↗</span></small>
-        </button>
+        <div className="tally-summary-card tally-live-card">
+          <span className="muted">Completed installed · {month}</span>
+          <div className="tally-summary-number">{completedInstalled.toLocaleString()}</div>
+          <small className="muted">Unique imported work orders marked COMPLETED</small>
+        </div>
         <div className="tally-summary-card tally-live-card">
           <span className="muted">Days remaining in month</span>
           <div className="tally-summary-number">{daysRemaining}</div>
@@ -1271,44 +1099,18 @@ export default function Tally() {
               </select>
             </label>
 
-            <div className="tally-period-manager">
-              <div className="tally-period-heading">
-                <label htmlFor="tally-month-picker">Report period</label>
-                <button type="button" className="tally-current-period" onClick={() => {
-                  const currentMonth = getCurrentMonth()
-                  const day = new Date().getDate()
-                  setMonth(currentMonth)
-                  setWeekOffset(day <= 8 ? 0 : day <= 15 ? 1 : day <= 22 ? 2 : 3)
-                }}>Today</button>
-              </div>
-              <div className="tally-period-controls">
-                <button type="button" className="btn tally-period-arrow" aria-label="Previous reporting period" onClick={() => changeWeek(-1)}>‹</button>
-                <label className="tally-period-month">
-                  <span className="sr-only">Jump to a date in the reporting period</span>
-                  <input
-                    id="tally-month-picker"
-                    type="date"
-                    value={weekStart}
-                    aria-label="Jump to reporting period by date"
-                    onChange={event => {
-                      const pickedDate = event.target.value
-                      if (!pickedDate) return
-                      const pickedDay = Number(pickedDate.slice(8, 10))
-                      setMonth(pickedDate.slice(0, 7))
-                      setWeekOffset(pickedDay <= 8 ? 0 : pickedDay <= 15 ? 1 : pickedDay <= 22 ? 2 : 3)
-                    }}
-                  />
-                </label>
-                <select aria-label="Select reporting period" value={weekOffset} onChange={event => setWeekOffset(Number(event.target.value))}>
-                  {periodOptions.map(option => <option key={option.value} value={option.value}>{option.label.split(' · ')[0]}</option>)}
-                </select>
-                <button type="button" className="btn tally-period-arrow" aria-label="Next reporting period" onClick={() => changeWeek(1)}>›</button>
-              </div>
-              <div className="tally-period-range">
-                {new Date(`${weekStart}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                {' – '}
-                {new Date(`${weekEnd}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                {' · '}MTD through <span className="tally-period-cutoff">{new Date(`${reportDate}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.4rem' }}>
+                Reporting week
+              </label>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button type="button" className="btn" aria-label="Previous week" onClick={() => changeWeek(-1)}>←</button>
+                <div style={{ flex: 1, minWidth: 0, textAlign: 'center', fontWeight: 700 }}>
+                  {new Date(`${weekStart}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {' — '}
+                  {new Date(`${weekEnd}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </div>
+                <button type="button" className="btn" aria-label="Next week" onClick={() => changeWeek(1)}>→</button>
               </div>
             </div>
           </div>
@@ -1321,45 +1123,6 @@ export default function Tally() {
           </p>
         )}
       </div>
-
-      {completedModalOpen && (
-        <div className="tally-workorders-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setCompletedModalOpen(false) }}>
-          <section className="tally-workorders-modal" role="dialog" aria-modal="true" aria-labelledby="completed-workorders-title">
-            <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:'.75rem'}}>
-              <div>
-                <h2 id="completed-workorders-title" style={{margin:0,fontSize:'1.1rem'}}>Completed work orders</h2>
-                <p className="muted" style={{margin:'.2rem 0 0',fontSize:'.8rem'}}>
-                  {completedTeamFilter
-                    ? `${teams.find(team=>team.id===completedTeamFilter)?.code ?? 'Selected team'} · ${new Date(`${weekStart}T12:00:00`).toLocaleDateString('en-US',{month:'short',day:'numeric'})}–${new Date(`${reportDate}T12:00:00`).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`
-                    : completedPeriodOnly
-                      ? `${month} · ${departments.find(item=>item.id===departmentId)?.code ?? 'Department'} · selected reporting period`
-                      : `${month} · ${departments.find(item=>item.id===departmentId)?.code ?? 'Department'} · full month`}
-                  {' · '}{modalCompletedWorkOrders.length.toLocaleString()} unique records
-                </p>
-              </div>
-              <button type="button" className="btn" onClick={() => setCompletedModalOpen(false)} aria-label="Close completed work orders">✕</button>
-            </div>
-            <input className="tally-workorders-search" type="search" value={completedSearch} onChange={event=>setCompletedSearch(event.target.value)} placeholder="Search WO ID, team, or date…" aria-label="Search completed work orders" />
-            <div className="muted" style={{fontSize:'.75rem',marginBottom:'.4rem'}}>{visibleCompletedWorkOrders.length.toLocaleString()} records shown · sorted newest first</div>
-            {visibleCompletedWorkOrders.length ? (
-              <div style={{overflowX:'auto'}}>
-                <table className="tally-workorders-table">
-                  <thead><tr><th>Date</th><th>Team</th><th>WO ID</th></tr></thead>
-                  <tbody>
-                    {visibleCompletedWorkOrders.map((row,index)=>(
-                      <tr key={`${row.wo_id}-${index}`}>
-                        <td>{new Date(`${row.work_date}T12:00:00`).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</td>
-                        <td>{teams.find(team=>team.id===row.team_id)?.code ?? 'Unassigned'}</td>
-                        <td style={{fontWeight:700,wordBreak:'break-word'}}>{row.wo_id}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : <div className="empty" style={{padding:'1.25rem',textAlign:'center'}}>{modalCompletedWorkOrders.length ? 'No completed work orders match your search.' : 'No completed work orders have been imported for this team and reporting period.'}</div>}
-          </section>
-        </div>
-      )}
 
       {tallyView === 'total-loads' && (
       <div className="card" style={{ marginBottom: '1rem' }}>
@@ -1476,7 +1239,6 @@ export default function Tally() {
               <thead>
                 <tr>
                   <th>Team</th>
-                  <th title="Completed work orders in this reporting period">Done</th>
                   {dates.map(date => (
                     <th key={date}>
                       <span style={{ display: 'block', fontSize: '0.75rem', opacity: 0.8 }}>
@@ -1494,17 +1256,6 @@ export default function Tally() {
                 {activeTeams.map((team, teamIndex) => (
                   <tr key={team.id}>
                     <th scope="row">{team.code}</th>
-                    <td>
-                      <button
-                        type="button"
-                        className="tally-row-completed-button"
-                        onClick={() => openCompletedWorkOrders(team.id, true)}
-                        aria-label={`View ${getWTD(team.id)} completed work orders for ${team.code} in this reporting period`}
-                        title="View completed work orders for this team and reporting period"
-                      >
-                        {getWTD(team.id).toLocaleString()}
-                      </button>
-                    </td>
 
                     {dates.map(date => (
                       <td key={date}>
@@ -1569,14 +1320,6 @@ export default function Tally() {
                     <span className="tally-mobile-total"><small>MTD</small><strong>{getMTD(team.id).toLocaleString()}</strong></span>
                   </span>
                 </summary>
-                <button
-                  type="button"
-                  className="tally-mobile-completed"
-                  onClick={() => openCompletedWorkOrders(team.id, true)}
-                  aria-label={`View ${getWTD(team.id)} completed work orders for ${team.code} in this reporting period`}
-                >
-                  <span>Completed work orders</span><strong>{getWTD(team.id).toLocaleString()} ↗</strong>
-                </button>
                 {expandedTeams[team.id] && <div className="tally-mobile-days">
                   {dates.map(date => (
                     <div className="tally-mobile-day" key={date}>
