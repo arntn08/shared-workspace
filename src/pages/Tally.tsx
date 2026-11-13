@@ -794,27 +794,65 @@ export default function Tally() {
 
 
         .tally-page .tally-mobile-teams { display: none; }
-        .tally-page .tally-mobile-team { border: 1px solid var(--tally-border); border-radius: 16px; background: var(--tally-card); margin: 0 0 .75rem; overflow: hidden; }
-        .tally-page .tally-mobile-team summary { list-style: none; cursor: pointer; padding: 1rem; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: .75rem; align-items: center; }
+        .tally-page .tally-mobile-team {
+          border: 1px solid var(--tally-border);
+          border-radius: 12px;
+          background: var(--tally-card);
+          margin: 0;
+          min-width: 0;
+          overflow: hidden;
+          align-self: start;
+        }
+        .tally-page .tally-mobile-team summary {
+          list-style: none;
+          cursor: pointer;
+          padding: .6rem .65rem;
+          display: grid;
+          grid-template-columns: minmax(0,1fr) auto;
+          gap: .4rem;
+          align-items: center;
+        }
         .tally-page .tally-mobile-team summary::-webkit-details-marker { display:none; }
-        .tally-page .tally-mobile-team-name { font-weight: 800; overflow-wrap: anywhere; }
-        .tally-page .tally-mobile-totals { display:flex; gap:.5rem; }
-        .tally-page .tally-mobile-total { min-width: 58px; text-align:center; border-radius:10px; background:var(--tally-soft); padding:.45rem .55rem; }
-        .tally-page .tally-mobile-total strong { display:block; color:var(--tally-accent); font-size:1.1rem; }
-        .tally-page .tally-mobile-total small { font-size:.68rem; }
-        .tally-page .tally-mobile-days { padding: 0 .75rem .85rem; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem; }
-        .tally-page .tally-mobile-day { display:flex; justify-content:space-between; align-items:center; gap:.5rem; border-radius:10px; background:var(--tally-soft); padding:.6rem .7rem; }
-        .tally-page .tally-mobile-day input { width:64px; max-width:42%; min-height:40px; text-align:center; border:1px solid var(--tally-border); border-radius:9px; background:var(--tally-card); color:var(--text); font-size:1rem; }
+        .tally-page .tally-mobile-team-name { font-size: .82rem; font-weight: 800; overflow-wrap:anywhere; line-height:1.2; }
+        .tally-page .tally-mobile-totals { display:flex; gap:.3rem; }
+        .tally-page .tally-mobile-total { min-width: 42px; text-align:center; border-radius:8px; background:var(--tally-soft); padding:.28rem .35rem; }
+        .tally-page .tally-mobile-total strong { display:block; color:var(--tally-accent); font-size:.92rem; line-height:1.15; }
+        .tally-page .tally-mobile-total small { font-size:.6rem; }
+        .tally-page .tally-mobile-days { padding: 0 .5rem .5rem; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.3rem; }
+        .tally-page .tally-mobile-day {
+          display:flex;
+          flex-direction:column;
+          justify-content:center;
+          align-items:center;
+          gap:.12rem;
+          min-width:0;
+          border-radius:8px;
+          background:var(--tally-soft);
+          padding:.3rem .15rem;
+          font-size:.72rem;
+        }
+        .tally-page .tally-mobile-day input { width:100%; max-width:100%; min-height:32px; text-align:center; border:1px solid var(--tally-border); border-radius:7px; background:var(--tally-card); color:var(--text); font-size:.82rem; }
         @media (max-width: 600px) {
-          .tally-page .tally-mobile-teams { display:block; }
+          .tally-page .tally-mobile-teams {
+            display:grid;
+            grid-template-columns:repeat(2,minmax(0,1fr));
+            gap:.45rem;
+            align-items:start;
+          }
           .tally-page .tally-desktop-table { display:none; }
           .tally-page .tally-month-title { align-items:flex-start; }
           .tally-page .tally-month-title > span { display:none; }
-          .tally-page .tally-mobile-totals { gap:.35rem; }
-          .tally-page .tally-mobile-total { min-width:50px; padding:.4rem; }
-          .tally-page .tally-mobile-team summary { padding:.85rem; }
-          .tally-page .tally-mobile-days { grid-template-columns:1fr 1fr; }
+          .tally-page .tally-mobile-totals { gap:.25rem; }
+          .tally-page .tally-mobile-total { min-width:38px; padding:.25rem .3rem; }
+          .tally-page .tally-mobile-team summary { padding:.5rem; grid-template-columns:minmax(0,1fr) auto; gap:.25rem; }
+          .tally-page .tally-mobile-team-name { font-size:.74rem; }
+          .tally-page .tally-mobile-team-name small { font-size:.58rem; margin-top:.12rem !important; }
+          .tally-page .tally-mobile-days { grid-template-columns:repeat(4,minmax(0,1fr)); gap:.25rem; padding:.05rem .35rem .4rem; }
+          .tally-page .tally-mobile-day { font-size:.65rem; padding:.25rem .08rem; }
           .tally-page .tally-toolbar { grid-template-columns:1fr; }
+        }
+        @media (max-width: 350px) {
+          .tally-page .tally-mobile-teams { grid-template-columns:1fr; }
         }
 
         .tally-page .tally-month-title {
