@@ -214,7 +214,7 @@ export default function Overview() {
           <h1>Good day, {name}.</h1>
           <p>{today} <span className="ops-heading-separator">·</span> Your workspace at a glance.</p>
         </div>
-        <span className="ops-date-chip">AHBA Development</span>
+        <img className="ops-overview-logo" src={`${import.meta.env.BASE_URL}AHBA%20LOGO%20TRANSPARENT.png`} alt="AHBA Development" />
       </div>
 
       {loadError && <div className="notice error">{loadError}</div>}
