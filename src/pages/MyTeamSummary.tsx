@@ -74,29 +74,38 @@ export default function MyTeamSummary() {
 
         // Match the main Installation Tally source of truth: imported work orders
         // plus manual overrides. Do not read installation_daily_counts (not used by Tally).
-        const [overrideResult, ordersResult] = await Promise.all([
-          supabase.from('installation_tally_overrides')
-            .select('team_id,work_date,manual_count')
-            .in('team_id', teamIds)
-            .gte('work_date', queryStart)
-            .lte('work_date', today),
-          supabase.from('installation_imported_work_orders')
+        const { data: overrideData, error: overrideError } = await supabase.from('installation_tally_overrides')
+          .select('team_id,work_date,manual_count')
+          .in('team_id', teamIds)
+          .gte('work_date', queryStart)
+          .lte('work_date', today)
+        if (overrideError) throw overrideError
+
+        // Supabase returns at most 1,000 rows by default. Page through all
+        // matching work orders so an employee's team is not silently omitted.
+        const orderRows: WorkOrderRow[] = []
+        const pageSize = 1000
+        for (let offset = 0; ; offset += pageSize) {
+          const { data, error: ordersError } = await supabase.from('installation_imported_work_orders')
             .select('team_id,department_id,status,wo_id,work_date')
             .in('team_id', teamIds)
             .gte('work_date', monthStart)
             .lte('work_date', today)
             .order('wo_id')
-        ])
-        if (overrideResult.error) throw overrideResult.error
-        if (ordersResult.error) {
-          setLoadError(ordersResult.error.code === '42P01' || ordersResult.error.code === 'PGRST205'
-            ? 'Imported work-order records are unavailable. Please contact the workspace owner.'
-            : `Could not load imported work orders: ${ordersResult.error.message}`)
+            .range(offset, offset + pageSize - 1)
+          if (ordersError) {
+            setLoadError(ordersError.code === '42P01' || ordersError.code === 'PGRST205'
+              ? 'Imported work-order records are unavailable. Please contact the workspace owner.'
+              : `Could not load imported work orders: ${ordersError.message}`)
+            break
+          }
+          orderRows.push(...((data ?? []) as WorkOrderRow[]))
+          if (!data || data.length < pageSize) break
         }
         if (!cancelled) {
           setTeamRows(matchedTeams.sort((a, b) => a.code.localeCompare(b.code)))
-          setDailyRows((overrideResult.data ?? []) as DailyRow[])
-          setWorkOrders((ordersResult.data ?? []) as WorkOrderRow[])
+          setDailyRows((overrideData ?? []) as DailyRow[])
+          setWorkOrders(orderRows)
         }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load your team summary.')
