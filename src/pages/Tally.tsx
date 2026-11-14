@@ -728,8 +728,8 @@ export default function Tally() {
       sheet.getRow(1).height = 28
       sheet.getRow(2).height = 22
       sheet.getRow(3).height = 24
-      sheet.mergeCells(3, 1, 3, Math.max(4, lastColumn))
-      sheet.getCell('A3').value = `Department: ${selectedDepartment.code}  |  Reporting month: ${monthLabel}  |  Generated: ${generated.toLocaleDateString('en-PH')}`
+      sheet.mergeCells(3, 3, 3, Math.max(4, lastColumn))
+      sheet.getCell('C3').value = `Department: ${selectedDepartment.code}  |  Reporting month: ${monthLabel}  |  Generated: ${generated.toLocaleDateString('en-PH')}`
       sheet.getCell('A3').font = { name: 'Aptos', size: 9, color: { argb: muted }, italic: true }
       sheet.getCell('A3').alignment = { vertical: 'middle', horizontal: 'left' }
       sheet.getCell('A3').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: paleGreen } }
@@ -807,6 +807,7 @@ export default function Tally() {
     monthly.addRow([])
     monthly.addRow(monthlyHeaders)
     styleHeader(monthly, 5, 1, totalColumn)
+    monthDatesLocal.forEach((_, index) => { monthly.getCell(5, firstDayColumn + index).numFmt = 'ddd, dd-mmm' })
 
     const recordRange = "'Work Order Records'"
     const teamRowStart = 6
