@@ -8,6 +8,11 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: {
+        // The main application bundle is currently larger than Workbox's 2 MiB default.
+        // Allow it to be precached so the installed PWA remains available offline.
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024
+      },
       includeAssets: ['apple-touch-icon.png'],
       manifest: {
         name: 'Shared Workspace',
