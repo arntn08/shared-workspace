@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 
 type Department = {
   id: string
@@ -660,10 +661,11 @@ export default function Tally() {
     [dates, activeTeams, uniqueImportedLoads, tallyOverrides, editDraft]
   )
 
-  function exportMonthlyExcel(selectedDepartmentId: string) {
+  async function exportMonthlyExcel(selectedDepartmentId: string) {
     const selectedTeamIds = new Set(teams.filter(team => team.department_id === selectedDepartmentId).map(team => team.id))
     const selectedDepartment = departments.find(item => item.id === selectedDepartmentId)
     if (!selectedDepartment) return
+
     const monthOrders = uniqueImportedLoads.filter(row =>
       row.work_date >= monthStart &&
       row.work_date <= monthEnd &&
@@ -673,115 +675,285 @@ export default function Tally() {
     const teamsWithRecords = new Set(monthOrders.map(row => row.team_id).filter((id): id is string => Boolean(id)))
     const exportTeams = teams
       .filter(team => team.department_id === selectedDepartmentId && (team.active || teamsWithRecords.has(team.id)))
-      .sort((a, b) =>
-        (departments.find(d => d.id === a.department_id)?.code ?? '').localeCompare(departments.find(d => d.id === b.department_id)?.code ?? '') ||
-        a.code.localeCompare(b.code)
-      )
-    const dateSerial = (value: string) => {
-      const [year, monthNumber, day] = value.split('-').map(Number)
-      return Math.floor(Date.UTC(year, monthNumber - 1, day) / 86400000) + 25569
-    }
-    const countIfs = (summaryRow: number, dateCell?: string, status?: string) => {
-      const criteria = [
-        `'Work Order Records'!$B:$B,$A${summaryRow}`,
-        `'Work Order Records'!$C:$C,$B${summaryRow}`
-      ]
-      if (dateCell) criteria.push(`'Work Order Records'!$A:$A,">="&${dateCell}`, `'Work Order Records'!$A:$A,"<"&${dateCell}+1`)
-      if (status) criteria.push(`'Work Order Records'!$E:$E,"${status}"`)
-      return `COUNTIFS(${criteria.join(',')})`
-    }
-    const workOrderRows: unknown[][] = [
-      ['Work date', 'Department', 'Team', 'WO ID', 'Status', 'Notes (editable)'],
-      ...monthOrders.map(row => [
-        { t: 'n', v: dateSerial(row.work_date), z: 'dd-mmm-yyyy' },
-        departments.find(d => d.id === row.department_id)?.code ?? '—',
-        teams.find(t => t.id === row.team_id)?.code ?? 'Unassigned',
-        row.wo_id,
-        String(row.status).trim().toUpperCase(),
-        ''
-      ])
-    ]
-    const recordsSheet = XLSX.utils.aoa_to_sheet(workOrderRows)
-    recordsSheet['!cols'] = [{ wch: 16 }, { wch: 15 }, { wch: 18 }, { wch: 25 }, { wch: 16 }, { wch: 34 }]
-    recordsSheet['!autofilter'] = { ref: `A1:F${Math.max(1, workOrderRows.length)}` }
-    recordsSheet['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft', state: 'frozen' }
+      .sort((a, b) => a.code.localeCompare(b.code))
 
-    const firstDayColumn = 3
-    const lastDayColumn = firstDayColumn + monthDates.length - 1
-    const mtdColumn = lastDayColumn + 1
-    const incompleteColumn = mtdColumn + 1
-    const canceledColumn = incompleteColumn + 1
-    const totalColumn = canceledColumn + 1
-    const columnLetter = (index: number) => XLSX.utils.encode_col(index)
-    const summaryRows: unknown[][] = [
-      ['AHBA DEVELOPMENT · INSTALLATION TALLY', 'Month', { t: 'n', v: dateSerial(monthStart), z: 'mmmm yyyy' }, 'Generated', { t: 'n', v: dateSerial(formatDate(new Date())), z: 'dd-mmm-yyyy' }],
-      ['Edit dates, team labels, statuses, or notes in Work Order Records. Summary formulas recalculate in Excel.'],
-      ['Department', 'Team', 'Team name', ...monthDates.map(date => ({ t: 'n', v: dateSerial(date), z: 'ddd, dd-mmm' })), 'Completed MTD', 'Incomplete', 'Canceled', 'Total Loads']
-    ]
-    exportTeams.forEach(team => {
-      const rowNumber = summaryRows.length + 1
-      const departmentCode = departments.find(d => d.id === team.department_id)?.code ?? '—'
-      const dailyFormulas = monthDates.map((_, dayIndex) => {
-        const dateColumn = columnLetter(firstDayColumn + dayIndex)
-        return { t: 'n', f: countIfs(rowNumber, `${dateColumn}$3`, 'COMPLETED'), v: monthOrders.filter(row => row.team_id === team.id && row.work_date === monthDates[dayIndex] && String(row.status).trim().toUpperCase() === 'COMPLETED').length, z: '0' }
-      })
-      const mtdLetter = columnLetter(mtdColumn)
-      const incompleteLetter = columnLetter(incompleteColumn)
-      const canceledLetter = columnLetter(canceledColumn)
-      const totalLetter = columnLetter(totalColumn)
-      const lastDailyLetter = columnLetter(lastDayColumn)
-      const completed = monthOrders.filter(row => row.team_id === team.id && String(row.status).trim().toUpperCase() === 'COMPLETED').length
-      const incomplete = monthOrders.filter(row => row.team_id === team.id && String(row.status).trim().toUpperCase() === 'INCOMPLETE').length
-      const canceled = monthOrders.filter(row => row.team_id === team.id && String(row.status).trim().toUpperCase() === 'CANCELED').length
-      summaryRows.push([
-        departmentCode,
-        team.code,
-        team.name,
-        ...dailyFormulas,
-        { t: 'n', f: `SUM(D${rowNumber}:${lastDailyLetter}${rowNumber})`, v: completed, z: '0' },
-        { t: 'n', f: countIfs(rowNumber, undefined, 'INCOMPLETE'), v: incomplete, z: '0' },
-        { t: 'n', f: countIfs(rowNumber, undefined, 'CANCELED'), v: canceled, z: '0' },
-        { t: 'n', f: `${mtdLetter}${rowNumber}+${incompleteLetter}${rowNumber}+${canceledLetter}${rowNumber}`, v: completed + incomplete + canceled, z: '0' }
-      ])
-    })
-    const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows)
-    summarySheet['!cols'] = [{ wch: 15 }, { wch: 18 }, { wch: 26 }, ...monthDates.map(() => ({ wch: 13 })), { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 15 }]
-    summarySheet['!autofilter'] = { ref: `A3:${columnLetter(totalColumn)}${summaryRows.length}` }
-    summarySheet['!freeze'] = { xSplit: 3, ySplit: 3, topLeftCell: 'D4', activePane: 'bottomRight', state: 'frozen' }
+    const workbook = new ExcelJS.Workbook()
+    workbook.creator = 'AHBA Development'
+    workbook.company = 'AHBA Development'
+    workbook.subject = 'Monthly installation tally and work-order register'
+    workbook.title = `AHBA Installation Tally ${selectedDepartment.code} ${month}`
+    workbook.created = new Date()
+    workbook.modified = new Date()
+    workbook.calcProperties.fullCalcOnLoad = true
+    workbook.calcProperties.forceFullCalc = true
 
-    const dailyRows: unknown[][] = [
-      ['Work date', 'Department', 'Team', 'Completed', 'Incomplete', 'Canceled', 'Total Loads']
-    ]
-    for (const team of exportTeams) {
-      const departmentCode = departments.find(d => d.id === team.department_id)?.code ?? '—'
-      for (const date of monthDates) {
-        const matching = monthOrders.filter(row => row.team_id === team.id && row.work_date === date)
-        const completed = matching.filter(row => String(row.status).trim().toUpperCase() === 'COMPLETED').length
-        const incomplete = matching.filter(row => String(row.status).trim().toUpperCase() === 'INCOMPLETE').length
-        const canceled = matching.filter(row => String(row.status).trim().toUpperCase() === 'CANCELED').length
-        if (completed + incomplete + canceled > 0) dailyRows.push([
-          { t: 'n', v: dateSerial(date), z: 'dd-mmm-yyyy' }, departmentCode, team.code,
-          completed, incomplete, canceled, completed + incomplete + canceled
-        ])
+    const green = '174D35'
+    const greenDark = '103A29'
+    const gold = 'C7A45A'
+    const paleGreen = 'EAF2ED'
+    const paleGold = 'F5F0E4'
+    const borderColor = 'D8E1DB'
+    const white = 'FFFFFF'
+    const muted = '607067'
+    const generated = new Date()
+    const monthLabel = new Date(`${month}-01T12:00:00`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+
+    let logoImageId: number | null = null
+    try {
+      const logoResponse = await fetch(`${import.meta.env.BASE_URL}AHBA%20LOGO%20TRANSPARENT.png`)
+      if (logoResponse.ok) {
+        const logoBlob = await logoResponse.blob()
+        const logoData = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(String(reader.result))
+          reader.onerror = () => reject(new Error('Could not read the AHBA logo.'))
+          reader.readAsDataURL(logoBlob)
+        })
+        logoImageId = workbook.addImage({ base64: logoData, extension: 'png' })
+      }
+    } catch (logoError) {
+      console.warn('AHBA export logo could not be loaded; continuing without it.', logoError)
+    }
+
+    const addBrandHeader = (sheet: ExcelJS.Worksheet, lastColumn: number, subtitle: string) => {
+      sheet.mergeCells(1, 1, 2, 2)
+      sheet.mergeCells(1, 3, 1, Math.max(8, lastColumn))
+      sheet.mergeCells(2, 3, 2, Math.max(8, lastColumn))
+      sheet.getCell('C1').value = 'AHBA DEVELOPMENT'
+      sheet.getCell('C1').font = { name: 'Aptos Display', size: 17, bold: true, color: { argb: greenDark } }
+      sheet.getCell('C1').alignment = { vertical: 'middle', horizontal: 'left' }
+      sheet.getCell('C2').value = subtitle
+      sheet.getCell('C2').font = { name: 'Aptos', size: 11, bold: true, color: { argb: muted } }
+      sheet.getCell('C2').alignment = { vertical: 'middle', horizontal: 'left' }
+      sheet.getRow(1).height = 28
+      sheet.getRow(2).height = 22
+      sheet.getRow(3).height = 24
+      sheet.mergeCells(3, 1, 3, Math.max(4, lastColumn))
+      sheet.getCell('A3').value = `Department: ${selectedDepartment.code}  |  Reporting month: ${monthLabel}  |  Generated: ${generated.toLocaleDateString('en-PH')}`
+      sheet.getCell('A3').font = { name: 'Aptos', size: 9, color: { argb: muted }, italic: true }
+      sheet.getCell('A3').alignment = { vertical: 'middle', horizontal: 'left' }
+      sheet.getCell('A3').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: paleGreen } }
+      if (logoImageId !== null) {
+        sheet.addImage(logoImageId, { tl: { col: 0.18, row: 0.12 }, br: { col: 1.78, row: 2.82 }, editAs: 'oneCell' })
       }
     }
-    const dailySheet = XLSX.utils.aoa_to_sheet(dailyRows)
-    dailySheet['!cols'] = [{ wch: 16 }, { wch: 15 }, { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 15 }]
-    dailySheet['!autofilter'] = { ref: `A1:G${dailyRows.length}` }
-    dailySheet['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft', state: 'frozen' }
 
-    const workbook = XLSX.utils.book_new()
-    workbook.Props = {
-      Title: `AHBA Installation Tally ${selectedDepartment.code} ${month}`,
-      Subject: 'Editable full-month installation tally and work-order register',
-      Author: 'AHBA Development',
-      Company: 'AHBA Development',
-      CreatedDate: new Date()
+    const styleHeader = (sheet: ExcelJS.Worksheet, rowNumber: number, startColumn: number, endColumn: number) => {
+      const row = sheet.getRow(rowNumber)
+      row.height = 34
+      for (let col = startColumn; col <= endColumn; col += 1) {
+        const cell = row.getCell(col)
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: green } }
+        cell.font = { name: 'Aptos', size: 9, bold: true, color: { argb: white } }
+        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }
+        cell.border = { bottom: { style: 'medium', color: { argb: gold } } }
+      }
     }
-    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Monthly Tally')
-    XLSX.utils.book_append_sheet(workbook, dailySheet, 'Daily Breakdown')
-    XLSX.utils.book_append_sheet(workbook, recordsSheet, 'Work Order Records')
-    XLSX.writeFile(workbook, `AHBA-Installation-Tally-${selectedDepartment.code}-${month}.xlsx`, { cellDates: false, compression: true })
+
+    const styleBody = (sheet: ExcelJS.Worksheet, firstRow: number, lastRow: number, lastColumn: number) => {
+      for (let rowNumber = firstRow; rowNumber <= lastRow; rowNumber += 1) {
+        const row = sheet.getRow(rowNumber)
+        row.height = 22
+        for (let col = 1; col <= lastColumn; col += 1) {
+          const cell = row.getCell(col)
+          cell.font = { name: 'Aptos', size: 9, color: { argb: '26352D' } }
+          cell.alignment = { vertical: 'middle', horizontal: col <= 3 ? 'left' : 'center' }
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowNumber % 2 === 0 ? white : 'F4F7F5' } }
+          cell.border = {
+            bottom: { style: 'hair', color: { argb: borderColor } },
+            right: { style: 'hair', color: { argb: borderColor } }
+          }
+        }
+      }
+    }
+
+    const setupPrint = (sheet: ExcelJS.Worksheet, lastColumn: number) => {
+      sheet.pageSetup = {
+        paperSize: 9,
+        orientation: 'landscape',
+        fitToPage: true,
+        fitToWidth: 1,
+        fitToHeight: 0,
+        margins: { left: 0.25, right: 0.25, top: 0.45, bottom: 0.45, header: 0.2, footer: 0.2 },
+        printTitlesRow: '1:5'
+      }
+      sheet.headerFooter.oddFooter = '&LAHBA Development&CConfidential · Internal Operations&RPage &P of &N'
+      sheet.properties.pageSetUpPr = { fitToPage: true, autoPageBreaks: false }
+      sheet.views = [{ state: 'frozen', ySplit: 5, xSplit: sheet.name === 'Monthly Tally' ? 3 : 0, topLeftCell: sheet.name === 'Monthly Tally' ? 'D6' : 'A6' }]
+      sheet.autoFilter = { from: { row: 5, column: 1 }, to: { row: Math.max(5, sheet.rowCount), column: lastColumn } }
+    }
+
+    const monthDatesLocal = getMonthDates(month)
+    const monthly = workbook.addWorksheet('Monthly Tally', { properties: { tabColor: green } })
+    const firstDayColumn = 4
+    const lastDayColumn = firstDayColumn + monthDatesLocal.length - 1
+    const completedColumn = lastDayColumn + 1
+    const incompleteColumn = completedColumn + 1
+    const canceledColumn = incompleteColumn + 1
+    const totalColumn = canceledColumn + 1
+    const colLetter = (index: number) => {
+      let n = index
+      let result = ''
+      while (n > 0) {
+        const rem = (n - 1) % 26
+        result = String.fromCharCode(65 + rem) + result
+        n = Math.floor((n - 1) / 26)
+      }
+      return result
+    }
+
+    addBrandHeader(monthly, totalColumn, 'MONTHLY INSTALLATION TALLY')
+    const monthlyHeaders = ['Department', 'Team', 'Team name', ...monthDatesLocal.map(date => new Date(`${date}T12:00:00`)), 'Completed MTD', 'Incomplete', 'Canceled', 'Total Loads']
+    monthly.addRow([])
+    monthly.addRow(monthlyHeaders)
+    styleHeader(monthly, 5, 1, totalColumn)
+
+    const recordRange = "'Work Order Records'"
+    const teamRowStart = 6
+    exportTeams.forEach((team, index) => {
+      const rowNumber = teamRowStart + index
+      const row = monthly.getRow(rowNumber)
+      row.getCell(1).value = selectedDepartment.code
+      row.getCell(2).value = team.code
+      row.getCell(3).value = team.name || team.code
+      monthDatesLocal.forEach((date, dayIndex) => {
+        const dateColumn = colLetter(firstDayColumn + dayIndex)
+        const formula = `COUNTIFS(${recordRange}!$B:$B,$A${rowNumber},${recordRange}!$C:$C,$B${rowNumber},${recordRange}!$A:$A,">="&${dateColumn}$5,${recordRange}!$A:$A,"<"&${dateColumn}$5+1,${recordRange}!$E:$E,"COMPLETED")`
+        const cached = monthOrders.filter(item => item.team_id === team.id && item.work_date === date && String(item.status).trim().toUpperCase() === 'COMPLETED').length
+        row.getCell(firstDayColumn + dayIndex).value = { formula, result: cached }
+        row.getCell(firstDayColumn + dayIndex).numFmt = '0'
+      })
+      const completedLetter = colLetter(completedColumn)
+      const incompleteLetter = colLetter(incompleteColumn)
+      const canceledLetter = colLetter(canceledColumn)
+      const lastDailyLetter = colLetter(lastDayColumn)
+      const completed = monthOrders.filter(item => item.team_id === team.id && String(item.status).trim().toUpperCase() === 'COMPLETED').length
+      const incomplete = monthOrders.filter(item => item.team_id === team.id && String(item.status).trim().toUpperCase() === 'INCOMPLETE').length
+      const canceled = monthOrders.filter(item => item.team_id === team.id && String(item.status).trim().toUpperCase() === 'CANCELED').length
+      row.getCell(completedColumn).value = { formula: `SUM(D${rowNumber}:${lastDailyLetter}${rowNumber})`, result: completed }
+      row.getCell(incompleteColumn).value = { formula: `COUNTIFS(${recordRange}!$B:$B,$A${rowNumber},${recordRange}!$C:$C,$B${rowNumber},${recordRange}!$E:$E,"INCOMPLETE")`, result: incomplete }
+      row.getCell(canceledColumn).value = { formula: `COUNTIFS(${recordRange}!$B:$B,$A${rowNumber},${recordRange}!$C:$C,$B${rowNumber},${recordRange}!$E:$E,"CANCELED")`, result: canceled }
+      row.getCell(totalColumn).value = { formula: `${completedLetter}${rowNumber}+${incompleteLetter}${rowNumber}+${canceledLetter}${rowNumber}`, result: completed + incomplete + canceled }
+    })
+    const monthlyLastRow = Math.max(5, teamRowStart + exportTeams.length - 1)
+    const monthlyTotalRow = monthlyLastRow + 1
+    monthly.getCell(monthlyTotalRow, 1).value = 'DEPARTMENT TOTAL'
+    monthly.mergeCells(monthlyTotalRow, 1, monthlyTotalRow, 3)
+    for (let col = firstDayColumn; col <= totalColumn; col += 1) {
+      const letter = colLetter(col)
+      const value = exportTeams.reduce((sum, team) => {
+        if (col <= lastDayColumn) {
+          const date = monthDatesLocal[col - firstDayColumn]
+          return sum + monthOrders.filter(item => item.team_id === team.id && item.work_date === date && String(item.status).trim().toUpperCase() === 'COMPLETED').length
+        }
+        const status = col === completedColumn ? 'COMPLETED' : col === incompleteColumn ? 'INCOMPLETE' : col === canceledColumn ? 'CANCELED' : ''
+        return sum + (status ? monthOrders.filter(item => item.team_id === team.id && String(item.status).trim().toUpperCase() === status).length : monthOrders.filter(item => item.team_id === team.id).length)
+      }, 0)
+      monthly.getCell(monthlyTotalRow, col).value = { formula: `SUM(${letter}${teamRowStart}:${letter}${monthlyLastRow})`, result: value }
+    }
+    for (let col = 1; col <= totalColumn; col += 1) {
+      const cell = monthly.getCell(monthlyTotalRow, col)
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: greenDark } }
+      cell.font = { name: 'Aptos', size: 9, bold: true, color: { argb: white } }
+      cell.alignment = { vertical: 'middle', horizontal: col <= 3 ? 'left' : 'center' }
+    }
+    styleBody(monthly, teamRowStart, monthlyLastRow, totalColumn)
+    for (let col = 1; col <= totalColumn; col += 1) {
+      const cell = monthly.getCell(monthlyTotalRow, col)
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: greenDark } }
+      cell.font = { name: 'Aptos', size: 9, bold: true, color: { argb: white } }
+    }
+    for (let col = completedColumn; col <= totalColumn; col += 1) {
+      for (let rowNumber = 6; rowNumber <= monthlyLastRow; rowNumber += 1) {
+        monthly.getCell(rowNumber, col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: paleGold } }
+        monthly.getCell(rowNumber, col).font = { name: 'Aptos', size: 9, bold: true, color: { argb: greenDark } }
+      }
+    }
+    monthly.columns = [
+      { width: 14 }, { width: 18 }, { width: 24 },
+      ...monthDatesLocal.map(() => ({ width: 11 })),
+      { width: 15 }, { width: 13 }, { width: 13 }, { width: 14 }
+    ]
+    monthly.getRow(5).height = 36
+    monthly.getColumn(1).alignment = { vertical: 'middle', horizontal: 'left' }
+    setupPrint(monthly, totalColumn)
+    monthly.autoFilter = { from: { row: 5, column: 1 }, to: { row: Math.max(5, monthlyLastRow), column: totalColumn } }
+
+    const daily = workbook.addWorksheet('Daily Breakdown', { properties: { tabColor: gold } })
+    addBrandHeader(daily, 7, 'DAILY TEAM PERFORMANCE · COMPLETED / INCOMPLETE / CANCELED')
+    daily.addRow([])
+    daily.addRow(['Work date', 'Department', 'Team', 'Completed', 'Incomplete', 'Canceled', 'Total Loads'])
+    styleHeader(daily, 5, 1, 7)
+    const dailyData: Array<{ date: string; team: Team; completed: number; incomplete: number; canceled: number }> = []
+    for (const team of exportTeams) {
+      for (const date of monthDatesLocal) {
+        const matching = monthOrders.filter(item => item.team_id === team.id && item.work_date === date)
+        const completed = matching.filter(item => String(item.status).trim().toUpperCase() === 'COMPLETED').length
+        const incomplete = matching.filter(item => String(item.status).trim().toUpperCase() === 'INCOMPLETE').length
+        const canceled = matching.filter(item => String(item.status).trim().toUpperCase() === 'CANCELED').length
+        if (completed + incomplete + canceled > 0) dailyData.push({ date, team, completed, incomplete, canceled })
+      }
+    }
+    dailyData.forEach(item => {
+      const row = daily.addRow([new Date(`${item.date}T12:00:00`), selectedDepartment.code, item.team.code, item.completed, item.incomplete, item.canceled, item.completed + item.incomplete + item.canceled])
+      row.getCell(1).numFmt = 'dd-mmm-yyyy'
+    })
+    const dailyLastRow = Math.max(5, daily.rowCount)
+    styleBody(daily, 6, dailyLastRow, 7)
+    const dailyTotalRow = dailyLastRow + 1
+    daily.getCell(dailyTotalRow, 1).value = 'DEPARTMENT TOTAL'
+    daily.mergeCells(dailyTotalRow, 1, dailyTotalRow, 3)
+    for (let col = 4; col <= 7; col += 1) {
+      const letter = colLetter(col)
+      const value = dailyData.reduce((sum, item) => sum + (col === 4 ? item.completed : col === 5 ? item.incomplete : col === 6 ? item.canceled : item.completed + item.incomplete + item.canceled), 0)
+      daily.getCell(dailyTotalRow, col).value = { formula: `SUM(${letter}6:${letter}${dailyLastRow})`, result: value }
+    }
+    for (let col = 1; col <= 7; col += 1) {
+      const cell = daily.getCell(dailyTotalRow, col)
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: greenDark } }
+      cell.font = { name: 'Aptos', size: 9, bold: true, color: { argb: white } }
+    }
+    daily.columns = [{ width: 16 }, { width: 15 }, { width: 20 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 15 }]
+    setupPrint(daily, 7)
+    daily.autoFilter = { from: { row: 5, column: 1 }, to: { row: dailyLastRow, column: 7 } }
+
+    const records = workbook.addWorksheet('Work Order Records', { properties: { tabColor: '789486' } })
+    addBrandHeader(records, 6, 'SOURCE REGISTER · EDITABLE WORK ORDER STATUS AND NOTES')
+    records.addRow([])
+    records.addRow(['Work date', 'Department', 'Team', 'WO ID', 'Status', 'Notes (editable)'])
+    styleHeader(records, 5, 1, 6)
+    monthOrders.forEach(item => {
+      const row = records.addRow([
+        new Date(`${item.work_date}T12:00:00`),
+        selectedDepartment.code,
+        teams.find(team => team.id === item.team_id)?.code ?? 'Unassigned',
+        item.wo_id,
+        String(item.status).trim().toUpperCase(),
+        ''
+      ])
+      row.getCell(1).numFmt = 'dd-mmm-yyyy'
+      row.getCell(5).dataValidation = { type: 'list', allowBlank: false, formulae: ['"COMPLETED,INCOMPLETE,CANCELED"'], showErrorMessage: true, errorTitle: 'Invalid status', error: 'Choose COMPLETED, INCOMPLETE, or CANCELED.' }
+    })
+    const recordsLastRow = Math.max(5, records.rowCount)
+    styleBody(records, 6, recordsLastRow, 6)
+    for (let rowNumber = 6; rowNumber <= recordsLastRow; rowNumber += 1) {
+      records.getCell(rowNumber, 5).font = { name: 'Aptos', size: 9, bold: true, color: { argb: greenDark } }
+      records.getCell(rowNumber, 6).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: paleGold } }
+    }
+    records.columns = [{ width: 16 }, { width: 15 }, { width: 20 }, { width: 27 }, { width: 18 }, { width: 38 }]
+    setupPrint(records, 6)
+    records.autoFilter = { from: { row: 5, column: 1 }, to: { row: recordsLastRow, column: 6 } }
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `AHBA-Installation-Tally-${selectedDepartment.code}-${month}.xlsx`
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
     setExportDialogOpen(false)
   }
 
