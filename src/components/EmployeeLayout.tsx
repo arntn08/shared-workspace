@@ -69,10 +69,7 @@ function EmployeeSidebar({ title, mobileOpen, setMobileOpen }: {
       <aside className={`ops-sidebar${mobileOpen ? ' is-open' : ''}`}>
         <div className="ops-brand">
           <img className="ops-brand-logo" src={`${import.meta.env.BASE_URL}AHBA%20LOGO%20TRANSPARENT.png`} alt="AHBA Development" />
-          <div className="ops-brand-copy">
-            <strong>AHBA</strong>
-            <span>{settings.title || 'Development Workspace'}</span>
-          </div>
+          
           <button
             className="ops-sidebar-close"
             type="button"
