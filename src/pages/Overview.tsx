@@ -214,7 +214,6 @@ export default function Overview() {
           <h1>Good day, {name}.</h1>
           <p>{today} <span className="ops-heading-separator">·</span> Your workspace at a glance.</p>
         </div>
-        <img className="ops-overview-logo" src={`${import.meta.env.BASE_URL}AHBA%20LOGO%20TRANSPARENT.png`} alt="AHBA Development" />
       </div>
 
       {loadError && <div className="notice error">{loadError}</div>}
@@ -229,11 +228,7 @@ export default function Overview() {
             <Link className="btn" to="/schedule">View schedule</Link>
           </div>
         </div>
-        <div className="ops-hero-orbit" aria-hidden="true">
-          <div className="ops-orbit-ring ops-ring-one" />
-          <div className="ops-orbit-ring ops-ring-two" />
-          <div className="ops-orbit-center">A</div>
-        </div>
+        <img className="ops-hero-logo" src={`${import.meta.env.BASE_URL}AHBA%20LOGO%20TRANSPARENT.png`} alt="AHBA Development" />
       </div>
 
       <div className="ops-section-heading">
