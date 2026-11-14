@@ -4,7 +4,7 @@ import { useAuth } from '../lib/auth'
 
 type RosterRow = { team?: string | null; code?: string | null; team_code?: string | null }
 type TeamRow = { id: string; code: string; name: string; active: boolean; department_id: string }
-type DailyRow = { team_id: string; work_date: string; daily_count: number }
+type DailyRow = { team_id: string; work_date: string; manual_count: number }
 type WorkOrderRow = { team_id: string | null; department_id: string | null; status: string; wo_id: string; work_date: string }
 
 const dateKey = (date: Date) => {
@@ -13,7 +13,7 @@ const dateKey = (date: Date) => {
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
-const normalize = (value: string) => value.trim().toUpperCase().replace(/\\s+/g, '')
+const normalize = (value: string) => value.trim().toUpperCase().replace(/\s+/g, '')
 const stripPrefix = (value: string) => value.replace(/^(AHBA_|A8_|AHBA-|A8-)/, '')
 
 export default function MyTeamSummary() {
@@ -72,9 +72,11 @@ export default function MyTeamSummary() {
         const queryStart = weekStart < monthStart ? weekStart : monthStart
         const teamIds = matchedTeams.map(team => team.id)
 
-        const [dailyResult, ordersResult] = await Promise.all([
-          supabase.from('installation_daily_counts')
-            .select('team_id,work_date,daily_count')
+        // Match the main Installation Tally source of truth: imported work orders
+        // plus manual overrides. Do not read installation_daily_counts (not used by Tally).
+        const [overrideResult, ordersResult] = await Promise.all([
+          supabase.from('installation_tally_overrides')
+            .select('team_id,work_date,manual_count')
             .in('team_id', teamIds)
             .gte('work_date', queryStart)
             .lte('work_date', today),
@@ -83,16 +85,17 @@ export default function MyTeamSummary() {
             .in('team_id', teamIds)
             .gte('work_date', monthStart)
             .lte('work_date', today)
+            .order('wo_id')
         ])
-        if (dailyResult.error) throw dailyResult.error
+        if (overrideResult.error) throw overrideResult.error
         if (ordersResult.error) {
           setLoadError(ordersResult.error.code === '42P01' || ordersResult.error.code === 'PGRST205'
-            ? 'Total Loads is unavailable because the imported work-orders table is not set up yet.'
-            : `Could not load Total Loads: ${ordersResult.error.message}`)
+            ? 'Imported work-order records are unavailable. Please contact the workspace owner.'
+            : `Could not load imported work orders: ${ordersResult.error.message}`)
         }
         if (!cancelled) {
           setTeamRows(matchedTeams.sort((a, b) => a.code.localeCompare(b.code)))
-          setDailyRows((dailyResult.data ?? []) as DailyRow[])
+          setDailyRows((overrideResult.data ?? []) as DailyRow[])
           setWorkOrders((ordersResult.data ?? []) as WorkOrderRow[])
         }
       } catch (err) {
@@ -116,14 +119,38 @@ export default function MyTeamSummary() {
     return dateKey(monday)
   }, [today])
 
-  const getWTD = (teamId: string) => dailyRows
-    .filter(row => row.team_id === teamId && row.work_date >= weekStart && row.work_date <= today)
-    .reduce((sum, row) => sum + Number(row.daily_count || 0), 0)
-  const getMTD = (teamId: string) => dailyRows
-    .filter(row => row.team_id === teamId && row.work_date >= monthStart && row.work_date <= today)
-    .reduce((sum, row) => sum + Number(row.daily_count || 0), 0)
-  const getStatusCount = (teamId: string, status?: string) => workOrders
-    .filter(row => row.team_id === teamId && (!status || String(row.status).toUpperCase() === status))
+  const uniqueWorkOrders = useMemo(() => {
+    const seen = new Set<string>()
+    return workOrders.filter(row => {
+      const id = String(row.wo_id ?? '').trim().toUpperCase()
+      if (!id || seen.has(id)) return false
+      seen.add(id)
+      return true
+    })
+  }, [workOrders])
+  const getCount = (teamId: string, date: string) => {
+    const override = dailyRows.find(row => row.team_id === teamId && row.work_date === date)
+    if (override) return Number(override.manual_count || 0)
+    const seen = new Set<string>()
+    return uniqueWorkOrders.filter(row => {
+      if (row.team_id !== teamId || row.work_date !== date || String(row.status).trim().toUpperCase() !== 'COMPLETED') return false
+      const id = String(row.wo_id ?? '').trim().toUpperCase()
+      if (!id || seen.has(id)) return false
+      seen.add(id)
+      return true
+    }).length
+  }
+  const getWTD = (teamId: string) => {
+    const end = today
+    return Array.from({ length: Math.max(0, Math.round((new Date(end + 'T12:00:00').getTime() - new Date(weekStart + 'T12:00:00').getTime()) / 86400000) + 1) }, (_, i) => {
+      const date = new Date(weekStart + 'T12:00:00')
+      date.setDate(date.getDate() + i)
+      return dateKey(date)
+    }).filter(date => date >= weekStart && date <= end).reduce((sum, date) => sum + getCount(teamId, date), 0)
+  }
+  const getMTD = (teamId: string) => Array.from({ length: Number(today.slice(-2)) }, (_, i) => `${today.slice(0, 7)}-${String(i + 1).padStart(2, '0')}`).reduce((sum, date) => sum + getCount(teamId, date), 0)
+  const getStatusCount = (teamId: string, status?: string) => uniqueWorkOrders
+    .filter(row => row.team_id === teamId && (!status || String(row.status).trim().toUpperCase() === status))
     .length
 
   return (
