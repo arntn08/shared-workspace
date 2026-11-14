@@ -523,3 +523,45 @@ tbody tr:hover td { background: var(--accent-soft); }
   .ops-brand-logo { width: min(100%, 176px); height: 64px; }
   .ops-hero-logo { right: 18px; width: 128px; max-height: 92px; opacity: .95; }
 }
+
+/* Restore the workspace name beside the AHBA logo */
+.ops-brand {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+}
+.ops-brand-logo {
+  width: 76px;
+  height: 62px;
+  max-width: 76px;
+  flex: 0 0 76px;
+  object-position: center;
+}
+.ops-brand-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  line-height: 1.2;
+}
+.ops-brand-copy strong {
+  color: var(--text, #19324b);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+.ops-brand-copy span {
+  color: var(--muted, #71839a);
+  font-size: 10px;
+  line-height: 1.35;
+  max-width: 126px;
+}
+@media (max-width: 760px) {
+  .ops-brand { min-height: 88px; gap: 10px; padding: 10px 14px; }
+  .ops-brand-logo { width: 64px; height: 54px; max-width: 64px; flex-basis: 64px; }
+  .ops-brand-copy strong { font-size: 13px; }
+  .ops-brand-copy span { font-size: 9px; }
+}
