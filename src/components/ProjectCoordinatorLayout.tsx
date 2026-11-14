@@ -11,7 +11,7 @@ export default function ProjectCoordinatorLayout() {
 
   return <div className="ops-shell employee-ops-shell role-theme-coordinator">
     <aside className="ops-sidebar">
-      <div className="ops-brand"><div className="ops-brand-mark">A</div><div className="ops-brand-copy"><strong>AHBA</strong><span>{settings.title || 'Development Workspace'}</span></div></div>
+      <div className="ops-brand"><img className="ops-brand-logo" src={`${import.meta.env.BASE_URL}AHBA%20LOGO%20TRANSPARENT.png`} alt="AHBA Development" /><div className="ops-brand-copy"><strong>AHBA</strong><span>{settings.title || 'Development Workspace'}</span></div></div>
       <div className="ops-workspace-label">PROJECT OPERATIONS</div>
       <nav className="ops-nav"><div className="ops-nav-group"><div className="ops-nav-heading">Coordination</div><NavLink to="/" end className={({isActive})=>`ops-nav-link${isActive?' active':''}`}><span className="ops-nav-icon"><Icon name="calendar-check"/></span><span className="ops-nav-label">Project activities</span></NavLink></div></nav>
       <div className="ops-sidebar-bottom"><div className="ops-help-card"><span className="ops-help-icon">✦</span><div><strong>Dedicated access</strong><span>Project Coordinator</span></div></div>
