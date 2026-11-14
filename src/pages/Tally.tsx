@@ -653,7 +653,7 @@ export default function Tally() {
           0
         )
       ),
-    [dates, activeTeams, uniqueImportedLoads]
+    [dates, activeTeams, uniqueImportedLoads, tallyOverrides, editDraft]
   )
 
   function exportMonthlyExcel(selectedDepartmentId: string) {
