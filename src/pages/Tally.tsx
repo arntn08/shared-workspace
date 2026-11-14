@@ -609,12 +609,16 @@ export default function Tally() {
     setError('')
     setMessage('')
     try {
-      const changed = activeTeams.flatMap(team => dates.map(date => {
+      if (!profile?.id) throw new Error('Your account could not be verified. Please sign in again.')
+      const changed: Array<{ team_id: string; work_date: string; manual_count: number; updated_by: string }> = []
+      activeTeams.forEach(team => dates.forEach(date => {
         const key = `${team.id}|${date}`
         const next = Number(editDraft[key] ?? getCount(team.id, date))
         const previous = getCount(team.id, date)
-        return next !== previous ? { team_id: team.id, work_date: date, manual_count: next, updated_by: profile?.id ?? null } : null
-      })).filter((row): row is {team_id:string;work_date:string;manual_count:number;updated_by:string|null} => row !== null)
+        if (next !== previous) {
+          changed.push({ team_id: team.id, work_date: date, manual_count: next, updated_by: profile.id })
+        }
+      }))
 
       if (changed.some(row => !Number.isInteger(row.manual_count) || row.manual_count < 0)) {
         throw new Error('Counts must be whole numbers greater than or equal to zero.')
