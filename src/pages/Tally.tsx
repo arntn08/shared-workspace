@@ -685,7 +685,6 @@ export default function Tally() {
     workbook.created = new Date()
     workbook.modified = new Date()
     workbook.calcProperties.fullCalcOnLoad = true
-    workbook.calcProperties.forceFullCalc = true
 
     const green = '174D35'
     const greenDark = '103A29'
@@ -734,7 +733,7 @@ export default function Tally() {
       sheet.getCell('A3').alignment = { vertical: 'middle', horizontal: 'left' }
       sheet.getCell('A3').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: paleGreen } }
       if (logoImageId !== null) {
-        sheet.addImage(logoImageId, { tl: { col: 0.18, row: 0.12 }, br: { col: 1.78, row: 2.82 }, editAs: 'oneCell' })
+        sheet.addImage(logoImageId, 'A1:B3')
       }
     }
 
@@ -778,13 +777,12 @@ export default function Tally() {
         printTitlesRow: '1:5'
       }
       sheet.headerFooter.oddFooter = '&LAHBA Development&CConfidential · Internal Operations&RPage &P of &N'
-      sheet.properties.pageSetUpPr = { fitToPage: true, autoPageBreaks: false }
       sheet.views = [{ state: 'frozen', ySplit: 5, xSplit: sheet.name === 'Monthly Tally' ? 3 : 0, topLeftCell: sheet.name === 'Monthly Tally' ? 'D6' : 'A6' }]
       sheet.autoFilter = { from: { row: 5, column: 1 }, to: { row: Math.max(5, sheet.rowCount), column: lastColumn } }
     }
 
     const monthDatesLocal = getMonthDates(month)
-    const monthly = workbook.addWorksheet('Monthly Tally', { properties: { tabColor: green } })
+    const monthly = workbook.addWorksheet('Monthly Tally', { properties: { tabColor: { argb: green } } })
     const firstDayColumn = 4
     const lastDayColumn = firstDayColumn + monthDatesLocal.length - 1
     const completedColumn = lastDayColumn + 1
@@ -880,7 +878,7 @@ export default function Tally() {
     setupPrint(monthly, totalColumn)
     monthly.autoFilter = { from: { row: 5, column: 1 }, to: { row: Math.max(5, monthlyLastRow), column: totalColumn } }
 
-    const daily = workbook.addWorksheet('Daily Breakdown', { properties: { tabColor: gold } })
+    const daily = workbook.addWorksheet('Daily Breakdown', { properties: { tabColor: { argb: gold } } })
     addBrandHeader(daily, 7, 'DAILY TEAM PERFORMANCE · COMPLETED / INCOMPLETE / CANCELED')
     daily.addRow([])
     daily.addRow(['Work date', 'Department', 'Team', 'Completed', 'Incomplete', 'Canceled', 'Total Loads'])
@@ -918,7 +916,7 @@ export default function Tally() {
     setupPrint(daily, 7)
     daily.autoFilter = { from: { row: 5, column: 1 }, to: { row: dailyLastRow, column: 7 } }
 
-    const records = workbook.addWorksheet('Work Order Records', { properties: { tabColor: '789486' } })
+    const records = workbook.addWorksheet('Work Order Records', { properties: { tabColor: { argb: '789486' } } })
     addBrandHeader(records, 6, 'SOURCE REGISTER · EDITABLE WORK ORDER STATUS AND NOTES')
     records.addRow([])
     records.addRow(['Work date', 'Department', 'Team', 'WO ID', 'Status', 'Notes (editable)'])
