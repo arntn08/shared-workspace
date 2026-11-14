@@ -1461,7 +1461,7 @@ export default function Tally() {
       </div>
 
       <div className="card">
-        <div className="tally-edit-banner">
+        <div className="tally-edit-banner" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
           <div>
             <h2>
               {departments.find(item => item.id === departmentId)?.code ?? 'Department'}
@@ -1472,7 +1472,7 @@ export default function Tally() {
             </h2>
             <p>Weekly installation tally · {dates.length} reporting days</p>
           </div>
-          {canEdit && <div className="tally-edit-actions">
+          {canEdit && <div className="tally-edit-actions" style={{ marginLeft: 'auto', display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
             {!editMode ? (
               <button type="button" className="btn primary" onClick={beginTableEdit} disabled={loading || activeTeams.length === 0}>Edit Table</button>
             ) : <>
