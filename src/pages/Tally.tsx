@@ -114,6 +114,8 @@ export default function Tally() {
   const [loadBreakdownError, setLoadBreakdownError] = useState('')
   const [tallyView, setTallyView] = useState<'wtd-mtd' | 'total-loads'>('wtd-mtd')
   const [quotaOpen, setQuotaOpen] = useState(false)
+  const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [exportDepartmentId, setExportDepartmentId] = useState('')
 
   useEffect(() => {
     if (canEdit || !profile?.id) return
@@ -135,7 +137,7 @@ export default function Tally() {
   const weekStart = `${month}-${String(periodStartDay).padStart(2, '0')}`
   const dates = useMemo(
     () => Array.from(
-      { length: Math.min(weekOffset === 0 ? 8 : 7, Number(monthEnd.slice(-2)) - periodStartDay + 1) },
+      { length: Math.min(weekOffset === 0 ? 8 : weekOffset === 3 ? Number(monthEnd.slice(-2)) - periodStartDay + 1 : 7, Number(monthEnd.slice(-2)) - periodStartDay + 1) },
       (_, index) => addDays(weekStart, index)
     ),
     [monthEnd, periodStartDay, weekStart]
@@ -547,15 +549,19 @@ export default function Tally() {
     [dates, activeTeams, uniqueImportedLoads]
   )
 
-  function exportMonthlyExcel() {
+  function exportMonthlyExcel(selectedDepartmentId: string) {
+    const selectedTeamIds = new Set(teams.filter(team => team.department_id === selectedDepartmentId).map(team => team.id))
+    const selectedDepartment = departments.find(item => item.id === selectedDepartmentId)
+    if (!selectedDepartment) return
     const monthOrders = uniqueImportedLoads.filter(row =>
       row.work_date >= monthStart &&
       row.work_date <= monthEnd &&
+      Boolean(row.team_id && selectedTeamIds.has(row.team_id)) &&
       ['COMPLETED', 'INCOMPLETE', 'CANCELED'].includes(String(row.status).trim().toUpperCase())
     )
     const teamsWithRecords = new Set(monthOrders.map(row => row.team_id).filter((id): id is string => Boolean(id)))
     const exportTeams = teams
-      .filter(team => team.active || teamsWithRecords.has(team.id))
+      .filter(team => team.department_id === selectedDepartmentId && (team.active || teamsWithRecords.has(team.id)))
       .sort((a, b) =>
         (departments.find(d => d.id === a.department_id)?.code ?? '').localeCompare(departments.find(d => d.id === b.department_id)?.code ?? '') ||
         a.code.localeCompare(b.code)
@@ -655,7 +661,7 @@ export default function Tally() {
 
     const workbook = XLSX.utils.book_new()
     workbook.Props = {
-      Title: `AHBA Installation Tally ${month}`,
+      Title: `AHBA Installation Tally ${selectedDepartment.code} ${month}`,
       Subject: 'Editable full-month installation tally and work-order register',
       Author: 'AHBA Development',
       Company: 'AHBA Development',
@@ -664,7 +670,8 @@ export default function Tally() {
     XLSX.utils.book_append_sheet(workbook, summarySheet, 'Monthly Tally')
     XLSX.utils.book_append_sheet(workbook, dailySheet, 'Daily Breakdown')
     XLSX.utils.book_append_sheet(workbook, recordsSheet, 'Work Order Records')
-    XLSX.writeFile(workbook, `AHBA-Installation-Tally-${month}.xlsx`, { cellDates: false, compression: true })
+    XLSX.writeFile(workbook, `AHBA-Installation-Tally-${selectedDepartment.code}-${month}.xlsx`, { cellDates: false, compression: true })
+    setExportDialogOpen(false)
   }
 
   function exportCsv() {
@@ -1041,7 +1048,7 @@ export default function Tally() {
             </label>
           )}
           {canEdit && <>
-            <button type="button" className="btn primary" onClick={exportMonthlyExcel} disabled={loading || teams.length === 0}>
+            <button type="button" className="btn primary" onClick={() => { setExportDepartmentId(departmentId || departments.find(item => item.active)?.id || ''); setExportDialogOpen(true) }} disabled={loading || teams.length === 0 || departments.length === 0}>
               Export full month · Excel
             </button>
             <button type="button" className="btn" onClick={exportCsv} disabled={loading || activeTeams.length === 0}>
@@ -1050,6 +1057,26 @@ export default function Tally() {
           </>}
         </div>
       </div>
+
+      {exportDialogOpen && <div className="tally-quota-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setExportDialogOpen(false) }}>
+        <section className="card tally-quota-modal" role="dialog" aria-modal="true" aria-labelledby="tally-export-title" style={{maxWidth:460}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
+            <div><h2 id="tally-export-title" style={{margin:0,fontSize:'1.05rem'}}>Export monthly Excel</h2><p className="muted" style={{margin:'.25rem 0 0'}}>Choose one department for {month}</p></div>
+            <button type="button" className="btn" onClick={()=>setExportDialogOpen(false)}>Close</button>
+          </div>
+          <label style={{display:'grid',gap:6,marginTop:18,fontWeight:650}}>Department
+            <select className="input" value={exportDepartmentId} onChange={event=>setExportDepartmentId(event.target.value)}>
+              <option value="">Select department</option>
+              {departments.filter(item=>item.active).sort((a,b)=>a.code.localeCompare(b.code)).map(item=><option key={item.id} value={item.id}>{item.code} — {item.name}</option>)}
+            </select>
+          </label>
+          <p className="muted" style={{fontSize:'.82rem',marginTop:10}}>The workbook will include all active teams and imported work orders for the selected department and entire calendar month.</p>
+          <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:18}}>
+            <button type="button" className="btn" onClick={()=>setExportDialogOpen(false)}>Cancel</button>
+            <button type="button" className="btn primary" disabled={!exportDepartmentId} onClick={()=>exportMonthlyExcel(exportDepartmentId)}>Download Excel</button>
+          </div>
+        </section>
+      </div>}
 
       <div className="tally-subtabs" style={{display:'flex',gap:'.6rem',marginBottom:'1rem',flexWrap:'wrap'}}>
         <button type="button" className={quotaOpen?'btn':'btn secondary'} onClick={()=>setQuotaOpen(true)}>Monthly Team Quota · View table</button>
