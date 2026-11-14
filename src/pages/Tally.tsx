@@ -564,10 +564,10 @@ export default function Tally() {
       const [year, monthNumber, day] = value.split('-').map(Number)
       return Math.floor(Date.UTC(year, monthNumber - 1, day) / 86400000) + 25569
     }
-    const countIfs = (team: Team, dateCell?: string, status?: string) => {
+    const countIfs = (summaryRow: number, dateCell?: string, status?: string) => {
       const criteria = [
-        `'Work Order Records'!$B:$B,$A4`,
-        `'Work Order Records'!$C:$C,$B4`
+        `'Work Order Records'!$B:$B,$A${summaryRow}`,
+        `'Work Order Records'!$C:$C,$B${summaryRow}`
       ]
       if (dateCell) criteria.push(`'Work Order Records'!$A:$A,">="&${dateCell}`, `'Work Order Records'!$A:$A,"<"&${dateCell}+1`)
       if (status) criteria.push(`'Work Order Records'!$E:$E,"${status}"`)
@@ -606,7 +606,7 @@ export default function Tally() {
       const departmentCode = departments.find(d => d.id === team.department_id)?.code ?? '—'
       const dailyFormulas = monthDates.map((_, dayIndex) => {
         const dateColumn = columnLetter(firstDayColumn + dayIndex)
-        return { t: 'n', f: countIfs(team, `${dateColumn}$3`, 'COMPLETED'), v: monthOrders.filter(row => row.team_id === team.id && row.work_date === monthDates[dayIndex] && String(row.status).trim().toUpperCase() === 'COMPLETED').length, z: '0' }
+        return { t: 'n', f: countIfs(rowNumber, `${dateColumn}$3`, 'COMPLETED'), v: monthOrders.filter(row => row.team_id === team.id && row.work_date === monthDates[dayIndex] && String(row.status).trim().toUpperCase() === 'COMPLETED').length, z: '0' }
       })
       const mtdLetter = columnLetter(mtdColumn)
       const incompleteLetter = columnLetter(incompleteColumn)
@@ -622,8 +622,8 @@ export default function Tally() {
         team.name,
         ...dailyFormulas,
         { t: 'n', f: `SUM(D${rowNumber}:${lastDailyLetter}${rowNumber})`, v: completed, z: '0' },
-        { t: 'n', f: countIfs(team, undefined, 'INCOMPLETE'), v: incomplete, z: '0' },
-        { t: 'n', f: countIfs(team, undefined, 'CANCELED'), v: canceled, z: '0' },
+        { t: 'n', f: countIfs(rowNumber, undefined, 'INCOMPLETE'), v: incomplete, z: '0' },
+        { t: 'n', f: countIfs(rowNumber, undefined, 'CANCELED'), v: canceled, z: '0' },
         { t: 'n', f: `${mtdLetter}${rowNumber}+${incompleteLetter}${rowNumber}+${canceledLetter}${rowNumber}`, v: completed + incomplete + canceled, z: '0' }
       ])
     })
