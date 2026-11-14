@@ -547,32 +547,135 @@ export default function Tally() {
     [dates, activeTeams, uniqueImportedLoads]
   )
 
-  function exportCsv() {
-    const escapeCsv = (value: string | number) =>
-      `"${String(value).replace(/"/g, '""')}"`
-
-    const rows: (string | number)[][] = [
-      ['Team', ...dates, 'WTD (selected period)', 'MTD']
+  function exportMonthlyExcel() {
+    const monthOrders = uniqueImportedLoads.filter(row =>
+      row.work_date >= monthStart &&
+      row.work_date <= monthEnd &&
+      ['COMPLETED', 'INCOMPLETE', 'CANCELED'].includes(String(row.status).trim().toUpperCase())
+    )
+    const teamsWithRecords = new Set(monthOrders.map(row => row.team_id).filter((id): id is string => Boolean(id)))
+    const exportTeams = teams
+      .filter(team => team.active || teamsWithRecords.has(team.id))
+      .sort((a, b) =>
+        (departments.find(d => d.id === a.department_id)?.code ?? '').localeCompare(departments.find(d => d.id === b.department_id)?.code ?? '') ||
+        a.code.localeCompare(b.code)
+      )
+    const dateSerial = (value: string) => {
+      const [year, monthNumber, day] = value.split('-').map(Number)
+      return Math.floor(Date.UTC(year, monthNumber - 1, day) / 86400000) + 25569
+    }
+    const countIfs = (team: Team, dateCell?: string, status?: string) => {
+      const criteria = [
+        `'Work Order Records'!$B:$B,$A4`,
+        `'Work Order Records'!$C:$C,$B4`
+      ]
+      if (dateCell) criteria.push(`'Work Order Records'!$A:$A,">="&${dateCell}`, `'Work Order Records'!$A:$A,"<"&${dateCell}+1`)
+      if (status) criteria.push(`'Work Order Records'!$E:$E,"${status}"`)
+      return `COUNTIFS(${criteria.join(',')})`
+    }
+    const workOrderRows: unknown[][] = [
+      ['Work date', 'Department', 'Team', 'WO ID', 'Status', 'Notes (editable)'],
+      ...monthOrders.map(row => [
+        { t: 'n', v: dateSerial(row.work_date), z: 'dd-mmm-yyyy' },
+        departments.find(d => d.id === row.department_id)?.code ?? '—',
+        teams.find(t => t.id === row.team_id)?.code ?? 'Unassigned',
+        row.wo_id,
+        String(row.status).trim().toUpperCase(),
+        ''
+      ])
     ]
+    const recordsSheet = XLSX.utils.aoa_to_sheet(workOrderRows)
+    recordsSheet['!cols'] = [{ wch: 16 }, { wch: 15 }, { wch: 18 }, { wch: 25 }, { wch: 16 }, { wch: 34 }]
+    recordsSheet['!autofilter'] = { ref: `A1:F${Math.max(1, workOrderRows.length)}` }
+    recordsSheet['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft', state: 'frozen' }
 
-    activeTeams.forEach(team => {
-      rows.push([
+    const firstDayColumn = 3
+    const lastDayColumn = firstDayColumn + monthDates.length - 1
+    const mtdColumn = lastDayColumn + 1
+    const incompleteColumn = mtdColumn + 1
+    const canceledColumn = incompleteColumn + 1
+    const totalColumn = canceledColumn + 1
+    const columnLetter = (index: number) => XLSX.utils.encode_col(index)
+    const summaryRows: unknown[][] = [
+      ['AHBA DEVELOPMENT · INSTALLATION TALLY', 'Month', { t: 'n', v: dateSerial(monthStart), z: 'mmmm yyyy' }, 'Generated', { t: 'n', v: dateSerial(formatDate(new Date())), z: 'dd-mmm-yyyy' }],
+      ['Edit dates, team labels, statuses, or notes in Work Order Records. Summary formulas recalculate in Excel.'],
+      ['Department', 'Team', 'Team name', ...monthDates.map(date => ({ t: 'n', v: dateSerial(date), z: 'ddd, dd-mmm' })), 'Completed MTD', 'Incomplete', 'Canceled', 'Total Loads']
+    ]
+    exportTeams.forEach(team => {
+      const rowNumber = summaryRows.length + 1
+      const departmentCode = departments.find(d => d.id === team.department_id)?.code ?? '—'
+      const dailyFormulas = monthDates.map((_, dayIndex) => {
+        const dateColumn = columnLetter(firstDayColumn + dayIndex)
+        return { t: 'n', f: countIfs(team, `${dateColumn}$3`, 'COMPLETED'), v: monthOrders.filter(row => row.team_id === team.id && row.work_date === monthDates[dayIndex] && String(row.status).trim().toUpperCase() === 'COMPLETED').length, z: '0' }
+      })
+      const mtdLetter = columnLetter(mtdColumn)
+      const incompleteLetter = columnLetter(incompleteColumn)
+      const canceledLetter = columnLetter(canceledColumn)
+      const totalLetter = columnLetter(totalColumn)
+      const lastDailyLetter = columnLetter(lastDayColumn)
+      const completed = monthOrders.filter(row => row.team_id === team.id && String(row.status).trim().toUpperCase() === 'COMPLETED').length
+      const incomplete = monthOrders.filter(row => row.team_id === team.id && String(row.status).trim().toUpperCase() === 'INCOMPLETE').length
+      const canceled = monthOrders.filter(row => row.team_id === team.id && String(row.status).trim().toUpperCase() === 'CANCELED').length
+      summaryRows.push([
+        departmentCode,
         team.code,
-        ...dates.map(date => getCount(team.id, date)),
-        getWTD(team.id),
-        getMTD(team.id)
+        team.name,
+        ...dailyFormulas,
+        { t: 'n', f: `SUM(D${rowNumber}:${lastDailyLetter}${rowNumber})`, v: completed, z: '0' },
+        { t: 'n', f: countIfs(team, undefined, 'INCOMPLETE'), v: incomplete, z: '0' },
+        { t: 'n', f: countIfs(team, undefined, 'CANCELED'), v: canceled, z: '0' },
+        { t: 'n', f: `${mtdLetter}${rowNumber}+${incompleteLetter}${rowNumber}+${canceledLetter}${rowNumber}`, v: completed + incomplete + canceled, z: '0' }
       ])
     })
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows)
+    summarySheet['!cols'] = [{ wch: 15 }, { wch: 18 }, { wch: 26 }, ...monthDates.map(() => ({ wch: 13 })), { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 15 }]
+    summarySheet['!autofilter'] = { ref: `A3:${columnLetter(totalColumn)}${summaryRows.length}` }
+    summarySheet['!freeze'] = { xSplit: 3, ySplit: 3, topLeftCell: 'D4', activePane: 'bottomRight', state: 'frozen' }
 
-    const csv = rows.map(row => row.map(escapeCsv).join(',')).join('\r\n')
-    const url = URL.createObjectURL(
-      new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    )
+    const dailyRows: unknown[][] = [
+      ['Work date', 'Department', 'Team', 'Completed', 'Incomplete', 'Canceled', 'Total Loads']
+    ]
+    for (const team of exportTeams) {
+      const departmentCode = departments.find(d => d.id === team.department_id)?.code ?? '—'
+      for (const date of monthDates) {
+        const matching = monthOrders.filter(row => row.team_id === team.id && row.work_date === date)
+        const completed = matching.filter(row => String(row.status).trim().toUpperCase() === 'COMPLETED').length
+        const incomplete = matching.filter(row => String(row.status).trim().toUpperCase() === 'INCOMPLETE').length
+        const canceled = matching.filter(row => String(row.status).trim().toUpperCase() === 'CANCELED').length
+        if (completed + incomplete + canceled > 0) dailyRows.push([
+          { t: 'n', v: dateSerial(date), z: 'dd-mmm-yyyy' }, departmentCode, team.code,
+          completed, incomplete, canceled, completed + incomplete + canceled
+        ])
+      }
+    }
+    const dailySheet = XLSX.utils.aoa_to_sheet(dailyRows)
+    dailySheet['!cols'] = [{ wch: 16 }, { wch: 15 }, { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 15 }]
+    dailySheet['!autofilter'] = { ref: `A1:G${dailyRows.length}` }
+    dailySheet['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft', state: 'frozen' }
 
+    const workbook = XLSX.utils.book_new()
+    workbook.Props = {
+      Title: `AHBA Installation Tally ${month}`,
+      Subject: 'Editable full-month installation tally and work-order register',
+      Author: 'AHBA Development',
+      Company: 'AHBA Development',
+      CreatedDate: new Date()
+    }
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Monthly Tally')
+    XLSX.utils.book_append_sheet(workbook, dailySheet, 'Daily Breakdown')
+    XLSX.utils.book_append_sheet(workbook, recordsSheet, 'Work Order Records')
+    XLSX.writeFile(workbook, `AHBA-Installation-Tally-${month}.xlsx`, { cellDates: false, compression: true })
+  }
+
+  function exportCsv() {
+    const escapeCsv = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`
+    const rows: (string | number)[][] = [['Team', ...dates, 'WTD (selected period)', 'MTD']]
+    activeTeams.forEach(team => rows.push([team.code, ...dates.map(date => getCount(team.id, date)), getWTD(team.id), getMTD(team.id)]))
+    const csv = rows.map(row => row.map(escapeCsv).join(',')).join('\\r\\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download =
-      `installation-tally-${month}-${departments.find(item => item.id === departmentId)?.code ?? 'department'}.csv`
+    anchor.download = `installation-tally-${month}-${departments.find(item => item.id === departmentId)?.code ?? 'department'}.csv`
     anchor.click()
     URL.revokeObjectURL(url)
   }
@@ -937,14 +1040,14 @@ export default function Tally() {
               />
             </label>
           )}
-          {canEdit && <button
-            type="button"
-            className="btn"
-            onClick={exportCsv}
-            disabled={loading || activeTeams.length === 0}
-          >
-            Export CSV
-          </button>}
+          {canEdit && <>
+            <button type="button" className="btn primary" onClick={exportMonthlyExcel} disabled={loading || teams.length === 0}>
+              Export full month · Excel
+            </button>
+            <button type="button" className="btn" onClick={exportCsv} disabled={loading || activeTeams.length === 0}>
+              Export current view · CSV
+            </button>
+          </>}
         </div>
       </div>
 
