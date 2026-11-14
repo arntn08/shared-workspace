@@ -60,6 +60,24 @@ const getMonthDates = (month: string) => {
   )
 }
 
+type MonthWeekRange = { start: string; end: string; dayCount: number }
+
+const getMonthWeekRanges = (month: string): MonthWeekRange[] => {
+  const monthDates = getMonthDates(month)
+  const ranges: MonthWeekRange[] = []
+  let index = 0
+  while (index < monthDates.length) {
+    const start = monthDates[index]
+    const [year, monthNumber, day] = start.split('-').map(Number)
+    const weekday = new Date(year, monthNumber - 1, day).getDay()
+    const daysUntilSunday = weekday === 0 ? 0 : 7 - weekday
+    const endIndex = Math.min(index + daysUntilSunday, monthDates.length - 1)
+    ranges.push({ start, end: monthDates[endIndex], dayCount: endIndex - index + 1 })
+    index = endIndex + 1
+  }
+  return ranges
+}
+
 type ImportedWorkOrderRow = { work_date: string; team_id: string | null; department_id: string | null; status: string; wo_id: string }
 
 async function fetchImportedWorkOrders(start: string, end: string): Promise<ImportedWorkOrderRow[]> {
@@ -102,8 +120,8 @@ export default function Tally() {
   const [departmentId, setDepartmentId] = useState('')
   const [month, setMonth] = useState(getCurrentMonth)
   const [weekOffset, setWeekOffset] = useState(() => {
-    const day = new Date().getDate()
-    return day <= 8 ? 0 : day <= 15 ? 1 : day <= 22 ? 2 : 3
+    const today = formatDate(new Date())
+    return getMonthWeekRanges(getCurrentMonth()).findIndex(range => today >= range.start && today <= range.end)
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -131,18 +149,16 @@ export default function Tally() {
   const monthDates = useMemo(() => getMonthDates(month), [month])
   const monthStart = `${month}-01`
   const monthEnd = monthDates[monthDates.length - 1]
-  // Monthly reporting blocks intentionally stay inside the calendar month:
-  // Nov 1–8, Nov 9–15, Nov 16–22, then Nov 23–month-end.
-  const periodStartDay = Math.min(weekOffset === 0 ? 1 : 2 + weekOffset * 7, Number(monthEnd.slice(-2)))
-  const weekStart = `${month}-${String(periodStartDay).padStart(2, '0')}`
+  // Calendar weeks are Monday–Sunday. At month boundaries, show only
+  // dates belonging to the selected month so MTD never crosses months.
+  const monthWeekRanges = useMemo(() => getMonthWeekRanges(month), [month])
+  const selectedWeek = monthWeekRanges[Math.min(Math.max(weekOffset, 0), monthWeekRanges.length - 1)]
+  const weekStart = selectedWeek.start
+  const weekEnd = selectedWeek.end
   const dates = useMemo(
-    () => Array.from(
-      { length: Math.min(weekOffset === 0 ? 8 : weekOffset === 3 ? Number(monthEnd.slice(-2)) - periodStartDay + 1 : 7, Number(monthEnd.slice(-2)) - periodStartDay + 1) },
-      (_, index) => addDays(weekStart, index)
-    ),
-    [monthEnd, periodStartDay, weekStart]
+    () => Array.from({ length: selectedWeek.dayCount }, (_, index) => addDays(weekStart, index)),
+    [selectedWeek.dayCount, weekStart]
   )
-  const weekEnd = dates[dates.length - 1]
   const nowDate = formatDate(new Date())
   const reportDate = nowDate < weekStart ? weekStart : nowDate > weekEnd ? weekEnd : nowDate
   // Imported records and every displayed date are scoped to the selected month.
@@ -257,15 +273,14 @@ export default function Tally() {
   }, [importedEnd, importedStart])
 
   function changeWeek(offset: number) {
-    // Each selected reporting block belongs to one month only.
     let targetMonth = month
     let targetOffset = weekOffset + offset
     if (targetOffset < 0) {
       const [year, monthNumber] = month.split('-').map(Number)
       const previous = new Date(year, monthNumber - 2, 1)
       targetMonth = `${previous.getFullYear()}-${String(previous.getMonth() + 1).padStart(2, '0')}`
-      targetOffset = 3
-    } else if (targetOffset > 3) {
+      targetOffset = getMonthWeekRanges(targetMonth).length - 1
+    } else if (targetOffset >= monthWeekRanges.length) {
       const [year, monthNumber] = month.split('-').map(Number)
       const next = new Date(year, monthNumber, 1)
       targetMonth = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`
@@ -1248,7 +1263,7 @@ export default function Tally() {
         {tallyView === 'wtd-mtd' && (
           <p className="tally-note">
             {canEdit
-              ? 'Enter a daily count and leave the field to save. Reporting periods stay within the selected month (1–8, 9–15, 16–22, 23–month-end). WTD covers the selected period; MTD always starts on day 1 of that month.'
+              ? 'Enter a daily count and leave the field to save. Reporting weeks follow Monday–Sunday calendar weeks. The first and last week show only dates inside the selected month; WTD covers the selected week and MTD starts on day 1 of that month.'
               : 'Read-only view. Contact an owner or editor to update counts.'}
           </p>
         )}
