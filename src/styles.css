@@ -485,29 +485,41 @@ tbody tr:hover td { background: var(--accent-soft); }
 }
 
 
-/* AHBA Development brand logo */
+
+/* AHBA Development logo — single mark in sidebar and overview hero */
+.ops-brand {
+  min-height: 112px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
 .ops-brand-logo {
   display: block;
-  width: 100%;
-  max-width: 190px;
-  height: 54px;
+  width: min(100%, 208px);
+  height: 82px;
+  max-width: 208px;
   object-fit: contain;
-  object-position: left center;
+  object-position: center;
   flex: 0 0 auto;
 }
-.ops-brand {
-  align-items: center;
-}
-.ops-overview-logo {
+.ops-hero-logo {
+  position: absolute;
+  z-index: 2;
+  right: 54px;
+  top: 50%;
+  transform: translateY(-50%);
   display: block;
-  width: clamp(150px, 19vw, 230px);
-  max-height: 92px;
-  height: auto;
+  width: clamp(190px, 22%, 280px);
+  max-height: 150px;
   object-fit: contain;
-  object-position: right center;
-  flex: 0 0 auto;
+  object-position: center;
+  filter: drop-shadow(0 8px 18px rgba(15, 35, 20, 0.10));
 }
-@media (max-width: 640px) {
-  .ops-brand-logo { max-width: 160px; height: 46px; }
-  .ops-overview-logo { width: 142px; max-height: 68px; }
+@media (max-width: 760px) {
+  .ops-brand { min-height: 88px; padding: 10px 14px; }
+  .ops-brand-logo { width: min(100%, 176px); height: 64px; }
+  .ops-hero-logo { right: 18px; width: 128px; max-height: 92px; opacity: .95; }
 }
