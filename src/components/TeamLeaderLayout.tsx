@@ -10,7 +10,7 @@ export default function TeamLeaderLayout() {
   const navigate = useNavigate()
   return <div className="ops-shell employee-ops-shell role-theme-hr">
     <aside className="ops-sidebar">
-      <div className="ops-brand"><img className="ops-brand-logo" src={`${import.meta.env.BASE_URL}AHBA%20LOGO%20TRANSPARENT.png`} alt="AHBA Development" /><div className="ops-brand-copy"><strong>AHBA</strong><span>{settings.title || 'Development Workspace'}</span></div></div>
+      <div className="ops-brand"><img className="ops-brand-logo" src={`${import.meta.env.BASE_URL}AHBA%20LOGO%20TRANSPARENT.png`} alt="AHBA Development" /></div>
       <div className="ops-workspace-label">SALES TEAM PORTAL</div>
       <nav className="ops-nav"><div className="ops-nav-group"><div className="ops-nav-heading">Team activities</div><NavLink to="/" end className={({isActive})=>`ops-nav-link${isActive?' active':''}`}><span className="ops-nav-icon"><Icon name="calendar-check"/></span><span className="ops-nav-label">My team activities</span></NavLink></div></nav>
       <div className="ops-sidebar-bottom"><div className="ops-help-card"><span className="ops-help-icon">✦</span><div><strong>Dedicated access</strong><span>Team Leader portal</span></div></div>
