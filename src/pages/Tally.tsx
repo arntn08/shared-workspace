@@ -95,6 +95,8 @@ const getMonthWeekRanges = (month: string): MonthWeekRange[] => {
   return ranges
 }
 
+type TallyOverrideRow = { team_id: string; work_date: string; manual_count: number }
+
 type ImportedWorkOrderRow = { work_date: string; team_id: string | null; department_id: string | null; status: string; wo_id: string }
 
 async function fetchImportedWorkOrders(start: string, end: string): Promise<ImportedWorkOrderRow[]> {
@@ -152,6 +154,10 @@ export default function Tally() {
   const [quotaOpen, setQuotaOpen] = useState(false)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [exportDepartmentId, setExportDepartmentId] = useState('')
+  const [tallyOverrides, setTallyOverrides] = useState<Record<string, number>>({})
+  const [editMode, setEditMode] = useState(false)
+  const [editDraft, setEditDraft] = useState<Record<string, number>>({})
+  const [savingEdits, setSavingEdits] = useState(false)
 
   useEffect(() => {
     if (canEdit || !profile?.id) return
@@ -260,6 +266,20 @@ export default function Tally() {
             : `Could not load imported status totals: ${message}`
         )
       }
+
+      const { data: overrideRows, error: overrideError } = await supabase
+        .from('installation_tally_overrides')
+        .select('team_id,work_date,manual_count')
+        .gte('work_date', importedStart)
+        .lte('work_date', importedEnd)
+      if (overrideError) throw overrideError
+      const overrideMap: Record<string, number> = {}
+      ;((overrideRows ?? []) as TallyOverrideRow[]).forEach(row => {
+        overrideMap[`${row.team_id}|${row.work_date}`] = Number(row.manual_count)
+      })
+      setTallyOverrides(overrideMap)
+      setEditMode(false)
+      setEditDraft({})
 
     } catch (err) {
       setError(
@@ -542,26 +562,80 @@ export default function Tally() {
     [uniqueImportedLoads, monthStart, monthEnd, departmentTeamIds]
   )
 
-  function getCount(teamId: string, date: string) {
+  function importedCount(teamId: string, date: string) {
     return uniqueImportedLoads.filter(row =>
       row.team_id === teamId && row.work_date === date &&
       String(row.status).trim().toUpperCase() === 'COMPLETED'
     ).length
   }
 
+  function getCount(teamId: string, date: string) {
+    const key = `${teamId}|${date}`
+    return Object.prototype.hasOwnProperty.call(tallyOverrides, key)
+      ? tallyOverrides[key]
+      : importedCount(teamId, date)
+  }
+
   function getWTD(teamId: string) {
-    return uniqueImportedLoads.filter(row =>
-      row.team_id === teamId && row.work_date >= weekStart && row.work_date <= reportDate &&
-      String(row.status).trim().toUpperCase() === 'COMPLETED'
-    ).length
+    return dates.filter(date => date >= weekStart && date <= reportDate)
+      .reduce((sum, date) => sum + getCount(teamId, date), 0)
   }
 
   function getMTD(teamId: string) {
     const monthReportEnd = reportDate < monthEnd ? reportDate : monthEnd
-    return uniqueImportedLoads.filter(row =>
-      row.team_id === teamId && row.work_date >= monthStart && row.work_date <= monthReportEnd &&
-      String(row.status).trim().toUpperCase() === 'COMPLETED'
-    ).length
+    return monthDates.filter(date => date >= monthStart && date <= monthReportEnd)
+      .reduce((sum, date) => sum + getCount(teamId, date), 0)
+  }
+
+  function beginTableEdit() {
+    const draft: Record<string, number> = {}
+    activeTeams.forEach(team => dates.forEach(date => {
+      draft[`${team.id}|${date}`] = getCount(team.id, date)
+    }))
+    setEditDraft(draft)
+    setEditMode(true)
+    setError('')
+    setMessage('')
+  }
+
+  function cancelTableEdit() {
+    setEditDraft({})
+    setEditMode(false)
+  }
+
+  async function saveTableEdits() {
+    if (!canEdit || savingEdits) return
+    setSavingEdits(true)
+    setError('')
+    setMessage('')
+    try {
+      const changed = activeTeams.flatMap(team => dates.map(date => {
+        const key = `${team.id}|${date}`
+        const next = Number(editDraft[key] ?? getCount(team.id, date))
+        const previous = getCount(team.id, date)
+        return next !== previous ? { team_id: team.id, work_date: date, manual_count: next, updated_by: profile?.id ?? null } : null
+      })).filter((row): row is {team_id:string;work_date:string;manual_count:number;updated_by:string|null} => row !== null)
+
+      if (changed.some(row => !Number.isInteger(row.manual_count) || row.manual_count < 0)) {
+        throw new Error('Counts must be whole numbers greater than or equal to zero.')
+      }
+      if (changed.length) {
+        const { error: saveError } = await supabase
+          .from('installation_tally_overrides')
+          .upsert(changed, { onConflict: 'team_id,work_date' })
+        if (saveError) throw saveError
+        const nextOverrides = { ...tallyOverrides }
+        changed.forEach(row => { nextOverrides[`${row.team_id}|${row.work_date}`] = row.manual_count })
+        setTallyOverrides(nextOverrides)
+      }
+      setEditMode(false)
+      setEditDraft({})
+      setMessage(changed.length ? `Saved ${changed.length} corrected daily count(s). WTD and MTD have been recalculated.` : 'No count changes to save.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save table edits. Check the Supabase tally override migration.')
+    } finally {
+      setSavingEdits(false)
+    }
   }
 
   const departmentWTD = activeTeams.reduce((sum, team) => sum + getWTD(team.id), 0)
@@ -983,7 +1057,19 @@ export default function Tally() {
             align-items:start;
           }
           .tally-page .tally-desktop-table { display:none; }
-          .tally-page .tally-month-title { align-items:flex-start; }
+          .tally-page .tally-edit-banner {
+          display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;
+          margin:-.85rem -1rem 1rem;padding:1.25rem 1.4rem;border-radius:16px 16px 12px 12px;
+          color:#f3fff7;background:linear-gradient(115deg,#123f2b,#176b43 58%,#218653);
+          box-shadow:0 10px 24px rgba(13,74,43,.18);
+        }
+        .tally-page .tally-edit-banner h2 { margin:0;font-size:clamp(1.2rem,2.3vw,1.75rem);font-weight:850;letter-spacing:-.025em; }
+        .tally-page .tally-edit-banner p { margin:.3rem 0 0;color:rgba(243,255,247,.78);font-size:.88rem; }
+        .tally-page .tally-edit-actions { display:flex;gap:.5rem;flex-wrap:wrap; }
+        .tally-page .tally-edit-banner .btn { border-color:rgba(255,255,255,.35); }
+        .tally-page .tally-edit-banner .btn.primary { background:#f3fff7;color:#145332;border-color:#f3fff7; }
+        .tally-page .tally-edit-banner .btn:not(.primary) { background:rgba(255,255,255,.12);color:#fff; }
+        .tally-page .tally-month-title { align-items:flex-start; }
           .tally-page .tally-month-title > span { display:none; }
           .tally-page .tally-mobile-totals { gap:.25rem; }
           .tally-page .tally-mobile-total { min-width:38px; padding:.25rem .3rem; }
@@ -1371,23 +1457,25 @@ export default function Tally() {
       </div>
 
       <div className="card">
-        <div className="tally-month-title">
+        <div className="tally-edit-banner">
           <div>
-            <h2 style={{ margin: 0 }}>
+            <h2>
               {departments.find(item => item.id === departmentId)?.code ?? 'Department'}
               {' — '}
-              {new Date(`${weekStart}T12:00:00`).toLocaleDateString('en-US', {
-                month: 'long', day: 'numeric', year: 'numeric'
-              })}
+              {new Date(`${weekStart}T12:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+              {'–'}
+              {new Date(`${weekEnd}T12:00:00`).toLocaleDateString('en-US', { day: 'numeric', year: 'numeric' })}
             </h2>
-            <p className="muted" style={{ margin: '0.35rem 0 0' }}>
-              Daily counts by team · dates stay within the selected month · WTD and MTD calculated automatically
-            </p>
+            <p>Weekly installation tally · {dates.length} reporting days</p>
           </div>
-
-          <span className="muted" style={{ fontSize: '0.85rem' }}>
-            {dates.length} days · scroll inside the table
-          </span>
+          {canEdit && <div className="tally-edit-actions">
+            {!editMode ? (
+              <button type="button" className="btn primary" onClick={beginTableEdit} disabled={loading || activeTeams.length === 0}>Edit Table</button>
+            ) : <>
+              <button type="button" className="btn" onClick={cancelTableEdit} disabled={savingEdits}>Cancel</button>
+              <button type="button" className="btn primary" onClick={() => void saveTableEdits()} disabled={savingEdits}>{savingEdits ? 'Saving…' : 'Save Changes'}</button>
+            </>}
+          </div>}
         </div>
 
         {loading ? (
@@ -1420,13 +1508,21 @@ export default function Tally() {
                   <tr key={team.id}>
                     <th scope="row">{team.code}</th>
 
-                    {dates.map(date => (
-                      <td key={date}>
-                        <strong title={`${team.code} · ${date} · completed work orders`}>
-                          {getCount(team.id, date).toLocaleString()}
-                        </strong>
+                    {dates.map(date => {
+                      const key = `${team.id}|${date}`
+                      return <td key={date}>
+                        {editMode ? <input
+                          aria-label={`${team.code} ${date} count`}
+                          type="number"
+                          min="0"
+                          step="1"
+                          inputMode="numeric"
+                          value={editDraft[key] ?? getCount(team.id, date)}
+                          onChange={event => setEditDraft(current => ({ ...current, [key]: event.target.value === '' ? 0 : Number(event.target.value) }))}
+                          style={{width:'76px',maxWidth:'100%',minHeight:'42px',textAlign:'center',border:'1px solid var(--tally-accent)',borderRadius:'9px',fontSize:'1.05rem',fontWeight:800,background:'var(--tally-card)',color:'var(--text)'}}
+                        /> : <strong title={`${team.code} · ${date} · completed work orders`}>{getCount(team.id, date).toLocaleString()}</strong>}
                       </td>
-                    ))}
+                    })}
 
                     <td>
                       <strong
@@ -1484,12 +1580,13 @@ export default function Tally() {
                   </span>
                 </summary>
                 {expandedTeams[team.id] && <div className="tally-mobile-days">
-                  {dates.map(date => (
-                    <div className="tally-mobile-day" key={date}>
+                  {dates.map(date => {
+                    const key = `${team.id}|${date}`
+                    return <div className="tally-mobile-day" key={date}>
                       <span><strong>{new Date(`${date}T12:00:00`).toLocaleDateString('en-US',{weekday:'short'})}</strong><small className="muted" style={{display:'block'}}>{Number(date.slice(8))}</small></span>
-                      <strong>{getCount(team.id,date).toLocaleString()}</strong>
+                      {editMode ? <input aria-label={`${team.code} ${date} count`} type="number" min="0" step="1" inputMode="numeric" value={editDraft[key] ?? getCount(team.id,date)} onChange={event=>setEditDraft(current=>({...current,[key]:event.target.value===''?0:Number(event.target.value)}))}/> : <strong>{getCount(team.id,date).toLocaleString()}</strong>}
                     </div>
-                  ))}
+                  })}
                 </div>}
               </details>
             ))}
