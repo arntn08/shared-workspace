@@ -66,12 +66,29 @@ const getMonthWeekRanges = (month: string): MonthWeekRange[] => {
   const monthDates = getMonthDates(month)
   const ranges: MonthWeekRange[] = []
   let index = 0
+
+  // If a month begins on Sunday, attach that single Sunday to the
+  // following Monday–Sunday week instead of showing a one-day first week.
+  if (monthDates.length > 1) {
+    const [year, monthNumber, day] = monthDates[0].split('-').map(Number)
+    if (new Date(year, monthNumber - 1, day).getDay() === 0) index = 0
+  }
+
   while (index < monthDates.length) {
     const start = monthDates[index]
     const [year, monthNumber, day] = start.split('-').map(Number)
     const weekday = new Date(year, monthNumber - 1, day).getDay()
     const daysUntilSunday = weekday === 0 ? 0 : 7 - weekday
-    const endIndex = Math.min(index + daysUntilSunday, monthDates.length - 1)
+    let endIndex = Math.min(index + daysUntilSunday, monthDates.length - 1)
+
+    // Merge an opening Sunday with the following full calendar week.
+    if (index === 0 && weekday === 0 && monthDates.length > 1) {
+      const nextMonday = 1
+      const [ny, nm, nd] = monthDates[nextMonday].split('-').map(Number)
+      const nextWeekday = new Date(ny, nm - 1, nd).getDay()
+      endIndex = Math.min(nextMonday + (nextWeekday === 0 ? 0 : 7 - nextWeekday), monthDates.length - 1)
+    }
+
     ranges.push({ start, end: monthDates[endIndex], dayCount: endIndex - index + 1 })
     index = endIndex + 1
   }
