@@ -126,9 +126,10 @@ const formatDate = (date: Date) => {
 export default function Tally() {
   const { profile } = useAuth()
 
+  // HR receives the same Installation Tally controls as Editors.
   const canEdit =
     profile?.active === true &&
-    (profile.role === 'owner' || profile.role === 'editor')
+    (profile.role === 'owner' || profile.role === 'editor' || profile.role === 'hr')
 
   const [departments, setDepartments] = useState<Department[]>([])
   const [myTeamCodes, setMyTeamCodes] = useState<string[]>([])
@@ -339,7 +340,7 @@ export default function Tally() {
     setImportPreview(null)
     if (!file) return
     if (!canEdit) {
-      setError('Only owners and editors can import completed installations.')
+      setError('Only active Owners, Editors, and HR can import completed installations.')
       return
     }
 
