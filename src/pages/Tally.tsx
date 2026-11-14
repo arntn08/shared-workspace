@@ -802,6 +802,7 @@ export default function Tally() {
 
     addBrandHeader(monthly, totalColumn, 'MONTHLY INSTALLATION TALLY')
     const monthlyHeaders = ['Department', 'Team', 'Team name', ...monthDatesLocal.map(date => new Date(`${date}T12:00:00`)), 'Completed MTD', 'Incomplete', 'Canceled', 'Total Loads']
+    monthly.addRow([])
     monthly.addRow(monthlyHeaders)
     styleHeader(monthly, 5, 1, totalColumn)
     monthDatesLocal.forEach((_, index) => { monthly.getCell(5, firstDayColumn + index).numFmt = 'ddd, dd-mmm' })
@@ -879,6 +880,7 @@ export default function Tally() {
 
     const daily = workbook.addWorksheet('Daily Breakdown', { properties: { tabColor: { argb: gold } } })
     addBrandHeader(daily, 7, 'DAILY TEAM PERFORMANCE · COMPLETED / INCOMPLETE / CANCELED')
+    daily.addRow([])
     daily.addRow(['Work date', 'Department', 'Team', 'Completed', 'Incomplete', 'Canceled', 'Total Loads'])
     styleHeader(daily, 5, 1, 7)
     const dailyData: Array<{ date: string; team: Team; completed: number; incomplete: number; canceled: number }> = []
@@ -916,6 +918,7 @@ export default function Tally() {
 
     const records = workbook.addWorksheet('Work Order Records', { properties: { tabColor: { argb: '789486' } } })
     addBrandHeader(records, 6, 'SOURCE REGISTER · EDITABLE WORK ORDER STATUS AND NOTES')
+    records.addRow([])
     records.addRow(['Work date', 'Department', 'Team', 'WO ID', 'Status', 'Notes (editable)'])
     styleHeader(records, 5, 1, 6)
     monthOrders.forEach(item => {
