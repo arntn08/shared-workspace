@@ -16,7 +16,7 @@ export default function ARLayout() {
   const current = links.find(([to]) => to === '/' ? location.pathname === '/' : location.pathname.startsWith(to))?.[1] ?? 'AR workspace'
   return <div className="ops-shell employee-ops-shell role-theme-hr">
     <aside className="ops-sidebar">
-      <div className="ops-brand"><div className="ops-brand-mark">A</div><div className="ops-brand-copy"><strong>AHBA</strong><span>{settings.title || 'Development Workspace'}</span></div></div>
+      <div className="ops-brand"><img className="ops-brand-logo" src={`${import.meta.env.BASE_URL}AHBA%20LOGO%20TRANSPARENT.png`} alt="AHBA Development" /><div className="ops-brand-copy"><strong>AHBA</strong><span>{settings.title || 'Development Workspace'}</span></div></div>
       <div className="ops-workspace-label">AR WORKSPACE</div>
       <nav className="ops-nav" aria-label="AR navigation"><div className="ops-nav-group"><div className="ops-nav-heading">Operations</div>
         {links.map(([to,label,icon])=><NavLink key={to} to={to} end={to==='/'} className={({isActive})=>`ops-nav-link${isActive?' active':''}`}><span className="ops-nav-icon"><Icon name={icon}/></span><span className="ops-nav-label">{label}</span></NavLink>)}
