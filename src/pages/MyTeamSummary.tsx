@@ -37,7 +37,7 @@ export default function MyTeamSummary() {
         if (rosterError) throw new Error('Your team assignment could not be loaded. Please contact your workspace owner.')
 
         const roster = (rosterData ?? []) as RosterRow[]
-        const rosterNames = [...new Set(roster.flatMap(row => [row.code, row.team_code, row.team]).map(value => value?.trim()).filter((value): value is string => Boolean(value)))]
+        const rosterNames = [...new Set([...roster.flatMap(row => [row.code, row.team_code, row.team]), ...(profile?.teams ?? [])].map(value => value?.trim()).filter((value): value is string => Boolean(value)))]
         const rosterKeys = new Set(rosterNames.flatMap(name => {
           const key = normalize(name)
           return [key, stripPrefix(key)]
