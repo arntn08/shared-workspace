@@ -483,3 +483,31 @@ tbody tr:hover td { background: var(--accent-soft); }
   .topo-plane, .glow, .rise { animation: none; }
   .tilt, .login-card { transition: none; }
 }
+
+
+/* AHBA Development brand logo */
+.ops-brand-logo {
+  display: block;
+  width: 100%;
+  max-width: 190px;
+  height: 54px;
+  object-fit: contain;
+  object-position: left center;
+  flex: 0 0 auto;
+}
+.ops-brand {
+  align-items: center;
+}
+.ops-overview-logo {
+  display: block;
+  width: clamp(150px, 19vw, 230px);
+  max-height: 92px;
+  height: auto;
+  object-fit: contain;
+  object-position: right center;
+  flex: 0 0 auto;
+}
+@media (max-width: 640px) {
+  .ops-brand-logo { max-width: 160px; height: 46px; }
+  .ops-overview-logo { width: 142px; max-height: 68px; }
+}
