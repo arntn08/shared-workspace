@@ -1579,7 +1579,7 @@ export default function Tally() {
           <span className="muted" style={{ fontSize: '0.85rem' }}>Duplicates excluded by WO ID</span>
         </div>
         {loadBreakdownError && <div className="notice error">{loadBreakdownError}</div>}
-        <div className="tally-summary" style={{ marginBottom: '1rem' }}>
+        <div className="tally-summary" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: '.55rem', marginBottom: '.7rem' }}>
           {([
             ['Total load', ['COMPLETED','INCOMPLETE','CANCELED']],
             ['Completed', ['COMPLETED']],
@@ -1589,15 +1589,15 @@ export default function Tally() {
             const count = monthLoads.filter(row =>
               statuses.includes(String(row.status).trim().toUpperCase())
             ).length
-            return <div className="tally-summary-card" key={label}>
+            return <div className="tally-summary-card" key={label} style={{ padding: '.65rem .8rem', minHeight: 'auto' }}>
               <div className="muted">{label}</div>
-              <div className="tally-summary-number">{count.toLocaleString()}</div>
+              <div className="tally-summary-number" style={{ fontSize: '1.35rem', lineHeight: 1.15, margin: '.15rem 0' }}>{count.toLocaleString()}</div>
               <div className="muted" style={{ fontSize: '0.8rem' }}>Selected department · this month</div>
             </div>
           })}
-          <div className="tally-summary-card">
+          <div className="tally-summary-card" style={{ padding: '.65rem .8rem', minHeight: 'auto' }}>
             <div className="muted">Completion rate</div>
-            <div className="tally-summary-number">
+            <div className="tally-summary-number" style={{ fontSize: '1.35rem', lineHeight: 1.15, margin: '.15rem 0' }}>
               {monthLoads.length
                 ? `${((monthLoads.filter(row => String(row.status).trim().toUpperCase() === 'COMPLETED').length / monthLoads.length) * 100).toFixed(1)}%`
                 : '—'}
