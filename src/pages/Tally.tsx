@@ -152,6 +152,8 @@ export default function Tally() {
   const [importedLoads, setImportedLoads] = useState<Array<{work_date:string; team_id:string|null; department_id:string|null; status:string; wo_id:string}>>([])
   const [loadBreakdownError, setLoadBreakdownError] = useState('')
   const [tallyView, setTallyView] = useState<'wtd-mtd' | 'total-loads'>('wtd-mtd')
+  const [totalLoadsSearch, setTotalLoadsSearch] = useState('')
+  const [totalLoadsSort, setTotalLoadsSort] = useState<'high-low' | 'low-high'>('high-low')
   const [quotaOpen, setQuotaOpen] = useState(false)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [exportDepartmentId, setExportDepartmentId] = useState('')
@@ -562,6 +564,25 @@ export default function Tally() {
     ),
     [uniqueImportedLoads, monthStart, monthEnd, departmentTeamIds]
   )
+
+  const totalLoadsTeamRows = useMemo(() => activeTeams.map(team => {
+    const rows = monthLoads.filter(row => row.team_id === team.id)
+    const countStatus = (status: string) => rows.filter(row => String(row.status).trim().toUpperCase() === status).length
+    return {
+      team,
+      total: rows.length,
+      completed: countStatus('COMPLETED'),
+      incomplete: countStatus('INCOMPLETE'),
+      canceled: countStatus('CANCELED'),
+      completionRate: rows.length ? (countStatus('COMPLETED') / rows.length) * 100 : null
+    }
+  }).filter(item => {
+    const query = totalLoadsSearch.trim().toLowerCase()
+    return !query || item.team.code.toLowerCase().includes(query) || item.team.name.toLowerCase().includes(query)
+  }).sort((a, b) => totalLoadsSort === 'high-low'
+    ? b.total - a.total || a.team.code.localeCompare(b.team.code)
+    : a.total - b.total || a.team.code.localeCompare(b.team.code)),
+  [activeTeams, monthLoads, totalLoadsSearch, totalLoadsSort])
 
   function importedCount(teamId: string, date: string) {
     return uniqueImportedLoads.filter(row =>
@@ -1586,26 +1607,49 @@ export default function Tally() {
             </div>
           </div>
         </div>
-        {canEdit && <div className="tally-scroll" style={{ maxHeight: '320px' }}>
-          <table className="tally-table">
-            <thead><tr><th>Team</th><th>Total load</th><th>Completed</th><th>Incomplete</th><th>Canceled</th><th>Completion rate</th></tr></thead>
-            <tbody>
-              {activeTeams.map(team => {
-                const rows = monthLoads.filter(row => row.team_id === team.id)
-                const countStatus = (status: string) => rows.filter(row => String(row.status).trim().toUpperCase() === status).length
-                const teamRate = rows.length ? (countStatus('COMPLETED') / rows.length) * 100 : null
-                return <tr key={team.id}>
-                  <th scope="row" title={team.code} style={{ fontSize: '.72rem', whiteSpace: 'nowrap', letterSpacing: '-0.03em', paddingLeft: '.45rem', paddingRight: '.45rem' }}>{team.code}</th>
-                  <td><strong>{rows.length.toLocaleString()}</strong></td>
-                  <td>{countStatus('COMPLETED').toLocaleString()}</td>
-                  <td>{countStatus('INCOMPLETE').toLocaleString()}</td>
-                  <td>{countStatus('CANCELED').toLocaleString()}</td>
-                  <td><strong>{teamRate === null ? '—' : `${teamRate.toFixed(1)}%`}</strong></td>
-                </tr>
-              })}
-            </tbody>
-          </table>
-        </div>}
+        {canEdit && <>
+          <div className="tally-toolbar" style={{ display: 'flex', alignItems: 'end', gap: '.75rem', flexWrap: 'wrap', marginBottom: '.75rem' }}>
+            <label style={{ flex: '1 1 240px', minWidth: 0 }}>
+              Search teams
+              <input
+                type="search"
+                value={totalLoadsSearch}
+                onChange={event => setTotalLoadsSearch(event.target.value)}
+                placeholder="Search team code or team name…"
+                aria-label="Search Total Loads teams"
+              />
+            </label>
+            <label style={{ flex: '0 1 220px' }}>
+              Sort by total loads
+              <select
+                value={totalLoadsSort}
+                onChange={event => setTotalLoadsSort(event.target.value as 'high-low' | 'low-high')}
+                aria-label="Sort Total Loads from highest to lowest or lowest to highest"
+              >
+                <option value="high-low">Highest to lowest</option>
+                <option value="low-high">Lowest to highest</option>
+              </select>
+            </label>
+            {totalLoadsSearch && <button type="button" className="btn" onClick={() => setTotalLoadsSearch('')}>Clear search</button>}
+          </div>
+          <div className="tally-scroll" style={{ maxHeight: '320px' }}>
+            <table className="tally-table">
+              <thead><tr><th>Team</th><th>Total load</th><th>Completed</th><th>Incomplete</th><th>Canceled</th><th>Completion rate</th></tr></thead>
+              <tbody>
+                {totalLoadsTeamRows.length ? totalLoadsTeamRows.map(item => (
+                  <tr key={item.team.id}>
+                    <th scope="row" title={item.team.name} style={{ fontSize: '.72rem', whiteSpace: 'nowrap', letterSpacing: '-0.03em', paddingLeft: '.45rem', paddingRight: '.45rem' }}>{item.team.code}</th>
+                    <td><strong>{item.total.toLocaleString()}</strong></td>
+                    <td>{item.completed.toLocaleString()}</td>
+                    <td>{item.incomplete.toLocaleString()}</td>
+                    <td>{item.canceled.toLocaleString()}</td>
+                    <td><strong>{item.completionRate === null ? '—' : `${item.completionRate.toFixed(1)}%`}</strong></td>
+                  </tr>
+                )) : <tr><td colSpan={6} style={{ textAlign: 'center', padding: '1.25rem' }}>No teams match your search.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </>}
         <p className="tally-note">Total Loads includes unique work orders marked COMPLETED, INCOMPLETE, or CANCELED. WTD/MTD count only COMPLETED work orders.</p>
       </div>
       )}
