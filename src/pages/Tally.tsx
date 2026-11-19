@@ -1574,20 +1574,33 @@ export default function Tally() {
               <div className="muted" style={{ fontSize: '0.8rem' }}>Selected department · this month</div>
             </div>
           })}
+          <div className="tally-summary-card">
+            <div className="muted">Completion rate</div>
+            <div className="tally-summary-number">
+              {monthLoads.length
+                ? `${((monthLoads.filter(row => String(row.status).trim().toUpperCase() === 'COMPLETED').length / monthLoads.length) * 100).toFixed(1)}%`
+                : '—'}
+            </div>
+            <div className="muted" style={{ fontSize: '0.8rem' }}>
+              Completed ÷ total loads · this month
+            </div>
+          </div>
         </div>
         {canEdit && <div className="tally-scroll" style={{ maxHeight: '320px' }}>
           <table className="tally-table">
-            <thead><tr><th>Team</th><th>Total load</th><th>Completed</th><th>Incomplete</th><th>Canceled</th></tr></thead>
+            <thead><tr><th>Team</th><th>Total load</th><th>Completed</th><th>Incomplete</th><th>Canceled</th><th>Completion rate</th></tr></thead>
             <tbody>
               {activeTeams.map(team => {
                 const rows = monthLoads.filter(row => row.team_id === team.id)
                 const countStatus = (status: string) => rows.filter(row => String(row.status).trim().toUpperCase() === status).length
+                const teamRate = rows.length ? (countStatus('COMPLETED') / rows.length) * 100 : null
                 return <tr key={team.id}>
                   <th scope="row" title={team.code} style={{ fontSize: '.72rem', whiteSpace: 'nowrap', letterSpacing: '-0.03em', paddingLeft: '.45rem', paddingRight: '.45rem' }}>{team.code}</th>
                   <td><strong>{rows.length.toLocaleString()}</strong></td>
                   <td>{countStatus('COMPLETED').toLocaleString()}</td>
                   <td>{countStatus('INCOMPLETE').toLocaleString()}</td>
                   <td>{countStatus('CANCELED').toLocaleString()}</td>
+                  <td><strong>{teamRate === null ? '—' : `${teamRate.toFixed(1)}%`}</strong></td>
                 </tr>
               })}
             </tbody>
