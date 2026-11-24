@@ -331,9 +331,6 @@ export default function Tally() {
 
   const getDepartmentQuota = () => quotaTargets[departmentId] ?? 50
   const departmentCompletedTotal = activeTeams.reduce((sum, team) => sum + getMTD(team.id), 0)
-  const departmentLoads = monthLoads.filter(row => row.department_id === departmentId)
-  const departmentCompletedStatuses = departmentLoads.filter(row => String(row.status).trim().toUpperCase() === 'COMPLETED').length
-  const departmentCompletionRate = departmentLoads.length ? departmentCompletedStatuses / departmentLoads.length * 100 : 0
   const departmentQuota = getDepartmentQuota()
   const departmentShortfall = Math.max(0, departmentQuota - departmentCompletedTotal)
   const departmentQuotaProgress = departmentQuota > 0 ? departmentCompletedTotal / departmentQuota * 100 : 0
