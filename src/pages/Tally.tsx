@@ -156,7 +156,7 @@ export default function Tally() {
   const [totalLoadsSort, setTotalLoadsSort] = useState<'high-low' | 'low-high'>('high-low')
   const [quotaOpen, setQuotaOpen] = useState(false)
   const [quotaTargets, setQuotaTargets] = useState<Record<string, number>>({})
-  const [quotaDraft, setQuotaDraft] = useState<number>(50)
+  const [quotaDraft, setQuotaDraft] = useState<Record<string, number>>({})
   const [quotaEditMode, setQuotaEditMode] = useState(false)
   const [savingQuota, setSavingQuota] = useState(false)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
@@ -231,16 +231,16 @@ export default function Tally() {
       setTeams(teamRows)
 
       const { data: quotaRows, error: quotaError } = await supabase
-        .from('installation_department_monthly_quotas')
-        .select('department_id,target_quota')
+        .from('installation_team_monthly_quotas')
+        .select('team_id,target_quota')
         .eq('quota_month', month)
-      if (quotaError && quotaError.code !== '42P01' && !quotaError.message.includes('installation_department_monthly_quotas')) throw quotaError
+      if (quotaError) throw quotaError
       const quotaMap: Record<string, number> = {}
-      ;((quotaRows ?? []) as Array<{department_id:string;target_quota:number}>).forEach(row => {
-        quotaMap[row.department_id] = Number(row.target_quota)
+      ;((quotaRows ?? []) as Array<{team_id:string;target_quota:number}>).forEach(row => {
+        quotaMap[row.team_id] = Number(row.target_quota)
       })
       setQuotaTargets(quotaMap)
-      setQuotaDraft(quotaMap[departmentId] ?? 50)
+      setQuotaDraft(quotaMap)
 
       const selectedDepartment =
         departmentRows.find(
@@ -329,28 +329,31 @@ export default function Tally() {
     return () => window.clearInterval(timer)
   }, [importedEnd, importedStart])
 
+  const getTeamQuota = (teamId: string) => quotaTargets[teamId] ?? 50
+
   async function saveQuotaTargets() {
-    if (!departmentId) return
     setSavingQuota(true)
     setError('')
     setMessage('')
     try {
-      const target = Math.max(0, Math.floor(Number(quotaDraft) || 0))
+      const rows = activeTeams.map(team => ({
+        team_id: team.id,
+        quota_month: month,
+        target_quota: Math.max(0, Math.floor(Number(quotaDraft[team.id] ?? getTeamQuota(team.id)))),
+        updated_by: profile?.id
+      }))
       const { error: saveError } = await supabase
-        .from('installation_department_monthly_quotas')
-        .upsert({
-          department_id: departmentId,
-          quota_month: month,
-          target_quota: target,
-          updated_by: profile?.id
-        }, { onConflict: 'department_id,quota_month' })
+        .from('installation_team_monthly_quotas')
+        .upsert(rows, { onConflict: 'team_id,quota_month' })
       if (saveError) throw saveError
-      setQuotaTargets(current => ({ ...current, [departmentId]: target }))
-      setQuotaDraft(target)
+      const next = { ...quotaTargets }
+      rows.forEach(row => { next[row.team_id] = row.target_quota })
+      setQuotaTargets(next)
+      setQuotaDraft(next)
       setQuotaEditMode(false)
-      setMessage('Monthly department target saved successfully.')
+      setMessage('Monthly team targets saved successfully.')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save the monthly department target.')
+      setError(err instanceof Error ? err.message : 'Could not save monthly team targets.')
     } finally {
       setSavingQuota(false)
     }
@@ -1447,18 +1450,18 @@ export default function Tally() {
         <button type="button" className={quotaOpen?'btn':'btn secondary'} onClick={()=>setQuotaOpen(true)}>Monthly Team Quota · View table</button>
       </div>
       {quotaOpen&&<div className="tally-quota-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setQuotaOpen(false)}}>
-        <section className="card tally-quota-modal" role="dialog" aria-modal="true" aria-label="Monthly department quota">
+        <section className="card tally-quota-modal" role="dialog" aria-modal="true" aria-label="Monthly team quota">
           <div style={{display:'flex',justifyContent:'space-between',gap:'.75rem',alignItems:'center',flexWrap:'wrap'}}>
             <div>
-              <h2 style={{margin:0,fontSize:'1.05rem'}}>Monthly department quota</h2>
-              <p className="muted" style={{margin:'.2rem 0 0'}}>{selectedDepartmentName} · {month} · One target for all teams combined</p>
+              <h2 style={{margin:0,fontSize:'1.05rem'}}>Monthly team quota</h2>
+              <p className="muted" style={{margin:'.2rem 0 0'}}>Team-specific targets · {month} · Default target: 50</p>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:'.5rem',flexWrap:'wrap'}}>
-              <strong>{departmentCompletedTotal.toLocaleString()} / {departmentQuota.toLocaleString()} completed</strong>
-              {canEdit && !quotaEditMode && <button type="button" className="btn" onClick={()=>{setQuotaDraft(departmentQuota);setQuotaEditMode(true)}}>Edit target</button>}
+              <strong>{activeTeams.filter(team=>getMTD(team.id)>=getTeamQuota(team.id)).length} / {activeTeams.length} teams at quota</strong>
+              {canEdit && !quotaEditMode && <button type="button" className="btn" onClick={()=>{setQuotaDraft({...quotaTargets});setQuotaEditMode(true)}}>Edit targets</button>}
               {canEdit && quotaEditMode && <>
-                <button type="button" className="btn secondary" disabled={savingQuota} onClick={()=>{setQuotaDraft(departmentQuota);setQuotaEditMode(false)}}>Cancel</button>
-                <button type="button" className="btn primary" disabled={savingQuota} onClick={()=>void saveQuotaTargets()}>{savingQuota?'Saving…':'Save target'}</button>
+                <button type="button" className="btn secondary" disabled={savingQuota} onClick={()=>{setQuotaDraft({...quotaTargets});setQuotaEditMode(false)}}>Cancel</button>
+                <button type="button" className="btn primary" disabled={savingQuota} onClick={()=>void saveQuotaTargets()}>{savingQuota?'Saving…':'Save targets'}</button>
               </>}
               <button type="button" className="btn secondary" onClick={()=>setQuotaOpen(false)}>Close ✕</button>
             </div>
@@ -1466,28 +1469,39 @@ export default function Tally() {
           <div style={{overflowX:'auto',marginTop:'.8rem'}}>
             <table style={{width:'100%',borderCollapse:'collapse',fontSize:'.9rem'}}>
               <thead><tr>
-                <th style={{textAlign:'left',padding:'.65rem'}}>Department</th>
-                <th style={{textAlign:'right',padding:'.65rem'}}>Completed installations</th>
-                <th style={{textAlign:'right',padding:'.65rem'}}>Monthly target</th>
-                <th style={{textAlign:'right',padding:'.65rem'}}>Target progress</th>
-                <th style={{textAlign:'right',padding:'.65rem'}}>Shortfall</th>
-                <th style={{textAlign:'left',padding:'.65rem'}}>Status</th>
+                <th style={{textAlign:'left',padding:'.55rem'}}>Team</th>
+                <th style={{textAlign:'right',padding:'.55rem'}}>Team Total</th>
+                <th style={{textAlign:'right',padding:'.55rem'}}>Target</th>
+                <th style={{textAlign:'right',padding:'.55rem'}}>Completion rate</th>
+                <th style={{textAlign:'right',padding:'.55rem'}}>Shortfall</th>
+                <th style={{textAlign:'left',padding:'.55rem'}}>Status</th>
               </tr></thead>
-              <tbody><tr style={{background:departmentQuotaProgress>=100?'rgba(22,163,74,.08)':departmentQuotaProgress<=40?'rgba(220,38,38,.12)':departmentQuotaProgress<=60?'rgba(220,38,38,.08)':'rgba(217,119,6,.08)',borderTop:'1px solid var(--border)'}}>
-                <th scope="row" style={{textAlign:'left',padding:'.75rem',fontWeight:800}}>{selectedDepartmentName}</th>
-                <td style={{textAlign:'right',padding:'.75rem',fontWeight:900,fontVariantNumeric:'tabular-nums'}}>{departmentCompletedTotal.toLocaleString()}</td>
-                <td style={{textAlign:'right',padding:'.5rem',fontVariantNumeric:'tabular-nums'}}>
-                  {quotaEditMode
-                    ? <input aria-label="Monthly department target quota" type="number" min="0" step="1" inputMode="numeric" value={quotaDraft} onChange={e=>setQuotaDraft(e.target.value===''?0:Number(e.target.value))} style={{width:'110px',maxWidth:'100%',minHeight:'38px',textAlign:'right',border:'1px solid var(--border)',borderRadius:'8px',padding:'.35rem',background:'var(--card)',color:'var(--text)'}} />
-                    : <strong>{departmentQuota.toLocaleString()}</strong>}
-                </td>
-                <td style={{textAlign:'right',padding:'.75rem',fontWeight:800,fontVariantNumeric:'tabular-nums'}}>{departmentQuota===0?'—':`${departmentQuotaProgress.toFixed(1)}%`}</td>
-                <td style={{textAlign:'right',padding:'.75rem',fontVariantNumeric:'tabular-nums'}}>{departmentShortfall.toLocaleString()}</td>
-                <td style={{padding:'.75rem',fontWeight:800,color:departmentQuota===0?'var(--muted)':departmentQuotaProgress>=100?'#16834a':departmentQuotaProgress<=40?'#dc2626':departmentQuotaProgress<=60?'#dc2626':'#b7791f'}}>{departmentQuota===0?'No target':departmentQuotaProgress>=100?'Target achieved':departmentQuotaProgress<=40?'Critical progress':departmentQuotaProgress<=60?'Below expected progress':'In progress'}</td>
-              </tr></tbody>
+              <tbody>{activeTeams.map(team=>{
+                const total=getMTD(team.id)
+                const target=getTeamQuota(team.id)
+                const teamLoads=monthLoads.filter(row=>row.team_id===team.id)
+                const completedLoads=teamLoads.filter(row=>String(row.status).trim().toUpperCase()==='COMPLETED').length
+                const completionRate=teamLoads.length?(completedLoads/teamLoads.length)*100:null
+                const shortfall=Math.max(0,target-total)
+                const critical=target>0 && total<=target*.4
+                const nte=target>0 && total<=target*.6
+                const below=total<target
+                return <tr key={team.id} style={{background:critical?'rgba(220,38,38,.16)':nte?'rgba(220,38,38,.10)':below?'rgba(217,119,6,.08)':'rgba(22,163,74,.07)',borderTop:'1px solid var(--border)'}}>
+                  <th scope="row" style={{textAlign:'left',padding:'.65rem',fontWeight:800}}>{team.code} · {team.name}</th>
+                  <td style={{textAlign:'right',padding:'.65rem',fontWeight:900,fontVariantNumeric:'tabular-nums'}}>{total}</td>
+                  <td style={{textAlign:'right',padding:'.45rem',fontVariantNumeric:'tabular-nums'}}>
+                    {quotaEditMode
+                      ? <input aria-label={`${team.code} monthly target quota`} type="number" min="0" step="1" inputMode="numeric" value={quotaDraft[team.id] ?? target} onChange={e=>setQuotaDraft(current=>({...current,[team.id]:e.target.value===''?0:Number(e.target.value)}))} style={{width:'88px',maxWidth:'100%',minHeight:'38px',textAlign:'right',border:'1px solid var(--border)',borderRadius:'8px',padding:'.35rem',background:'var(--card)',color:'var(--text)'}} />
+                      : <strong>{target.toLocaleString()}</strong>}
+                  </td>
+                  <td style={{textAlign:'right',padding:'.65rem',fontWeight:800,fontVariantNumeric:'tabular-nums'}}>{completionRate===null?'—':`${completionRate.toFixed(1)}%`}</td>
+                  <td style={{textAlign:'right',padding:'.65rem',fontVariantNumeric:'tabular-nums'}}>{shortfall}</td>
+                  <td style={{padding:'.65rem',fontWeight:800,color:critical?'#dc2626':nte?'#dc2626':below?'#b7791f':'#16834a'}}>{target===0?'No target':critical?'NTE + Disciplinary Action':nte?'Subject for NTE':below?'Below quota':'Quota'}</td>
+                </tr>
+              })}</tbody>
             </table>
           </div>
-          <p className="muted" style={{fontSize:'.76rem',margin:'.65rem 0 0'}}>The target and progress are calculated for the whole selected department. All active teams in this department contribute to the same completed-installation total.</p>
+          <p className="muted" style={{fontSize:'.76rem',margin:'.65rem 0 0'}}>Status thresholds scale with each team’s target: 60% or below is flagged for review; 40% or below receives the higher-priority indicator. These are monitoring flags, not automatic sanctions.</p>
         </section>
       </div>}
 
