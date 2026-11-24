@@ -234,7 +234,7 @@ export default function Tally() {
         .from('installation_team_monthly_quotas')
         .select('team_id,target_quota')
         .eq('quota_month', month)
-      if (quotaError) throw quotaError
+      if (quotaError && quotaError.code !== '42P01' && !quotaError.message.includes('installation_team_monthly_quotas')) throw quotaError
       const quotaMap: Record<string, number> = {}
       ;((quotaRows ?? []) as Array<{team_id:string;target_quota:number}>).forEach(row => {
         quotaMap[row.team_id] = Number(row.target_quota)
