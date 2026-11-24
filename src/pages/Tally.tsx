@@ -329,13 +329,6 @@ export default function Tally() {
     return () => window.clearInterval(timer)
   }, [importedEnd, importedStart])
 
-  const getDepartmentQuota = () => quotaTargets[departmentId] ?? 50
-  const departmentCompletedTotal = activeTeams.reduce((sum, team) => sum + getMTD(team.id), 0)
-  const departmentQuota = getDepartmentQuota()
-  const departmentShortfall = Math.max(0, departmentQuota - departmentCompletedTotal)
-  const departmentQuotaProgress = departmentQuota > 0 ? departmentCompletedTotal / departmentQuota * 100 : 0
-  const selectedDepartmentName = departments.find(item => item.id === departmentId)?.name ?? 'Selected department'
-
   async function saveQuotaTargets() {
     if (!departmentId) return
     setSavingQuota(true)
@@ -658,6 +651,13 @@ export default function Tally() {
     return monthDates.filter(date => date >= monthStart && date <= monthReportEnd)
       .reduce((sum, date) => sum + getCount(teamId, date), 0)
   }
+
+  const getDepartmentQuota = () => quotaTargets[departmentId] ?? 50
+  const departmentCompletedTotal = activeTeams.reduce((sum, team) => sum + getMTD(team.id), 0)
+  const departmentQuota = getDepartmentQuota()
+  const departmentShortfall = Math.max(0, departmentQuota - departmentCompletedTotal)
+  const departmentQuotaProgress = departmentQuota > 0 ? departmentCompletedTotal / departmentQuota * 100 : 0
+  const selectedDepartmentName = departments.find(item => item.id === departmentId)?.name ?? 'Selected department'
 
   function beginTableEdit() {
     const draft: Record<string, number> = {}
