@@ -1509,7 +1509,7 @@ export default function Tally() {
                 const below=total<target
                 return <tr key={team.id} style={{background:critical?'rgba(220,38,38,.16)':nte?'rgba(220,38,38,.10)':below?'rgba(217,119,6,.08)':'rgba(22,163,74,.07)',borderTop:'1px solid var(--border)'}}>
                   <th scope="row" style={{textAlign:'left',padding:'.65rem',fontWeight:800}}>{team.code} · {team.name}</th>
-                  <td style={{textAlign:'right',padding:'.65rem',fontWeight:900,fontVariantNumeric:'tabular-nums'}}>
+                  <td style={{textAlign:'right',padding:'.65rem',fontWeight:900,fontVariantNumeric:'tabular-nums',position:'relative'}}>
                     <button type="button"
                       onMouseEnter={()=>setHoveredQuotaPreview(team.id)}
                       onMouseLeave={()=>setHoveredQuotaPreview(current=>current===team.id?null:current)}
@@ -1517,10 +1517,10 @@ export default function Tally() {
                       onBlur={()=>setHoveredQuotaPreview(current=>current===team.id?null:current)}
                       onClick={()=>{setSelectedQuotaTeamId(team.id);setHoveredQuotaPreview(null)}}
                       aria-label={`View load breakdown for ${team.code}`}
-                      style={{border:0,background:'transparent',color:'inherit',font:'inherit',fontWeight:900,cursor:'pointer',padding:'.15rem .35rem',borderRadius:7,textDecoration:'underline',textDecorationStyle:'dotted',textUnderlineOffset:4}}>
+                      style={{position:'relative',zIndex:hoveredQuotaPreview===team.id?3:1,border:0,background:'transparent',color:'inherit',font:'inherit',fontWeight:900,cursor:'pointer',padding:'.15rem .35rem',borderRadius:7,textDecoration:'underline',textDecorationStyle:'dotted',textUnderlineOffset:4}}>
                       {total}
                     </button>
-                    {hoveredQuotaPreview===team.id && <div role="status" style={{display:'block',width:'min(190px, 100%)',boxSizing:'border-box',margin:'.45rem 0 0 auto',padding:'.6rem .7rem',borderRadius:9,background:'#ffffff',color:'#172033',border:'1px solid #cbd5e1',boxShadow:'0 5px 14px rgba(15,23,42,.12)',textAlign:'left',fontSize:'.78rem',lineHeight:1.4,fontWeight:500,pointerEvents:'none'}}>
+                    {hoveredQuotaPreview===team.id && <div role="status" style={{position:'absolute',top:'calc(100% + 2px)',right:0,zIndex:10,display:'block',width:'190px',maxWidth:'min(190px, 90vw)',boxSizing:'border-box',padding:'.6rem .7rem',borderRadius:9,background:'#ffffff',color:'#172033',border:'1px solid #cbd5e1',boxShadow:'0 8px 20px rgba(15,23,42,.18)',textAlign:'left',fontSize:'.78rem',lineHeight:1.4,fontWeight:500,pointerEvents:'none'}}>
                       <strong style={{display:'block',marginBottom:'.3rem',fontSize:'.8rem',color:'#172033'}}>{team.code} · {month}</strong>
                       <div style={{display:'flex',justifyContent:'space-between',gap:'.75rem',padding:'.1rem 0'}}><span>Completed</span><b>{completedLoads.toLocaleString()}</b></div>
                       <div style={{display:'flex',justifyContent:'space-between',gap:'.75rem',padding:'.1rem 0'}}><span>Incomplete</span><b>{teamLoads.filter(row=>String(row.status).trim().toUpperCase()==='INCOMPLETE').length.toLocaleString()}</b></div>
