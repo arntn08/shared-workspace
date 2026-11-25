@@ -156,7 +156,7 @@ export default function Tally() {
   const [totalLoadsSort, setTotalLoadsSort] = useState<'high-low' | 'low-high'>('high-low')
   const [quotaOpen, setQuotaOpen] = useState(false)
   const [quotaSort, setQuotaSort] = useState<'high-low' | 'low-high'>('high-low')
-  const [hoveredQuotaTeamId, setHoveredQuotaTeamId] = useState<string | null>(null)
+  const [hoveredQuotaPreview, setHoveredQuotaPreview] = useState<{ teamId: string; left: number; top: number } | null>(null)
   const [selectedQuotaTeamId, setSelectedQuotaTeamId] = useState<string | null>(null)
   const [quotaTargets, setQuotaTargets] = useState<Record<string, number>>({})
   const [quotaDraft, setQuotaDraft] = useState<number>(50)
@@ -1509,16 +1509,31 @@ export default function Tally() {
                 const below=total<target
                 return <tr key={team.id} style={{background:critical?'rgba(220,38,38,.16)':nte?'rgba(220,38,38,.10)':below?'rgba(217,119,6,.08)':'rgba(22,163,74,.07)',borderTop:'1px solid var(--border)'}}>
                   <th scope="row" style={{textAlign:'left',padding:'.65rem',fontWeight:800}}>{team.code} · {team.name}</th>
-                  <td style={{textAlign:'right',padding:'.65rem',fontWeight:900,fontVariantNumeric:'tabular-nums',position:'relative'}}
-                    onMouseEnter={()=>setHoveredQuotaTeamId(team.id)}
-                    onMouseLeave={()=>setHoveredQuotaTeamId(current=>current===team.id?null:current)}>
-                    <button type="button" onFocus={()=>setHoveredQuotaTeamId(team.id)} onBlur={()=>setHoveredQuotaTeamId(null)} onClick={()=>{setSelectedQuotaTeamId(team.id);setHoveredQuotaTeamId(null)}} aria-label={`View load breakdown for ${team.code}`} style={{border:0,background:'transparent',color:'inherit',font:'inherit',fontWeight:900,cursor:'pointer',padding:'.15rem .35rem',borderRadius:7,textDecoration:'underline',textDecorationStyle:'dotted',textUnderlineOffset:4}}>{total}</button>
-                    {hoveredQuotaTeamId===team.id && <div role="status" style={{position:'absolute',right:0,bottom:'calc(100% + 8px)',zIndex:20,minWidth:190,padding:'.65rem .75rem',borderRadius:11,background:'var(--card)',color:'var(--text)',border:'1px solid var(--border)',boxShadow:'0 10px 28px rgba(0,0,0,.2)',textAlign:'left',fontSize:'.78rem',fontWeight:600,pointerEvents:'none'}}>
-                      <strong style={{display:'block',marginBottom:'.35rem'}}>{team.code} · {month}</strong>
-                      <div style={{display:'flex',justifyContent:'space-between',gap:'.75rem'}}><span>Completed</span><b>{completedLoads.toLocaleString()}</b></div>
-                      <div style={{display:'flex',justifyContent:'space-between',gap:'.75rem'}}><span>Incomplete</span><b>{teamLoads.filter(row=>String(row.status).trim().toUpperCase()==='INCOMPLETE').length.toLocaleString()}</b></div>
-                      <div style={{display:'flex',justifyContent:'space-between',gap:'.75rem'}}><span>Canceled</span><b>{teamLoads.filter(row=>String(row.status).trim().toUpperCase()==='CANCELED').length.toLocaleString()}</b></div>
-                      <span style={{display:'block',marginTop:'.35rem',color:'var(--muted)',fontWeight:500}}>Click the total for full details</span>
+                  <td style={{textAlign:'right',padding:'.65rem',fontWeight:900,fontVariantNumeric:'tabular-nums'}}>
+                    <button type="button"
+                      onMouseEnter={event=>{
+                        const rect=event.currentTarget.getBoundingClientRect()
+                        const width=230
+                        setHoveredQuotaPreview({teamId:team.id,left:Math.max(12,Math.min(window.innerWidth-width-12,rect.left+rect.width/2-width/2)),top:Math.min(window.innerHeight-150,rect.bottom+9)})
+                      }}
+                      onMouseLeave={()=>setHoveredQuotaPreview(current=>current?.teamId===team.id?null:current)}
+                      onFocus={event=>{
+                        const rect=event.currentTarget.getBoundingClientRect()
+                        const width=230
+                        setHoveredQuotaPreview({teamId:team.id,left:Math.max(12,Math.min(window.innerWidth-width-12,rect.left+rect.width/2-width/2)),top:Math.min(window.innerHeight-150,rect.bottom+9)})
+                      }}
+                      onBlur={()=>setHoveredQuotaPreview(current=>current?.teamId===team.id?null:current)}
+                      onClick={()=>{setSelectedQuotaTeamId(team.id);setHoveredQuotaPreview(null)}}
+                      aria-label={`View load breakdown for ${team.code}`}
+                      style={{border:0,background:'transparent',color:'inherit',font:'inherit',fontWeight:900,cursor:'pointer',padding:'.15rem .35rem',borderRadius:7,textDecoration:'underline',textDecorationStyle:'dotted',textUnderlineOffset:4}}>
+                      {total}
+                    </button>
+                    {hoveredQuotaPreview?.teamId===team.id && <div role="status" style={{position:'fixed',left:hoveredQuotaPreview.left,top:hoveredQuotaPreview.top,width:230,zIndex:10000,padding:'.8rem .9rem',borderRadius:12,background:'#ffffff',color:'#172033',border:'1px solid #cbd5e1',boxShadow:'0 14px 36px rgba(15,23,42,.24)',textAlign:'left',fontSize:'.82rem',lineHeight:1.45,fontWeight:500,pointerEvents:'none'}}>
+                      <strong style={{display:'block',marginBottom:'.45rem',fontSize:'.84rem',color:'#172033'}}>{team.code} · {month}</strong>
+                      <div style={{display:'flex',justifyContent:'space-between',gap:'.75rem',padding:'.12rem 0'}}><span>Completed</span><b>{completedLoads.toLocaleString()}</b></div>
+                      <div style={{display:'flex',justifyContent:'space-between',gap:'.75rem',padding:'.12rem 0'}}><span>Incomplete</span><b>{teamLoads.filter(row=>String(row.status).trim().toUpperCase()==='INCOMPLETE').length.toLocaleString()}</b></div>
+                      <div style={{display:'flex',justifyContent:'space-between',gap:'.75rem',padding:'.12rem 0'}}><span>Canceled</span><b>{teamLoads.filter(row=>String(row.status).trim().toUpperCase()==='CANCELED').length.toLocaleString()}</b></div>
+                      <span style={{display:'block',marginTop:'.4rem',paddingTop:'.35rem',borderTop:'1px solid #e2e8f0',color:'#64748b',fontSize:'.74rem'}}>Click the total for full details</span>
                     </div>}
                   </td>
                   <td style={{textAlign:'right',padding:'.65rem',fontWeight:800,fontVariantNumeric:'tabular-nums'}}>{target.toLocaleString()}</td>
