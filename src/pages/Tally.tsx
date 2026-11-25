@@ -1451,15 +1451,15 @@ export default function Tally() {
       <div className="tally-subtabs" style={{display:'flex',gap:'.6rem',marginBottom:'1rem',flexWrap:'wrap'}}>
         <button type="button" className={quotaOpen?'btn':'btn secondary'} onClick={()=>setQuotaOpen(true)}>Monthly Team Quota · View table</button>
       </div>
-      {quotaOpen&&<div className="tally-quota-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setQuotaOpen(false)}}>
-        <section className="card tally-quota-modal" role="dialog" aria-modal="true" aria-label="Monthly team quota">
+      {quotaOpen&&<div className="tally-quota-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setQuotaOpen(false)}} style={{position:'fixed',inset:0,zIndex:1000,display:'grid',placeItems:'center',padding:'clamp(12px,3vw,28px)',background:'rgba(8,18,30,.48)',backdropFilter:'blur(12px) saturate(135%)',WebkitBackdropFilter:'blur(12px) saturate(135%)'}}>
+        <section className="card tally-quota-modal" role="dialog" aria-modal="true" aria-label="Monthly team quota" style={{width:'min(1120px,100%)',maxHeight:'min(88vh,900px)',overflowY:'auto',padding:'clamp(16px,2.2vw,26px)',borderRadius:24,border:'1px solid color-mix(in srgb, var(--border) 68%, white 32%)',background:'color-mix(in srgb, var(--card) 88%, transparent)',backdropFilter:'blur(24px) saturate(150%)',WebkitBackdropFilter:'blur(24px) saturate(150%)',boxShadow:'0 28px 90px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.45)'}}>
           <div style={{display:'flex',justifyContent:'space-between',gap:'.75rem',alignItems:'center',flexWrap:'wrap'}}>
             <div>
-              <h2 style={{margin:0,fontSize:'1.05rem'}}>Monthly team quota</h2>
-              <p className="muted" style={{margin:'.2rem 0 0'}}>One shared target for every active team · {month} · Default: 50 per team</p>
+              <h2 style={{margin:0,fontSize:'1.2rem',fontWeight:850,letterSpacing:'-.025em'}}>Monthly team quota</h2>
+              <p className="muted" style={{margin:'.3rem 0 0',fontSize:'.88rem'}}>One shared target for every active team · {month} · Default: 50 per team</p>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:'.5rem',flexWrap:'wrap'}}>
-              <strong>{activeTeams.filter(team=>getMTD(team.id)>=getTeamQuota(team.id)).length} / {activeTeams.length} teams at quota</strong>
+              <strong style={{padding:'.55rem .8rem',borderRadius:999,background:'rgba(22,163,74,.11)',border:'1px solid rgba(22,163,74,.22)',color:'#16834a',fontSize:'.84rem',whiteSpace:'nowrap'}}>{activeTeams.filter(team=>getMTD(team.id)>=getTeamQuota(team.id)).length} / {activeTeams.length} teams at quota</strong>
               {canEdit && !quotaEditMode && <button type="button" className="btn" onClick={()=>{
                 const currentTargets=activeTeams.map(team=>getTeamQuota(team.id))
                 const uniform=currentTargets.length>0 && currentTargets.every(value=>value===currentTargets[0])
@@ -1478,16 +1478,16 @@ export default function Tally() {
             <input id="overall-team-quota" aria-label="Overall monthly quota per team" type="number" min="0" step="1" inputMode="numeric" value={quotaDraft} onChange={e=>setQuotaDraft(e.target.value===''?0:Number(e.target.value))} style={{width:110,minHeight:40,textAlign:'right',border:'1px solid var(--border)',borderRadius:8,padding:'.4rem',background:'var(--card)',color:'var(--text)',fontWeight:800}} />
             <span className="muted" style={{fontSize:'.82rem'}}>This single value will replace the target for all {activeTeams.length} active teams in this department for {month}.</span>
           </div>}
-          <div style={{display:'flex',justifyContent:'flex-end',alignItems:'center',gap:'.55rem',marginTop:'.85rem',flexWrap:'wrap'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:'.65rem',marginTop:'1rem',marginBottom:'.55rem',padding:'.65rem .8rem',flexWrap:'wrap',borderRadius:14,border:'1px solid var(--border)',background:'color-mix(in srgb, var(--card) 78%, rgba(22,163,74,.08))'}}>
             <label htmlFor="monthly-quota-sort" className="muted" style={{fontSize:'.82rem',fontWeight:700}}>Sort by team total</label>
             <select id="monthly-quota-sort" aria-label="Sort monthly quota teams by total" value={quotaSort} onChange={e=>setQuotaSort(e.target.value as 'high-low' | 'low-high')} style={{minHeight:38,border:'1px solid var(--border)',borderRadius:8,padding:'.35rem .65rem',background:'var(--card)',color:'var(--text)'}}>
               <option value="high-low">Highest to lowest</option>
               <option value="low-high">Lowest to highest</option>
             </select>
           </div>
-          <div style={{overflowX:'auto',marginTop:'.5rem'}}>
-            <table style={{width:'100%',borderCollapse:'collapse',fontSize:'.9rem'}}>
-              <thead><tr>
+          <div style={{overflowX:'auto',marginTop:'.45rem',borderRadius:16,border:'1px solid var(--border)',background:'color-mix(in srgb, var(--card) 92%, transparent)'}}>
+            <table style={{width:'100%',borderCollapse:'separate',borderSpacing:0,fontSize:'.9rem'}}>
+              <thead><tr style={{background:'rgba(59,130,246,.09)'}}>
                 <th style={{textAlign:'left',padding:'.55rem'}}>Team</th>
                 <th style={{textAlign:'right',padding:'.55rem'}}>Team Total</th>
                 <th style={{textAlign:'right',padding:'.55rem'}}>Target</th>
@@ -1505,7 +1505,7 @@ export default function Tally() {
                 const critical=target>0 && total<=target*.4
                 const nte=target>0 && total<=target*.6
                 const below=total<target
-                return <tr key={team.id} style={{background:critical?'rgba(220,38,38,.16)':nte?'rgba(220,38,38,.10)':below?'rgba(217,119,6,.08)':'rgba(22,163,74,.07)',borderTop:'1px solid var(--border)'}}>
+                return <tr key={team.id} style={{background:critical?'rgba(220,38,38,.13)':nte?'rgba(220,38,38,.08)':below?'rgba(217,119,6,.07)':'rgba(22,163,74,.065)'}}>
                   <th scope="row" style={{textAlign:'left',padding:'.65rem',fontWeight:800}}>{team.code} · {team.name}</th>
                   <td style={{textAlign:'right',padding:'.65rem',fontWeight:900,fontVariantNumeric:'tabular-nums'}}>{total}</td>
                   <td style={{textAlign:'right',padding:'.65rem',fontWeight:800,fontVariantNumeric:'tabular-nums'}}>{target.toLocaleString()}</td>
