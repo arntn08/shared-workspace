@@ -156,6 +156,8 @@ export default function Tally() {
   const [totalLoadsSort, setTotalLoadsSort] = useState<'high-low' | 'low-high'>('high-low')
   const [quotaOpen, setQuotaOpen] = useState(false)
   const [quotaSort, setQuotaSort] = useState<'high-low' | 'low-high'>('high-low')
+  const [hoveredQuotaTeamId, setHoveredQuotaTeamId] = useState<string | null>(null)
+  const [selectedQuotaTeamId, setSelectedQuotaTeamId] = useState<string | null>(null)
   const [quotaTargets, setQuotaTargets] = useState<Record<string, number>>({})
   const [quotaDraft, setQuotaDraft] = useState<number>(50)
   const [quotaEditMode, setQuotaEditMode] = useState(false)
@@ -1507,7 +1509,18 @@ export default function Tally() {
                 const below=total<target
                 return <tr key={team.id} style={{background:critical?'rgba(220,38,38,.16)':nte?'rgba(220,38,38,.10)':below?'rgba(217,119,6,.08)':'rgba(22,163,74,.07)',borderTop:'1px solid var(--border)'}}>
                   <th scope="row" style={{textAlign:'left',padding:'.65rem',fontWeight:800}}>{team.code} · {team.name}</th>
-                  <td style={{textAlign:'right',padding:'.65rem',fontWeight:900,fontVariantNumeric:'tabular-nums'}}>{total}</td>
+                  <td style={{textAlign:'right',padding:'.65rem',fontWeight:900,fontVariantNumeric:'tabular-nums',position:'relative'}}
+                    onMouseEnter={()=>setHoveredQuotaTeamId(team.id)}
+                    onMouseLeave={()=>setHoveredQuotaTeamId(current=>current===team.id?null:current)}>
+                    <button type="button" onFocus={()=>setHoveredQuotaTeamId(team.id)} onBlur={()=>setHoveredQuotaTeamId(null)} onClick={()=>{setSelectedQuotaTeamId(team.id);setHoveredQuotaTeamId(null)}} aria-label={`View load breakdown for ${team.code}`} style={{border:0,background:'transparent',color:'inherit',font:'inherit',fontWeight:900,cursor:'pointer',padding:'.15rem .35rem',borderRadius:7,textDecoration:'underline',textDecorationStyle:'dotted',textUnderlineOffset:4}}>{total}</button>
+                    {hoveredQuotaTeamId===team.id && <div role="status" style={{position:'absolute',right:0,bottom:'calc(100% + 8px)',zIndex:20,minWidth:190,padding:'.65rem .75rem',borderRadius:11,background:'var(--card)',color:'var(--text)',border:'1px solid var(--border)',boxShadow:'0 10px 28px rgba(0,0,0,.2)',textAlign:'left',fontSize:'.78rem',fontWeight:600,pointerEvents:'none'}}>
+                      <strong style={{display:'block',marginBottom:'.35rem'}}>{team.code} · {month}</strong>
+                      <div style={{display:'flex',justifyContent:'space-between',gap:'.75rem'}}><span>Completed</span><b>{completedLoads.toLocaleString()}</b></div>
+                      <div style={{display:'flex',justifyContent:'space-between',gap:'.75rem'}}><span>Incomplete</span><b>{teamLoads.filter(row=>String(row.status).trim().toUpperCase()==='INCOMPLETE').length.toLocaleString()}</b></div>
+                      <div style={{display:'flex',justifyContent:'space-between',gap:'.75rem'}}><span>Canceled</span><b>{teamLoads.filter(row=>String(row.status).trim().toUpperCase()==='CANCELED').length.toLocaleString()}</b></div>
+                      <span style={{display:'block',marginTop:'.35rem',color:'var(--muted)',fontWeight:500}}>Click the total for full details</span>
+                    </div>}
+                  </td>
                   <td style={{textAlign:'right',padding:'.65rem',fontWeight:800,fontVariantNumeric:'tabular-nums'}}>{target.toLocaleString()}</td>
                   <td style={{textAlign:'right',padding:'.65rem',fontWeight:800,fontVariantNumeric:'tabular-nums'}}>{completionRate===null?'—':`${completionRate.toFixed(1)}%`}</td>
                   <td style={{textAlign:'right',padding:'.65rem',fontVariantNumeric:'tabular-nums'}}>{shortfall}</td>
@@ -1516,6 +1529,32 @@ export default function Tally() {
               })}</tbody>
             </table>
           </div>
+          {selectedQuotaTeamId && (() => {
+            const selectedTeam = activeTeams.find(item=>item.id===selectedQuotaTeamId)
+            if (!selectedTeam) return null
+            const selectedRows = monthLoads.filter(row=>row.team_id===selectedTeam.id)
+            const countStatus = (status:string) => selectedRows.filter(row=>String(row.status).trim().toUpperCase()===status).length
+            const completed = countStatus('COMPLETED')
+            const incomplete = countStatus('INCOMPLETE')
+            const canceled = countStatus('CANCELED')
+            const totalLoads = completed + incomplete + canceled
+            const rate = totalLoads ? completed / totalLoads * 100 : null
+            return <div role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)setSelectedQuotaTeamId(null)}} style={{position:'fixed',inset:0,zIndex:1200,display:'grid',placeItems:'center',padding:16,background:'rgba(10,18,28,.48)',backdropFilter:'blur(5px)',WebkitBackdropFilter:'blur(5px)'}}>
+              <section role="dialog" aria-modal="true" aria-label={`Total loads for ${selectedTeam.code}`} className="card" style={{width:'min(520px,100%)',maxHeight:'85vh',overflowY:'auto',padding:'1.15rem',borderRadius:18,border:'1px solid var(--border)',boxShadow:'0 24px 70px rgba(0,0,0,.28)'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12}}>
+                  <div><h3 style={{margin:0,fontSize:'1.05rem'}}>{selectedTeam.code}</h3><p className="muted" style={{margin:'.25rem 0 0',fontSize:'.84rem'}}>{selectedTeam.name} · {month}</p></div>
+                  <button type="button" className="btn secondary" onClick={()=>setSelectedQuotaTeamId(null)}>Close ✕</button>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:'.65rem',marginTop:'1rem'}}>
+                  {([['Total loads',totalLoads],['Completed',completed],['Incomplete',incomplete],['Canceled',canceled]] as Array<[string,number]>).map(([label,value])=><div key={label} style={{padding:'.8rem',border:'1px solid var(--border)',borderRadius:12,background:'var(--surface, var(--card))'}}><div className="muted" style={{fontSize:'.78rem'}}>{label}</div><strong style={{display:'block',fontSize:'1.45rem',marginTop:'.15rem',fontVariantNumeric:'tabular-nums'}}>{value.toLocaleString()}</strong></div>)}
+                </div>
+                <div style={{marginTop:'.8rem',padding:'.8rem',borderRadius:12,background:'var(--surface, var(--card))',border:'1px solid var(--border)',display:'flex',justifyContent:'space-between',gap:12,alignItems:'center'}}>
+                  <span className="muted">Completion rate</span><strong>{rate===null?'—':`${rate.toFixed(1)}%`}</strong>
+                </div>
+                <p className="muted" style={{fontSize:'.76rem',margin:'.75rem 0 0'}}>Counts include unique imported work orders with status COMPLETED, INCOMPLETE, or CANCELED for this team and month.</p>
+              </section>
+            </div>
+          })()}
           <p className="muted" style={{fontSize:'.76rem',margin:'.65rem 0 0'}}>The overall target applies equally to every active team in the selected department. Status thresholds scale with the shared target: 60% or below is flagged for review; 40% or below receives the higher-priority indicator. These are monitoring flags, not automatic sanctions.</p>
         </section>
       </div>}
