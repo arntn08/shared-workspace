@@ -155,7 +155,7 @@ export default function Tally() {
   const [totalLoadsSearch, setTotalLoadsSearch] = useState('')
   const [totalLoadsSort, setTotalLoadsSort] = useState<'high-low' | 'low-high'>('high-low')
   const [quotaOpen, setQuotaOpen] = useState(false)
-  const [quotaSort, setQuotaSort] = useState<'high-low' | 'low-high'>('high-low')
+  const [quotaSort, setQuotaSort] = useState<'' | 'high-low' | 'low-high'>('')
   const [hoveredQuotaPreview, setHoveredQuotaPreview] = useState<string | null>(null)
   const [selectedQuotaTeamId, setSelectedQuotaTeamId] = useState<string | null>(null)
   const [quotaTargets, setQuotaTargets] = useState<Record<string, number>>({})
@@ -1483,6 +1483,7 @@ export default function Tally() {
           <div style={{display:'flex',justifyContent:'flex-end',alignItems:'center',gap:'.55rem',marginTop:'.85rem',flexWrap:'wrap'}}>
             <label htmlFor="monthly-quota-sort" className="muted" style={{fontSize:'.82rem',fontWeight:700}}>Sort by team total</label>
             <select id="monthly-quota-sort" aria-label="Sort monthly quota teams by total" value={quotaSort} onChange={e=>setQuotaSort(e.target.value as 'high-low' | 'low-high')} style={{minHeight:38,border:'1px solid var(--border)',borderRadius:8,padding:'.35rem .65rem',background:'var(--card)',color:'var(--text)'}}>
+              <option value="">Select sort order</option>
               <option value="high-low">Highest to lowest</option>
               <option value="low-high">Lowest to highest</option>
             </select>
@@ -1497,7 +1498,7 @@ export default function Tally() {
                 <th style={{textAlign:'right',padding:'.55rem'}}>Shortfall</th>
                 <th style={{textAlign:'left',padding:'.55rem'}}>Status</th>
               </tr></thead>
-              <tbody>{[...activeTeams].sort((a,b)=>quotaSort==='high-low'?getMTD(b.id)-getMTD(a.id):getMTD(a.id)-getMTD(b.id)).map(team=>{
+              <tbody>{(quotaSort ? [...activeTeams].sort((a,b)=>quotaSort==='high-low'?getMTD(b.id)-getMTD(a.id):getMTD(a.id)-getMTD(b.id)) : activeTeams).map(team=>{
                 const total=getMTD(team.id)
                 const target=getTeamQuota(team.id)
                 const teamLoads=monthLoads.filter(row=>row.team_id===team.id)
