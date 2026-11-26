@@ -146,7 +146,7 @@ export default function HrTeamSchedule() {
     if(source)updates.push({row:source.sheetRow,col:source.col,old:source.value,value:'',section:source.section,role:source.role,team:source.section})
     updates.push({row:target.sheetRow,col:target.col,old:target.value,value:displayEmployeeName(name),section:target.section,role:target.role,team:target.section})
     const move:MoveDraft={movedEmployee:displayEmployeeName(name),movedFromCell:source?a1Cell(source.sheetRow,source.col):null,movedFromTeam:sourceTeam,replacedEmployee:target.value.trim()?displayEmployeeName(target.value):null,targetCell:a1Cell(target.sheetRow,target.col),targetTeam:target.section,section:target.section,role:target.role,updates}
-    updateLocalCells(updates);setPendingMoves(current=>[...current,move]);setError('');setNotice(`${displayEmployeeName(name)} staged for ${target.section}. Save changes to sync both systems.`)
+    updateLocalCells(updates);setPendingMoves(current=>[...current,move]);setError('');setNotice(`${displayEmployeeName(name)} staged for ${target.section}. Save changes to sync both systems.`);setDragName('')
   }
   function undoLastMove(){
     const last=pendingMoves[pendingMoves.length-1];if(!last)return
