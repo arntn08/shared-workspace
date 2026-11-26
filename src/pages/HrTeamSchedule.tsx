@@ -133,14 +133,14 @@ export default function HrTeamSchedule() {
   function handleDrop(target: EmployeeSlot, name: string) {
     if(!canEdit||!name)return
     const key=normalizeEmployeeName(name)
-    if(absentNames.has(key)){setError('This employee is marked absent, on leave, suspended, or resigned.');return}
+    if(absentNames.has(key)){setError('This employee is marked absent, on leave, suspended, or resigned.');setDragName('');return}
     const matches=assigned.get(key)||[]
-    if(matches.length>1){setError(`${displayEmployeeName(name)} appears in multiple schedule slots. Resolve the duplicate first.`);return}
+    if(matches.length>1){setError(`${displayEmployeeName(name)} appears in multiple schedule slots. Resolve the duplicate first.`);setDragName('');return}
     const source=matches[0]||null
-    if(source&&source.sheetRow===target.sheetRow&&source.col===target.col)return
+    if(source&&source.sheetRow===target.sheetRow&&source.col===target.col){setDragName('');return}
     const sourceTeam=source?.section||roster.find(p=>normalizeEmployeeName(p.name)===key)?.team||null
     if(sourceTeam&&sourceTeam.toLowerCase()!==target.section.toLowerCase()){
-      if(!window.confirm(`Move ${displayEmployeeName(name)} from ${sourceTeam} to ${target.section}?\\n\\nThe original slot will become VACANT. You can fill that vacancy with another employee.`))return
+      if(!window.confirm(`Move ${displayEmployeeName(name)} from ${sourceTeam} to ${target.section}?\\n\\nThe original slot will become VACANT. You can fill that vacancy with another employee.`)){setDragName('');return}
     }
     const updates:CellUpdate[]=[]
     if(source)updates.push({row:source.sheetRow,col:source.col,old:source.value,value:'',section:source.section,role:source.role,team:source.section})
