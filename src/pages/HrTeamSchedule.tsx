@@ -4,7 +4,12 @@ import { useAuth } from '../lib/auth'
 import type { FileRow } from '../types'
 
 type Sheet = { tabs: string[]; tab: string; rows: string[][] }
-type Section = { title: string; headers: string[]; rows: string[][] }
+type ScheduleRow = { cells: string[]; sheetRow: number }
+type Section = { title: string; headers: string[]; rows: ScheduleRow[] }
+type RosterPerson = { name: string; team: string }
+type EmployeeSlot = { section: string; sheetRow: number; col: number; role: string; value: string; name: string }
+type CellUpdate = { row: number; col: number; old: string; value: string; section: string; role: string; team: string }
+type MoveDraft = { movedEmployee: string; movedFromCell: string | null; movedFromTeam: string | null; replacedEmployee: string | null; targetCell: string; targetTeam: string; section: string; role: string; updates: CellUpdate[] }
 const ERR = /^#(REF|N\/A|VALUE|DIV\/0|NAME|NULL|NUM|ERROR)[!?]?$/i
 const NUM = /^[\d.,\s]+$/
 const LABEL = /^(new install|migration|slr|total)$/i
@@ -16,28 +21,53 @@ function isHeading(cells: string[]) {
   if (NUM.test(values[0]) || /^total\b/i.test(values[0])) return false
   return values.slice(1).every(v => NUM.test(v) || LABEL.test(v))
 }
+
+function normalizeEmployeeName(v: string) { return v.replace(/^\\*+/, '').replace(/\\s+/g, ' ').trim().toLocaleUpperCase() }
+function displayEmployeeName(v: string) { return v.replace(/^\\*+/, '').trim() }
+function employeeHeader(v: string) { return /driver|drver|technician|tech\\b|employee|personnel|crew|staff|worker/i.test(v) }
+function colLetter(index: number) { let n=index+1,s=''; while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26)} return s }
+function a1Cell(row: number,col: number) { return `${colLetter(col)}${row+1}` }
+function employeeSlots(section: Section,row: ScheduleRow,rosterNames: Set<string>): EmployeeSlot[] {
+  const columns=section.headers.map((h,i)=>({h,i})).filter(x=>employeeHeader(x.h))
+  if(columns.length) return columns.map(({h,i})=>({section:section.title,sheetRow:row.sheetRow,col:i,role:h||'Employee',value:row.cells[i]||'',name:displayEmployeeName(row.cells[i]||'')}))
+  return row.cells.map((value,col)=>({value,col})).filter(x=>filled(x.value)&&rosterNames.has(normalizeEmployeeName(x.value))).map(x=>({section:section.title,sheetRow:row.sheetRow,col:x.col,role:'Employee',value:x.value,name:displayEmployeeName(x.value)}))
+}
+function parseAbsences(rows: string[][]) {
+  const header=rows.findIndex(r=>(r||[]).some(v=>/REST DAY/i.test(String(v||'')))&&(r||[]).some(v=>/SUSPENDED/i.test(String(v||''))))
+  const found=new Map<string,{employee_name:string;status:string;source_cell:string}>()
+  if(header<0) return [...found.values()]
+  for(let i=header+1;i<rows.length;i++){
+    const r=(rows[i]||[]).map(clean),name=r[4]||'',status=r[5]||''
+    if(name&&/absent|vacation|leave|rest\\s*day/i.test(status)) found.set(normalizeEmployeeName(name),{employee_name:displayEmployeeName(name),status:status.toUpperCase(),source_cell:`E${i+1}`})
+    if(r[8]&&!/SUSPENDED/i.test(r[8])) found.set(normalizeEmployeeName(r[8]),{employee_name:displayEmployeeName(r[8]),status:'SUSPENDED',source_cell:`I${i+1}`})
+    if(r[9]&&!/RESIGN/i.test(r[9])) found.set(normalizeEmployeeName(r[9]),{employee_name:displayEmployeeName(r[9]),status:'RESIGNED',source_cell:`J${i+1}`})
+  }
+  return [...found.values()]
+}
+
 function parseSections(rows: string[][]): Section[] {
   const sections: Section[] = []
-  let title = 'Schedule', headers: string[] = [], body: string[][] = [], seenTitle = false, expectHeaders = false
+  let title = 'Schedule', headers: string[] = [], body: ScheduleRow[] = [], seenTitle = false, expectHeaders = false
   const flush = () => { if (body.length) sections.push({ title, headers, rows: body }); body = [] }
-  for (const raw of rows) {
+  rows.forEach((raw, sheetRow) => {
     const cells = (Array.isArray(raw) ? raw : []).map(clean)
-    if (!cells.some(filled)) continue
+    if (!cells.some(filled)) return
     if (isHeading(cells)) {
       flush()
       const label = cells.find(filled) || ''
-      if (!seenTitle) { seenTitle = true; title = label; continue }
-      title = label; headers = []; expectHeaders = true; continue
+      if (!seenTitle) { seenTitle = true; title = label; return }
+      title = label; headers = []; expectHeaders = true; return
     }
-    if (expectHeaders) { headers = cells; expectHeaders = false; continue }
+    if (expectHeaders) { headers = cells; expectHeaders = false; return }
     if (!headers.length) headers = cells.map((_, i) => 'Column ' + (i + 1))
-    body.push(cells)
-  }
+    body.push({ cells, sheetRow })
+  })
   flush()
   return sections
 }
 export default function HrTeamSchedule() {
   const { profile } = useAuth()
+  const canEdit = profile?.active === true && (profile.role === 'owner' || profile.role === 'editor')
   const isHr = profile?.role === 'hr' || profile?.role === 'ar_encoder'
   const [files,setFiles] = useState<FileRow[]>([])
   const [fileId,setFileId] = useState('')
@@ -49,6 +79,12 @@ export default function HrTeamSchedule() {
   const [selectedRow,setSelectedRow] = useState<{section:string;headers:string[];cells:string[]}|null>(null)
   const [busy,setBusy] = useState(true)
   const [error,setError] = useState('')
+  const [roster,setRoster] = useState<RosterPerson[]>([])
+  const [pendingMoves,setPendingMoves] = useState<MoveDraft[]>([])
+  const [poolSearch,setPoolSearch] = useState('')
+  const [saving,setSaving] = useState(false)
+  const [dragName,setDragName] = useState('')
+  const [notice,setNotice] = useState('')
   useEffect(() => {
     let alive = true
     supabase.from('files').select('*').eq('kind','gsheet').order('created_at',{ascending:false}).then(({data,error}: any) => {
@@ -64,13 +100,72 @@ export default function HrTeamSchedule() {
     setBusy(true); setError('')
     const {data,error:err} = await supabase.functions.invoke('read-sheet',{body:{fileId:id,tab:t || undefined}})
     if (err || !data || data.error) { setError(err?.message || data?.error || 'Could not load the shared schedule.'); setBusy(false); return }
-    setTabs(data.tabs ?? []); setTab(data.tab ?? t ?? ''); setRows(data.rows ?? []); setBusy(false)
+    const nextRows = (data.rows ?? []) as string[][]
+    const nextTab = data.tab ?? t ?? ''
+    setTabs(data.tabs ?? []); setTab(nextTab); setRows(nextRows); setPendingMoves([])
+    if (canEdit) {
+      const { data: people } = await supabase.from('roster').select('name,team').order('team').order('name')
+      const list = (people ?? []) as RosterPerson[]; setRoster(list)
+      const names = new Set(list.map(p => normalizeEmployeeName(p.name)))
+      const snapshot = parseSections(nextRows).flatMap(s => s.rows.flatMap(r => employeeSlots(s,r,names).map(slot => ({file_id:id,tab:nextTab,date_key:nextTab,cell_a1:a1Cell(slot.sheetRow,slot.col),section:s.title,role:slot.role,employee_name:slot.value.trim()||null,employee_team:s.title,updated_by:profile?.id,updated_at:new Date().toISOString()}))))
+      if (snapshot.length) await supabase.from('schedule_daily_assignments').upsert(snapshot,{onConflict:'file_id,tab,cell_a1'})
+      const dayAbsences = parseAbsences(nextRows)
+      await supabase.from('schedule_absences').delete().eq('file_id',id).eq('tab',nextTab)
+      if (dayAbsences.length) await supabase.from('schedule_absences').insert(dayAbsences.map(a=>({file_id:id,tab:nextTab,employee_name:a.employee_name,status:a.status,source_cell:a.source_cell,recorded_by:profile?.id})))
+    }
+    setBusy(false)
   }
   useEffect(()=>{ if(fileId) void load(fileId) },[fileId])
   const sections = useMemo(()=>parseSections(rows),[rows])
+  const rosterNames = useMemo(()=>new Set(roster.map(p=>normalizeEmployeeName(p.name))),[roster])
+  const allSlots = useMemo(()=>sections.flatMap(s=>s.rows.flatMap(r=>employeeSlots(s,r,rosterNames))),[sections,rosterNames])
+  const assigned = useMemo(()=>{const m=new Map<string,EmployeeSlot[]>();allSlots.filter(s=>filled(s.value)).forEach(s=>{const k=normalizeEmployeeName(s.value);m.set(k,[...(m.get(k)||[]),s])});return m},[allSlots])
+  const absences = useMemo(()=>parseAbsences(rows),[rows])
+  const absentNames = useMemo(()=>new Set(absences.map(a=>normalizeEmployeeName(a.employee_name))),[absences])
+  const pool = roster.filter(p=>!absentNames.has(normalizeEmployeeName(p.name))&&(!poolSearch.trim()||p.name.toLowerCase().includes(poolSearch.toLowerCase())||p.team.toLowerCase().includes(poolSearch.toLowerCase())))
   const dates = useMemo(()=>sections.map(s=>s.title).filter((v,i,a)=>a.indexOf(v)===i),[sections])
-  const visible = sections.filter(s=>(dateFilter==='all'||s.title===dateFilter)&&(!search.trim()||s.title.toLowerCase().includes(search.toLowerCase())||s.rows.some(r=>r.some(c=>c.toLowerCase().includes(search.toLowerCase())))))
+  const visible = sections.filter(s=>(dateFilter==='all'||s.title===dateFilter)&&(!search.trim()||s.title.toLowerCase().includes(search.toLowerCase())||s.rows.some(r=>r.cells.some(c=>c.toLowerCase().includes(search.toLowerCase())))))
   const count = visible.reduce((sum,s)=>sum+s.rows.length,0)
+
+  function updateLocalCells(updates: CellUpdate[]) {
+    setRows(current=>{const next=current.map(r=>[...r]);updates.forEach(u=>{while(next[u.row].length<=u.col)next[u.row].push('');next[u.row][u.col]=u.value});return next})
+  }
+  function handleDrop(target: EmployeeSlot, name: string) {
+    if(!canEdit||!name)return
+    const key=normalizeEmployeeName(name)
+    if(absentNames.has(key)){setError('This employee is marked absent, on leave, suspended, or resigned.');return}
+    const matches=assigned.get(key)||[]
+    if(matches.length>1){setError(`${displayEmployeeName(name)} appears in multiple schedule slots. Resolve the duplicate first.`);return}
+    const source=matches[0]||null
+    if(source&&source.sheetRow===target.sheetRow&&source.col===target.col)return
+    const sourceTeam=source?.section||roster.find(p=>normalizeEmployeeName(p.name)===key)?.team||null
+    if(sourceTeam&&sourceTeam.toLowerCase()!==target.section.toLowerCase()){
+      if(!window.confirm(`Move ${displayEmployeeName(name)} from ${sourceTeam} to ${target.section}?\\n\\nThe original slot will become VACANT. You can fill that vacancy with another employee.`))return
+    }
+    const updates:CellUpdate[]=[]
+    if(source)updates.push({row:source.sheetRow,col:source.col,old:source.value,value:'',section:source.section,role:source.role,team:source.section})
+    updates.push({row:target.sheetRow,col:target.col,old:target.value,value:displayEmployeeName(name),section:target.section,role:target.role,team:target.section})
+    const move:MoveDraft={movedEmployee:displayEmployeeName(name),movedFromCell:source?a1Cell(source.sheetRow,source.col):null,movedFromTeam:sourceTeam,replacedEmployee:target.value.trim()?displayEmployeeName(target.value):null,targetCell:a1Cell(target.sheetRow,target.col),targetTeam:target.section,section:target.section,role:target.role,updates}
+    updateLocalCells(updates);setPendingMoves(current=>[...current,move]);setError('');setNotice(`${displayEmployeeName(name)} staged for ${target.section}. Save changes to sync both systems.`)
+  }
+  function undoLastMove(){
+    const last=pendingMoves[pendingMoves.length-1];if(!last)return
+    updateLocalCells(last.updates.map(u=>({...u,old:u.value,value:u.old})))
+    setPendingMoves(current=>current.slice(0,-1));setNotice('Last pending move undone.')
+  }
+  async function saveScheduleChanges(){
+    if(!canEdit||!pendingMoves.length||saving)return
+    setSaving(true);setError('');setNotice('')
+    const remaining=[...pendingMoves]
+    while(remaining.length){
+      const m=remaining[0]
+      const {data,error:invokeError}=await supabase.functions.invoke('move-schedule',{body:{fileId,tab,dateKey:tab,movedEmployee:m.movedEmployee,movedFromCell:m.movedFromCell,movedFromTeam:m.movedFromTeam,replacedEmployee:m.replacedEmployee,targetCell:m.targetCell,targetTeam:m.targetTeam,section:m.section,role:m.role,updates:m.updates.map(u=>({row:u.row,col:u.col,old:u.old,value:u.value,section:u.section,role:u.role,team:u.team}))}})
+      if(invokeError||!data?.ok){setError(data?.error||invokeError?.message||'Could not synchronize the schedule.');setPendingMoves(remaining);setSaving(false);return}
+      remaining.shift();setPendingMoves([...remaining])
+    }
+    setSaving(false);setNotice('Changes saved to Supabase and Google Sheets.');await load(fileId,tab)
+  }
+
   return <>
     <style>{`
       .hr-schedule-page.hr-schedule-hr{--rose:#c76b91;--rose-deep:#9f4e70;--rose-soft:#f9e9f0;--rose-line:#efd3df;color:var(--text)}
@@ -236,6 +331,29 @@ export default function HrTeamSchedule() {
       }
       @media(max-width:420px){.schedule-overview-strip{gap:.5rem}.schedule-stat-divider{height:26px}.schedule-stat-icon{display:none}.schedule-stat{flex:1}}
 
+
+      .schedule-employee-slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.35rem;margin-top:.45rem}
+      .schedule-employee-slot{min-width:0;border:1px solid var(--line);border-radius:9px;padding:.4rem .48rem;background:var(--card);font-size:.68rem;color:var(--text);overflow-wrap:anywhere}
+      .schedule-employee-slot[draggable="true"]{cursor:grab;border-color:var(--accent,#7395c2)}
+      .schedule-employee-slot.is-empty{border-style:dashed;color:var(--muted);min-height:34px}
+      .schedule-employee-slot span{display:block;font-size:.53rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:var(--muted);margin-bottom:.15rem}
+      .schedule-editor-panel{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,310px);gap:.8rem;margin-top:1rem}
+      .schedule-pool{padding:.85rem;border:1px solid var(--line);border-radius:15px;background:var(--card);min-width:0}
+      .schedule-pool h3{font-size:.88rem;margin:0 0 .25rem;color:var(--text)}
+      .schedule-pool p{font-size:.68rem;color:var(--muted);margin:.2rem 0 .55rem}
+      .schedule-pool input{width:100%;padding:.55rem .7rem;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text);margin-bottom:.5rem}
+      .schedule-pool-list{display:flex;flex-wrap:wrap;gap:.35rem;max-height:230px;overflow:auto}
+      .schedule-pool-list button{border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text);padding:.4rem .5rem;text-align:left;cursor:grab;font-size:.66rem}
+      .schedule-pool-list small{display:block;color:var(--muted);font-size:.56rem}
+      .schedule-review>span{border-radius:8px;padding:.1rem .35rem;background:var(--accent-soft);color:var(--accent)}
+      .schedule-review-item{padding:.45rem;border:1px solid var(--line);border-radius:8px;margin:.35rem 0;font-size:.66rem}
+      .schedule-review-item small{display:block;color:var(--muted);margin-top:.15rem}
+      .schedule-review-actions{display:flex;gap:.4rem;margin-top:.65rem}
+      .schedule-review-actions button{border:1px solid var(--line);border-radius:9px;padding:.5rem .65rem;background:var(--card);color:var(--text);font-size:.68rem;font-weight:750;cursor:pointer}
+      .schedule-review-actions button:last-child{background:var(--accent,#315f9b);border-color:var(--accent,#315f9b);color:white}
+      .schedule-review-actions button:disabled{opacity:.45;cursor:not-allowed}
+      .schedule-sync-notice{font-size:.72rem;color:var(--accent);margin:.6rem 0}
+      @media(max-width:760px){.schedule-editor-panel{grid-template-columns:1fr}}
     `}
 </style>
     <div className={`hr-schedule-page${isHr ? ' hr-schedule-hr' : ''}`}>
@@ -258,16 +376,24 @@ export default function HrTeamSchedule() {
         <div className="schedule-column-head"><div><span className="schedule-section-label">SCHEDULE GROUP</span><h2>{section.title}</h2></div><span className="schedule-count">{section.rows.length}<small>items</small></span></div>
         <div className="schedule-people-list">
           {section.rows.map((r,ri)=>{
-            const cells=r.map((v,i)=>({v,i})).filter(x=>filled(x.v))
-            const nameCell=cells.find(x=>/[a-z]/i.test(x.v)&&!NUM.test(x.v))
-            return <button type="button" key={ri} className="schedule-person" onClick={()=>setSelectedRow({section:section.title,headers:section.headers,cells:r})} aria-label={`View schedule details for ${nameCell?.v || cells[0]?.v || 'schedule row'}`}>
-              <div className="schedule-person-name"><span className="schedule-person-avatar">{(nameCell?.v || cells[0]?.v || 'S').trim().charAt(0).toUpperCase()}</span><strong>{nameCell?.v || cells[0]?.v || 'Schedule row'}</strong><span className="schedule-person-open">View details ↗</span></div>
-              <div className="schedule-person-fields">{cells.filter(x=>x!==nameCell).map(x=><span key={x.i} className="schedule-chip"><span className="schedule-chip-label">{section.headers[x.i] ? section.headers[x.i]+': ' : ''}</span>{x.v}</span>)}</div>
-            </button>
+            const slots=employeeSlots(section,r,rosterNames)
+            const employeeCols=new Set(slots.map(s=>s.col))
+            const cells=r.cells.map((v,i)=>({v,i})).filter(x=>filled(x.v)&&!employeeCols.has(x.i))
+            return <article type="button" key={r.sheetRow+'-'+ri} className="schedule-person">
+              <div className="schedule-person-name"><span className="schedule-person-avatar">{(cells[0]?.v || slots[0]?.name || 'S').trim().charAt(0).toUpperCase()}</span><strong>{cells.slice(0,2).map(x=>x.v).join(' · ') || `Schedule row ${r.sheetRow+1}`}</strong><button type="button" className="schedule-person-open" onClick={()=>setSelectedRow({section:section.title,headers:section.headers,cells:r.cells})}>Details ↗</button></div>
+              <div className="schedule-person-fields">{cells.slice(2).map(x=><span key={x.i} className="schedule-chip"><span className="schedule-chip-label">{section.headers[x.i] ? section.headers[x.i]+': ' : ''}</span>{x.v}</span>)}</div>
+              <div className="schedule-employee-slots">{slots.map(slot=><div key={slot.col} className={`schedule-employee-slot ${slot.name?'':'is-empty'}`} draggable={canEdit&&!!slot.name} onDragStart={e=>{setDragName(slot.value);e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',slot.value)}} onDragEnd={()=>setDragName('')} onDragOver={e=>{if(canEdit){e.preventDefault();e.dataTransfer.dropEffect='move'}}} onDrop={e=>{e.preventDefault();const name=e.dataTransfer.getData('text/plain')||dragName;if(name)handleDrop(slot,name)}}><span>{slot.role}</span>{slot.name||'Drop employee here'}</div>)}</div>
+            </article>
           })}
         </div>
       </section>)}
     </div>
+
+    {canEdit&&!busy&&<div className="schedule-editor-panel">
+      <section className="schedule-pool"><h3>Employee pool</h3><p>All roster employees are available to drag, including employees assigned to other teams. Absent, leave, suspended, and resigned employees are excluded.</p><input placeholder="Search employees or teams…" value={poolSearch} onChange={e=>setPoolSearch(e.target.value)}/><div className="schedule-pool-list">{pool.map(person=>{const current=assigned.get(normalizeEmployeeName(person.name))?.[0];return <button type="button" key={person.name+'-'+person.team} draggable onDragStart={e=>{setDragName(person.name);e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',person.name)}} onDragEnd={()=>setDragName('')}><strong>{person.name}</strong><small>{current?`Currently: ${current.section}`:person.team||'Unassigned'}</small></button>})}</div></section>
+      <section className="schedule-pool schedule-review"><h3>Review changes <span>{pendingMoves.length}</span></h3><p>Drag changes are staged first. Save to update Supabase and Google Sheets.</p>{pendingMoves.map((m,i)=><div className="schedule-review-item" key={i}><strong>{m.movedEmployee}</strong><small>{m.movedFromTeam?`${m.movedFromTeam} → ${m.targetTeam}`:`Added to ${m.targetTeam}`}{m.replacedEmployee?` · replaces ${m.replacedEmployee}`:''}</small></div>)}<div className="schedule-review-actions"><button type="button" disabled={!pendingMoves.length||saving} onClick={undoLastMove}>Undo last</button><button type="button" disabled={!pendingMoves.length||saving} onClick={()=>void saveScheduleChanges()}>{saving?'Saving…':'Save changes'}</button></div></section>
+    </div>}
+    {notice&&<p className="schedule-sync-notice">{notice}</p>}
     </div>
 
     {selectedRow&&<div className={`hr-schedule-modal-backdrop${isHr ? ' hr-schedule-modal-hr' : ' hr-schedule-modal-blue'}`} onMouseDown={e=>{if(e.target===e.currentTarget)setSelectedRow(null)}}><section className="hr-schedule-modal" role="dialog" aria-modal="true" aria-labelledby="hr-schedule-modal-title" onKeyDown={e=>{if(e.key==='Escape')setSelectedRow(null)}}><div className="hr-schedule-modal-head"><div><div className="schedule-kicker">Schedule details</div><h2 id="hr-schedule-modal-title">{selectedRow.section}</h2></div><button type="button" className="hr-schedule-modal-close" onClick={()=>setSelectedRow(null)} aria-label="Close schedule details">×</button></div><div className="hr-schedule-modal-lines">{selectedRow.cells.map((value,i)=>value.trim()?<div className="hr-schedule-modal-line" key={i}><span>{selectedRow.headers[i]||'Detail '+(i+1)}</span><strong>{value}</strong></div>:null)}</div></section></div>}
