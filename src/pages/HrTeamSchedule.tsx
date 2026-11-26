@@ -379,7 +379,7 @@ export default function HrTeamSchedule() {
             const slots=employeeSlots(section,r,rosterNames)
             const employeeCols=new Set(slots.map(s=>s.col))
             const cells=r.cells.map((v,i)=>({v,i})).filter(x=>filled(x.v)&&!employeeCols.has(x.i))
-            return <article type="button" key={r.sheetRow+'-'+ri} className="schedule-person">
+            return <article key={r.sheetRow+'-'+ri} className="schedule-person">
               <div className="schedule-person-name"><span className="schedule-person-avatar">{(cells[0]?.v || slots[0]?.name || 'S').trim().charAt(0).toUpperCase()}</span><strong>{cells.slice(0,2).map(x=>x.v).join(' · ') || `Schedule row ${r.sheetRow+1}`}</strong><button type="button" className="schedule-person-open" onClick={()=>setSelectedRow({section:section.title,headers:section.headers,cells:r.cells})}>Details ↗</button></div>
               <div className="schedule-person-fields">{cells.slice(2).map(x=><span key={x.i} className="schedule-chip"><span className="schedule-chip-label">{section.headers[x.i] ? section.headers[x.i]+': ' : ''}</span>{x.v}</span>)}</div>
               <div className="schedule-employee-slots">{slots.map(slot=><div key={slot.col} className={`schedule-employee-slot ${slot.name?'':'is-empty'}`} draggable={canEdit&&!!slot.name} onDragStart={e=>{setDragName(slot.value);e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',slot.value)}} onDragEnd={()=>setDragName('')} onDragOver={e=>{if(canEdit){e.preventDefault();e.dataTransfer.dropEffect='move'}}} onDrop={e=>{e.preventDefault();const name=e.dataTransfer.getData('text/plain')||dragName;if(name)handleDrop(slot,name)}}><span>{slot.role}</span>{slot.name||'Drop employee here'}</div>)}</div>
