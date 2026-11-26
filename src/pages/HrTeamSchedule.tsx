@@ -58,7 +58,7 @@ function parseSections(rows: string[][]): Section[] {
       if (!seenTitle) { seenTitle = true; title = label; return }
       title = label; headers = []; expectHeaders = true; return
     }
-    if (expectHeaders) { headers = cells; expectHeaders = false; return }
+    if (expectHeaders) { expectHeaders = false; if (cells.some(employeeHeader)) { headers = cells; return } headers = cells.map((_, i) => 'Column ' + (i + 1)); body.push({ cells, sheetRow }); return }
     if (!headers.length) headers = cells.map((_, i) => 'Column ' + (i + 1))
     body.push({ cells, sheetRow })
   })
