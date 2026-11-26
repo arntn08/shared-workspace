@@ -22,9 +22,9 @@ function isHeading(cells: string[]) {
   return values.slice(1).every(v => NUM.test(v) || LABEL.test(v))
 }
 
-function normalizeEmployeeName(v: string) { return v.replace(/^\\*+/, '').replace(/\\s+/g, ' ').trim().toLocaleUpperCase() }
-function displayEmployeeName(v: string) { return v.replace(/^\\*+/, '').trim() }
-function employeeHeader(v: string) { return /driver|drver|technician|tech\\b|employee|personnel|crew|staff|worker/i.test(v) }
+function normalizeEmployeeName(v: string) { return v.replace(/^\*+/, '').replace(/\s+/g, ' ').trim().toLocaleUpperCase() }
+function displayEmployeeName(v: string) { return v.replace(/^\*+/, '').trim() }
+function employeeHeader(v: string) { return /driver|drver|technician|tech\b|employee|personnel|crew|staff|worker/i.test(v) }
 function colLetter(index: number) { let n=index+1,s=''; while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26)} return s }
 function a1Cell(row: number,col: number) { return `${colLetter(col)}${row+1}` }
 function employeeSlots(section: Section,row: ScheduleRow,rosterNames: Set<string>): EmployeeSlot[] {
@@ -38,7 +38,7 @@ function parseAbsences(rows: string[][]) {
   if(header<0) return [...found.values()]
   for(let i=header+1;i<rows.length;i++){
     const r=(rows[i]||[]).map(clean),name=r[4]||'',status=r[5]||''
-    if(name&&/absent|vacation|leave|rest\\s*day/i.test(status)) found.set(normalizeEmployeeName(name),{employee_name:displayEmployeeName(name),status:status.toUpperCase(),source_cell:`E${i+1}`})
+    if(name&&/absent|vacation|leave|rest\s*day/i.test(status)) found.set(normalizeEmployeeName(name),{employee_name:displayEmployeeName(name),status:status.toUpperCase(),source_cell:`E${i+1}`})
     if(r[8]&&!/SUSPENDED/i.test(r[8])) found.set(normalizeEmployeeName(r[8]),{employee_name:displayEmployeeName(r[8]),status:'SUSPENDED',source_cell:`I${i+1}`})
     if(r[9]&&!/RESIGN/i.test(r[9])) found.set(normalizeEmployeeName(r[9]),{employee_name:displayEmployeeName(r[9]),status:'RESIGNED',source_cell:`J${i+1}`})
   }
