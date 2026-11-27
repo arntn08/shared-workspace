@@ -24,12 +24,15 @@ function isHeading(cells: string[]) {
 
 function normalizeEmployeeName(v: string) { return v.replace(/^\*+/, '').replace(/\s+/g, ' ').trim().toLocaleUpperCase() }
 function displayEmployeeName(v: string) { return v.replace(/^\*+/, '').trim() }
-function employeeHeader(v: string) { return /driver|drver|technician|tech\b|employee|personnel|crew|staff|worker/i.test(v) }
+function employeeHeader(v: string) { return ['DRIVER','DRVER','TECH','TECH 1','TECHNICIAN'].includes(v.replace(/\s+/g,' ').trim().toUpperCase()) }
+function employeeRole(v: string) { return /^(DRIVER|DRVER)$/i.test(v.trim()) ? 'Driver' : 'Installer' }
 function colLetter(index: number) { let n=index+1,s=''; while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26)} return s }
 function a1Cell(row: number,col: number) { return `${colLetter(col)}${row+1}` }
 function employeeSlots(section: Section,row: ScheduleRow,rosterNames: Set<string>): EmployeeSlot[] {
+  // Installation teams are strictly a two-person crew: one Driver and one Installer.
+  // TECH 2 is deliberately excluded because that column can hold non-personnel values (e.g. MDU).
   const columns=section.headers.map((h,i)=>({h,i})).filter(x=>employeeHeader(x.h))
-  if(columns.length) return columns.map(({h,i})=>({section:section.title,sheetRow:row.sheetRow,col:i,role:h||'Employee',value:row.cells[i]||'',name:displayEmployeeName(row.cells[i]||'')}))
+  if(columns.length) return columns.map(({h,i})=>({section:section.title,sheetRow:row.sheetRow,col:i,role:employeeRole(h),value:row.cells[i]||'',name:displayEmployeeName(row.cells[i]||'')}))
   return row.cells.map((value,col)=>({value,col})).filter(x=>filled(x.value)&&rosterNames.has(normalizeEmployeeName(x.value))).map(x=>({section:section.title,sheetRow:row.sheetRow,col:x.col,role:'Employee',value:x.value,name:displayEmployeeName(x.value)}))
 }
 function parseAbsences(rows: string[][]) {
