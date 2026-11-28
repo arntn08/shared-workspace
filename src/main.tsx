@@ -10,6 +10,7 @@ import './operations.css'
 import './compact-workspace.css'
 import './mobile-optimization.css'
 import './workspace-refresh.css'
+import './coordinator-theme.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
