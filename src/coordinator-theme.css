@@ -22,3 +22,71 @@
 .role-theme-coordinator .ops-page input,.role-theme-coordinator .ops-page select,.role-theme-coordinator .ops-page textarea{background:#fffdf6;color:var(--ops-text);border-color:var(--ops-border)}
 .role-theme-coordinator .ops-page input:focus,.role-theme-coordinator .ops-page select:focus,.role-theme-coordinator .ops-page textarea:focus{border-color:var(--ops-accent)!important;box-shadow:0 0 0 3px rgba(49,91,64,.13)!important}
 [data-theme="dark"] .role-theme-coordinator,[data-theme="dark"].role-theme-coordinator,.role-theme-coordinator[data-theme="dark"]{--ops-bg:#f5f1e5!important;--ops-panel:#fffdf6!important;--ops-panel-soft:#eee9d9!important;--ops-text:#263b2e!important;--ops-muted:#687969!important;--ops-border:#ded9c8!important;--ops-accent:#315b40!important;--ops-accent-soft:#e5ecdf!important;--bg:#f5f1e5!important;--surface:#fffdf6!important;--surface-2:#eee9d9!important;--text:#263b2e!important;--muted:#687969!important;--border:#ded9c8!important;--accent:#315b40!important;--accent-ink:#fffdf6!important;--accent-soft:#e5ecdf!important}
+
+
+/* Project Activities components — fully replace the previous blue/teal skin */
+.ops-shell.role-theme-coordinator .project-activities-page { color:#263b2e!important; }
+.ops-shell.role-theme-coordinator .pa-hero {
+ background:linear-gradient(115deg,#e9e4d2 0%,#fffdf6 58%,#e7eddf 100%)!important;
+ border:1px solid #ded9c8!important; box-shadow:0 12px 30px rgba(49,91,64,.07)!important;
+}
+.ops-shell.role-theme-coordinator .pa-hero h1 { color:#263b2e!important; }
+.ops-shell.role-theme-coordinator .pa-hero p { color:#687969!important; }
+.ops-shell.role-theme-coordinator .pa-hero .ops-eyebrow,
+.ops-shell.role-theme-coordinator .pa-hero .pa-eyebrow { color:#315b40!important; }
+.ops-shell.role-theme-coordinator .pa-tabs button,
+.ops-shell.role-theme-coordinator .pa-btn {
+ background:#fffdf6!important; color:#315b40!important; border:1px solid #ded9c8!important;
+ box-shadow:0 3px 10px rgba(49,91,64,.045)!important;
+}
+.ops-shell.role-theme-coordinator .pa-tabs button:hover,
+.ops-shell.role-theme-coordinator .pa-btn:hover {
+ background:#edf1e7!important; border-color:#b9cbb7!important; color:#244a32!important;
+}
+.ops-shell.role-theme-coordinator .pa-tabs button.active,
+.ops-shell.role-theme-coordinator .pa-btn.primary {
+ background:#315b40!important; color:#fffdf6!important; border-color:#315b40!important;
+ box-shadow:0 5px 14px rgba(49,91,64,.16)!important;
+}
+.ops-shell.role-theme-coordinator .pa-card {
+ background:#fffdf6!important; color:#263b2e!important; border:1px solid #ded9c8!important;
+ box-shadow:0 8px 22px rgba(49,91,64,.055)!important;
+}
+.ops-shell.role-theme-coordinator .pa-grid>.pa-card,
+.ops-shell.role-theme-coordinator .pa-grid>.pa-card:nth-child(2),
+.ops-shell.role-theme-coordinator .pa-grid>.pa-card:nth-child(3),
+.ops-shell.role-theme-coordinator .pa-grid>.pa-card:nth-child(4) {
+ border-top:3px solid #315b40!important;
+}
+.ops-shell.role-theme-coordinator .pa-card strong,
+.ops-shell.role-theme-coordinator .pa-card h3,
+.ops-shell.role-theme-coordinator .pa-item-head strong { color:#263b2e!important; }
+.ops-shell.role-theme-coordinator .pa-card span,
+.ops-shell.role-theme-coordinator .pa-card p { color:#687969!important; }
+.ops-shell.role-theme-coordinator .pa-item {
+ background:#fffdf6!important; color:#263b2e!important; border:1px solid #ded9c8!important;
+ box-shadow:0 4px 14px rgba(49,91,64,.045)!important;
+}
+.ops-shell.role-theme-coordinator .pa-item:hover {
+ background:#f8f7ef!important; border-color:#b9cbb7!important;
+}
+.ops-shell.role-theme-coordinator .pa-status {
+ color:#315b40!important; background:#e5ecdf!important; border:1px solid #d1ddca!important;
+}
+.ops-shell.role-theme-coordinator .pa-note {
+ color:#315b40!important; background:#e5ecdf!important; border:1px solid #d1ddca!important;
+}
+.ops-shell.role-theme-coordinator .pa-form input,
+.ops-shell.role-theme-coordinator .pa-form select,
+.ops-shell.role-theme-coordinator .pa-form textarea {
+ color:#263b2e!important; background:#fffdf6!important; border-color:#ded9c8!important;
+}
+.ops-shell.role-theme-coordinator .pa-form input:focus,
+.ops-shell.role-theme-coordinator .pa-form select:focus,
+.ops-shell.role-theme-coordinator .pa-form textarea:focus {
+ outline:3px solid rgba(49,91,64,.12)!important; border-color:#315b40!important;
+}
+.ops-shell.role-theme-coordinator .ops-date-chip,
+.ops-shell.role-theme-coordinator .pa-date-chip {
+ color:#315b40!important; background:#e5ecdf!important; border-color:#d1ddca!important;
+}
