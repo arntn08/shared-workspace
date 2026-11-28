@@ -126,7 +126,7 @@ export default function HrTeamSchedule() {
     }
     setBusy(false)
   }
-  useEffect(()=>{ if(fileId) void load(fileId) },[fileId])
+  useEffect(()=>{ if(fileId) void load(fileId) },[fileId, canEdit])
   const sections = useMemo(()=>parseSections(rows),[rows])
   const rosterNames = useMemo(()=>new Set(roster.map(p=>normalizeEmployeeName(p.name))),[roster])
   const allSlots = useMemo(()=>sections.flatMap(s=>s.rows.flatMap(r=>employeeSlots(s,r,rosterNames))),[sections,rosterNames])
