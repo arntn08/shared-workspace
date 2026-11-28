@@ -1,0 +1,96 @@
+/* Project Coordination — buttercream & forest green identity */
+.role-theme-coordinator {
+  --ops-bg: #f5f1e5;
+  --ops-panel: #fffdf6;
+  --ops-panel-soft: #f1eddf;
+  --ops-text: #263b2e;
+  --ops-muted: #758273;
+  --ops-border: #e3dfcf;
+  --ops-accent: #315b40;
+  --ops-accent-soft: #e5ecdf;
+  --ops-shadow: 0 12px 34px rgba(46, 67, 47, .07);
+  --bg: #f5f1e5;
+  --surface: #fffdf6;
+  --surface-2: #f1eddf;
+  --text: #263b2e;
+  --muted: #758273;
+  --border: #e3dfcf;
+  --accent: #315b40;
+  --accent-ink: #fffdf6;
+  --accent-soft: #e5ecdf;
+  background: var(--ops-bg);
+  color: var(--ops-text);
+}
+.role-theme-coordinator .ops-sidebar,
+.role-theme-coordinator .ops-topbar {
+  background-color: color-mix(in srgb, var(--ops-panel) 94%, transparent);
+}
+.role-theme-coordinator .ops-brand {
+  border-bottom-color: var(--ops-border);
+}
+.role-theme-coordinator .ops-nav-link.active {
+  box-shadow: inset 3px 0 0 var(--ops-accent);
+}
+.role-theme-coordinator .ops-help-card {
+  background: linear-gradient(135deg, var(--ops-accent-soft), var(--ops-panel));
+}
+.role-theme-coordinator .ops-help-icon {
+  background: var(--ops-accent);
+  color: #fffdf6;
+}
+.role-theme-coordinator .ops-status-dot {
+  background: #5b8b60;
+  box-shadow: 0 0 0 4px rgba(91, 139, 96, .13);
+}
+.role-theme-coordinator .ops-page .hero {
+  background:
+    radial-gradient(550px 220px at 90% 0%, rgba(104, 137, 88, .13), transparent 70%),
+    var(--ops-panel);
+}
+.role-theme-coordinator .ops-page .card,
+.role-theme-coordinator .ops-page .file-item,
+.role-theme-coordinator .ops-page .sheet-wrap,
+.role-theme-coordinator .ops-page .table-wrap {
+  border-color: var(--ops-border);
+}
+.role-theme-coordinator .ops-page button.primary,
+.role-theme-coordinator .ops-page .btn.primary {
+  background: var(--ops-accent);
+  border-color: var(--ops-accent);
+  color: #fffdf6;
+}
+.role-theme-coordinator .ops-page button:hover,
+.role-theme-coordinator .ops-page .btn:hover {
+  border-color: var(--ops-accent);
+}
+.role-theme-coordinator .ops-page input:focus,
+.role-theme-coordinator .ops-page select:focus,
+.role-theme-coordinator .ops-page textarea:focus {
+  border-color: var(--ops-accent);
+  box-shadow: 0 0 0 3px rgba(49, 91, 64, .13);
+}
+[data-theme="dark"] .role-theme-coordinator {
+  --ops-bg: #17251d;
+  --ops-panel: #203329;
+  --ops-panel-soft: #293d30;
+  --ops-text: #f4f0e4;
+  --ops-muted: #b6c0ae;
+  --ops-border: #3b5141;
+  --ops-accent: #c6d5b8;
+  --ops-accent-soft: #304737;
+  --ops-shadow: 0 14px 36px rgba(0, 0, 0, .2);
+  --bg: #17251d;
+  --surface: #203329;
+  --surface-2: #293d30;
+  --text: #f4f0e4;
+  --muted: #b6c0ae;
+  --border: #3b5141;
+  --accent: #c6d5b8;
+  --accent-ink: #17251d;
+  --accent-soft: #304737;
+}
+[data-theme="dark"] .role-theme-coordinator .ops-page button.primary,
+[data-theme="dark"] .role-theme-coordinator .ops-page .btn.primary,
+[data-theme="dark"] .role-theme-coordinator .ops-help-icon {
+  color: #17251d;
+}
