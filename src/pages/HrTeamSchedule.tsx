@@ -70,7 +70,15 @@ function parseSections(rows: string[][]): Section[] {
 }
 export default function HrTeamSchedule() {
   const { profile } = useAuth()
-  const canEdit = profile?.active === true && (profile.role === 'owner' || profile.role === 'editor')
+  const [isCoordinator, setIsCoordinator] = useState(false)
+  useEffect(() => {
+    let live = true
+    if (!profile?.active || !profile.id) { setIsCoordinator(false); return }
+    supabase.from('project_coordinator_access').select('user_id').eq('user_id', profile.id).eq('active', true).maybeSingle()
+      .then(({ data }) => { if (live) setIsCoordinator(!!data) })
+    return () => { live = false }
+  }, [profile?.id, profile?.active])
+  const canEdit = profile?.active === true && (profile.role === 'owner' || profile.role === 'editor' || isCoordinator)
   const isHr = profile?.role === 'hr' || profile?.role === 'ar_encoder'
   const [files,setFiles] = useState<FileRow[]>([])
   const [fileId,setFileId] = useState('')
