@@ -129,10 +129,18 @@ const formatDate = (date: Date) => {
 export default function Tally() {
   const { profile } = useAuth()
 
-  // HR receives the same Installation Tally controls as Editors.
-  const canEdit =
-    profile?.active === true &&
-    (profile.role === 'owner' || profile.role === 'editor' || profile.role === 'hr')
+  const [isCoordinator, setIsCoordinator] = useState(false)
+  useEffect(() => {
+    let live = true
+    if (!profile?.active || !profile.id) { setIsCoordinator(false); return }
+    supabase.from('project_coordinator_access').select('user_id').eq('user_id', profile.id).eq('active', true).maybeSingle()
+      .then(({ data }) => { if (live) setIsCoordinator(!!data) })
+    return () => { live = false }
+  }, [profile?.id, profile?.active])
+
+  // Owners, Editors, HR, and the dedicated Project Coordinator can manage tally operations.
+  const canEdit = profile?.active === true &&
+    (profile.role === 'owner' || profile.role === 'editor' || profile.role === 'hr' || isCoordinator)
 
   const [departments, setDepartments] = useState<Department[]>([])
   const [myTeamCodes, setMyTeamCodes] = useState<string[]>([])
