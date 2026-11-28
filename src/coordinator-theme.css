@@ -1,96 +1,24 @@
-/* Project Coordination — buttercream & forest green identity */
-.role-theme-coordinator {
-  --ops-bg: #f5f1e5;
-  --ops-panel: #fffdf6;
-  --ops-panel-soft: #f1eddf;
-  --ops-text: #263b2e;
-  --ops-muted: #758273;
-  --ops-border: #e3dfcf;
-  --ops-accent: #315b40;
-  --ops-accent-soft: #e5ecdf;
-  --ops-shadow: 0 12px 34px rgba(46, 67, 47, .07);
-  --bg: #f5f1e5;
-  --surface: #fffdf6;
-  --surface-2: #f1eddf;
-  --text: #263b2e;
-  --muted: #758273;
-  --border: #e3dfcf;
-  --accent: #315b40;
-  --accent-ink: #fffdf6;
-  --accent-soft: #e5ecdf;
-  background: var(--ops-bg);
-  color: var(--ops-text);
+/* Project Coordination visual identity: buttercream + forest green */
+.ops-shell.role-theme-coordinator,.role-theme-coordinator.employee-ops-shell,.role-theme-coordinator {
+ --ops-bg:#f5f1e5!important;--ops-panel:#fffdf6!important;--ops-panel-soft:#eee9d9!important;--ops-text:#263b2e!important;--ops-muted:#687969!important;--ops-border:#ded9c8!important;--ops-accent:#315b40!important;--ops-accent-soft:#e5ecdf!important;--ops-shadow:0 12px 34px rgba(46,67,47,.07)!important;
+ --bg:#f5f1e5!important;--surface:#fffdf6!important;--surface-2:#eee9d9!important;--text:#263b2e!important;--muted:#687969!important;--border:#ded9c8!important;--accent:#315b40!important;--accent-ink:#fffdf6!important;--accent-soft:#e5ecdf!important;
+ background:var(--ops-bg)!important;color:var(--ops-text)!important;
 }
-.role-theme-coordinator .ops-sidebar,
-.role-theme-coordinator .ops-topbar {
-  background-color: color-mix(in srgb, var(--ops-panel) 94%, transparent);
-}
-.role-theme-coordinator .ops-brand {
-  border-bottom-color: var(--ops-border);
-}
-.role-theme-coordinator .ops-nav-link.active {
-  box-shadow: inset 3px 0 0 var(--ops-accent);
-}
-.role-theme-coordinator .ops-help-card {
-  background: linear-gradient(135deg, var(--ops-accent-soft), var(--ops-panel));
-}
-.role-theme-coordinator .ops-help-icon {
-  background: var(--ops-accent);
-  color: #fffdf6;
-}
-.role-theme-coordinator .ops-status-dot {
-  background: #5b8b60;
-  box-shadow: 0 0 0 4px rgba(91, 139, 96, .13);
-}
-.role-theme-coordinator .ops-page .hero {
-  background:
-    radial-gradient(550px 220px at 90% 0%, rgba(104, 137, 88, .13), transparent 70%),
-    var(--ops-panel);
-}
-.role-theme-coordinator .ops-page .card,
-.role-theme-coordinator .ops-page .file-item,
-.role-theme-coordinator .ops-page .sheet-wrap,
-.role-theme-coordinator .ops-page .table-wrap {
-  border-color: var(--ops-border);
-}
-.role-theme-coordinator .ops-page button.primary,
-.role-theme-coordinator .ops-page .btn.primary {
-  background: var(--ops-accent);
-  border-color: var(--ops-accent);
-  color: #fffdf6;
-}
-.role-theme-coordinator .ops-page button:hover,
-.role-theme-coordinator .ops-page .btn:hover {
-  border-color: var(--ops-accent);
-}
-.role-theme-coordinator .ops-page input:focus,
-.role-theme-coordinator .ops-page select:focus,
-.role-theme-coordinator .ops-page textarea:focus {
-  border-color: var(--ops-accent);
-  box-shadow: 0 0 0 3px rgba(49, 91, 64, .13);
-}
-[data-theme="dark"] .role-theme-coordinator {
-  --ops-bg: #17251d;
-  --ops-panel: #203329;
-  --ops-panel-soft: #293d30;
-  --ops-text: #f4f0e4;
-  --ops-muted: #b6c0ae;
-  --ops-border: #3b5141;
-  --ops-accent: #c6d5b8;
-  --ops-accent-soft: #304737;
-  --ops-shadow: 0 14px 36px rgba(0, 0, 0, .2);
-  --bg: #17251d;
-  --surface: #203329;
-  --surface-2: #293d30;
-  --text: #f4f0e4;
-  --muted: #b6c0ae;
-  --border: #3b5141;
-  --accent: #c6d5b8;
-  --accent-ink: #17251d;
-  --accent-soft: #304737;
-}
-[data-theme="dark"] .role-theme-coordinator .ops-page button.primary,
-[data-theme="dark"] .role-theme-coordinator .ops-page .btn.primary,
-[data-theme="dark"] .role-theme-coordinator .ops-help-icon {
-  color: #17251d;
-}
+.role-theme-coordinator .ops-main,.role-theme-coordinator .ops-page,.role-theme-coordinator.employee-ops-page{background:var(--ops-bg)!important;color:var(--ops-text)!important}
+.role-theme-coordinator .ops-sidebar,.role-theme-coordinator .ops-topbar{background:var(--ops-panel)!important;color:var(--ops-text)!important;border-color:var(--ops-border)!important}
+.role-theme-coordinator .ops-brand,.role-theme-coordinator .ops-sidebar-bottom{border-color:var(--ops-border)!important}
+.role-theme-coordinator .ops-nav-heading,.role-theme-coordinator .ops-workspace-label,.role-theme-coordinator .ops-profile-copy span,.role-theme-coordinator .ops-help-card span:last-child{color:var(--ops-muted)!important}
+.role-theme-coordinator .ops-nav-link{color:var(--ops-muted)!important}
+.role-theme-coordinator .ops-nav-link:hover,.role-theme-coordinator .ops-nav-link.active{color:var(--ops-accent)!important;background:var(--ops-accent-soft)!important;border-color:#cbd8c7!important}
+.role-theme-coordinator .ops-nav-link.active{box-shadow:inset 3px 0 0 var(--ops-accent)!important}
+.role-theme-coordinator .ops-help-card,.role-theme-coordinator .ops-page .card,.role-theme-coordinator .ops-stat-card,.role-theme-coordinator .ops-panel,.role-theme-coordinator .ops-page .file-item,.role-theme-coordinator .ops-page .sheet-wrap,.role-theme-coordinator .ops-page .table-wrap,.role-theme-coordinator .ops-date-chip,.role-theme-coordinator .ops-mini-badge{background:var(--ops-panel)!important;color:var(--ops-text)!important;border-color:var(--ops-border)!important;box-shadow:var(--ops-shadow)}
+.role-theme-coordinator .ops-page .hero,.role-theme-coordinator .ops-overview-hero{background:radial-gradient(500px 240px at 92% 0%,rgba(91,125,83,.13),transparent 72%),linear-gradient(120deg,#f0ead8 0%,#fffdf6 72%)!important;color:var(--ops-text)!important;border:1px solid var(--ops-border)!important}
+.role-theme-coordinator .ops-page h1,.role-theme-coordinator .ops-page h2,.role-theme-coordinator .ops-page h3,.role-theme-coordinator .ops-page strong,.role-theme-coordinator .ops-stat-number{color:var(--ops-text)}
+.role-theme-coordinator .ops-eyebrow,.role-theme-coordinator .ops-text-link,.role-theme-coordinator .ops-stat-symbol{color:var(--ops-accent)!important}
+.role-theme-coordinator .ops-stat-symbol,.role-theme-coordinator .ops-mini-badge,.role-theme-coordinator .ops-role-pill{background:var(--ops-accent-soft)!important;color:var(--ops-accent)!important;border-color:var(--ops-border)!important}
+.role-theme-coordinator .ops-help-icon{background:var(--ops-accent)!important;color:#fffdf6!important}
+.role-theme-coordinator .ops-status-dot{background:#5b8b60!important;box-shadow:0 0 0 4px rgba(91,139,96,.13)!important}
+.role-theme-coordinator .ops-page button.primary,.role-theme-coordinator .ops-page .btn.primary{background:var(--ops-accent)!important;border-color:var(--ops-accent)!important;color:#fffdf6!important}
+.role-theme-coordinator .ops-page input,.role-theme-coordinator .ops-page select,.role-theme-coordinator .ops-page textarea{background:#fffdf6;color:var(--ops-text);border-color:var(--ops-border)}
+.role-theme-coordinator .ops-page input:focus,.role-theme-coordinator .ops-page select:focus,.role-theme-coordinator .ops-page textarea:focus{border-color:var(--ops-accent)!important;box-shadow:0 0 0 3px rgba(49,91,64,.13)!important}
+[data-theme="dark"] .role-theme-coordinator,[data-theme="dark"].role-theme-coordinator,.role-theme-coordinator[data-theme="dark"]{--ops-bg:#f5f1e5!important;--ops-panel:#fffdf6!important;--ops-panel-soft:#eee9d9!important;--ops-text:#263b2e!important;--ops-muted:#687969!important;--ops-border:#ded9c8!important;--ops-accent:#315b40!important;--ops-accent-soft:#e5ecdf!important;--bg:#f5f1e5!important;--surface:#fffdf6!important;--surface-2:#eee9d9!important;--text:#263b2e!important;--muted:#687969!important;--border:#ded9c8!important;--accent:#315b40!important;--accent-ink:#fffdf6!important;--accent-soft:#e5ecdf!important}
