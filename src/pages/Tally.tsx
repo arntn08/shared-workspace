@@ -421,7 +421,7 @@ export default function Tally() {
     setImportPreview(null)
     if (!file) return
     if (!canEdit) {
-      setError('Only active Owners, Editors, and HR can import completed installations.')
+      setError('Only active Owners, Editors, HR, and authorized Project Coordinators can import completed installations.')
       return
     }
 
